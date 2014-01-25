@@ -134,6 +134,13 @@ struct PROC_RESOURCES {
         double wss;
         if (max_concurrent_exceeded(rp)) return false;
         if (atp) {
+			// don't schedule if something's pending
+			//
+			switch (atp->task_state()) {
+			case PROCESS_ABORT_PENDING:
+			case PROCESS_QUIT_PENDING:
+				return false;
+			}
             if (gstate.retry_shmem_time > gstate.now) {
                 if (atp->app_client_shm.shm == NULL) {
                     if (log_flags.cpu_sched_debug) {
@@ -437,7 +444,10 @@ RESULT* first_coproc_result(int rsc_type) {
     for (i=0; i<gstate.results.size(); i++) {
         RESULT* rp = gstate.results[i];
         if (rp->resource_type() != rsc_type) continue;
-        if (!rp->runnable()) continue;
+        if (!rp->runnable()) {
+			//msg_printf(rp->project, MSG_INFO, "not runnable: %s", rp->name);
+			continue;
+		}
         if (rp->non_cpu_intensive()) continue;
         if (rp->already_selected) continue;
         prio = rp->project->sched_priority;
@@ -957,6 +967,7 @@ static inline bool in_run_list(vector<RESULT*>& run_list, ACTIVE_TASK* atp) {
     return false;
 }
 
+#if 0
 // scan the runnable list, keeping track of CPU usage X.
 // if find a MT job J, and X < ncpus, move J before all non-MT jobs
 // But don't promote a MT job ahead of a job in EDF
@@ -992,6 +1003,7 @@ static void promote_multi_thread_jobs(vector<RESULT*>& runnable_jobs) {
         cur++;
     }
 }
+#endif
 
 // return true if r0 is more important to run than r1
 //
@@ -1018,6 +1030,11 @@ static inline bool more_important(RESULT* r0, RESULT* r1) {
     bool unfin1 = r1->unfinished_time_slice;
     if (unfin0 && !unfin1) return true;
     if (!unfin0 && unfin1) return false;
+
+    // favor jobs that use more CPUs
+    //
+    if (r0->avp->avg_ncpus > r1->avp->avg_ncpus) return true;
+    if (r1->avp->avg_ncpus > r0->avp->avg_ncpus) return false;
 
     // favor jobs selected first by schedule_cpus()
     // (e.g., because their project has high sched priority)
@@ -1549,7 +1566,9 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
         more_important
     );
 
+#if 0
     promote_multi_thread_jobs(run_list);
+#endif
 
     if (log_flags.cpu_sched_debug) {
         msg_printf(0, MSG_INFO, "[cpu_sched_debug] final job list:");
@@ -1657,6 +1676,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
             }
         }
 
+#if 0
         // Don't overcommit CPUs by > 1 if a MT job is scheduled.
         // Skip this check for GPU jobs.
         //
@@ -1672,6 +1692,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
             }
             continue;
         }
+#endif
 
         double wss = 0;
         if (atp) {

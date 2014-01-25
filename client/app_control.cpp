@@ -1056,11 +1056,28 @@ void ACTIVE_TASK_SET::suspend_all(int reason) {
     for (unsigned int i=0; i<active_tasks.size(); i++) {
         ACTIVE_TASK* atp = active_tasks[i];
 
+        // don't suspend if process doesn't exist,
+        // or if quit/abort is pending.
+        // If process is currently suspended, proceed;
+        // the new suspension may require it to be removed from memory.
+        // E.g. a GPU job may currently be suspended due to CPU throttling,
+        // and therefore left in memory,
+        // but this suspension (say, a user request)
+        // might require it to be removed from memory.
+        //
+        switch (atp->task_state()) {
+        case PROCESS_EXECUTING:
+        case PROCESS_SUSPENDED:
+            break;
+        default:
+            continue;
+        }
+
         // handle CPU throttling separately
         //
         if (reason == SUSPEND_REASON_CPU_THROTTLE) {
             if (atp->result->dont_throttle()) continue;
-            atp->preempt(REMOVE_NEVER);
+            atp->preempt(REMOVE_NEVER, reason);
             continue;
         }
 
@@ -1105,20 +1122,20 @@ void ACTIVE_TASK_SET::suspend_all(int reason) {
 
 // resume all currently scheduled tasks
 //
-void ACTIVE_TASK_SET::unsuspend_all() {
+void ACTIVE_TASK_SET::unsuspend_all(int reason) {
     unsigned int i;
     ACTIVE_TASK* atp;
     for (i=0; i<active_tasks.size(); i++) {
         atp = active_tasks[i];
         if (atp->scheduler_state != CPU_SCHED_SCHEDULED) continue;
         if (atp->task_state() == PROCESS_UNINITIALIZED) {
-            if (atp->start()) {
+            if (atp->resume_or_start(false)) {
                 msg_printf(atp->wup->project, MSG_INTERNAL_ERROR,
                     "Couldn't restart task %s", atp->result->name
                 );
             }
         } else if (atp->task_state() == PROCESS_SUSPENDED) {
-            atp->unsuspend();
+            atp->unsuspend(reason);
         }
     }
 }
@@ -1192,14 +1209,14 @@ int ACTIVE_TASK::suspend() {
 
 // resume a suspended task
 //
-int ACTIVE_TASK::unsuspend() {
+int ACTIVE_TASK::unsuspend(int reason) {
     if (!app_client_shm.shm) return 0;
     if (task_state() != PROCESS_SUSPENDED) {
         msg_printf(result->project, MSG_INFO,
             "Internal error: expected process %s to be suspended", result->name
         );
     }
-    if (log_flags.cpu_sched) {
+    if (log_flags.cpu_sched && reason != SUSPEND_REASON_CPU_THROTTLE) {
         msg_printf(result->project, MSG_INFO,
             "[cpu_sched] Resuming %s", result->name
         );
@@ -1371,12 +1388,24 @@ void ACTIVE_TASK_SET::get_msgs() {
     }
     last_time = gstate.now;
 
+	double et_diff, et_diff_throttle;
+	switch (gstate.suspend_reason) {
+	case 0:
+	case SUSPEND_REASON_CPU_THROTTLE:
+		et_diff = delta_t;
+		et_diff_throttle = delta_t * gstate.global_prefs.cpu_usage_limit/100;
+		break;
+	default:
+		et_diff = et_diff_throttle = 0;
+		break;
+	}
+
     for (i=0; i<active_tasks.size(); i++) {
         atp = active_tasks[i];
         if (!atp->process_exists()) continue;
         old_time = atp->checkpoint_cpu_time;
-        if (atp->task_state() == PROCESS_EXECUTING) {
-            atp->elapsed_time += delta_t;
+        if (atp->scheduler_state == CPU_SCHED_SCHEDULED) {
+            atp->elapsed_time += atp->result->dont_throttle()?et_diff:et_diff_throttle;
         }
         if (atp->get_app_status_msg()) {
             if (old_time != atp->checkpoint_cpu_time) {
@@ -1484,4 +1513,3 @@ void ACTIVE_TASK::read_task_state_file() {
         }
     }
 }
-

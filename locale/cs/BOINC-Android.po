@@ -341,6 +341,7 @@ msgid "Synchronize"
 msgstr ""
 
 #. main activity
+#, fuzzy
 msgctxt "main_noproject_warning"
 msgid "Tab here to choose a project."
 msgstr "Prem aquí per escollir un projecte."
@@ -1129,3 +1130,13 @@ msgid ""
 msgstr ""
 "© 2003–2013 Universitat de Califòrnia, Berkeley.\n"
 "Tots els Drets Reservats."
+
+#, fuzzy
+#~ msgctxt "main_noproject_warning"
+#~ msgid "Tap here to choose a project."
+#~ msgstr "Prem aquí per escollir un projecte."
+
+#, fuzzy
+#~ msgctxt "prefs_power_source_usb"
+#~ msgid "USB connection"
+#~ msgstr "No hi ha connexió a Internet"

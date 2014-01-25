@@ -80,18 +80,18 @@ class CSlideShowPanel : public wxPanel
 		~CSlideShowPanel();
 
         void OnSlideShowTimer(wxTimerEvent& WXUNUSED(event));
+        void SetDescriptionText(void);
         void AdvanceSlideShow(bool changeSlide, bool reload);
         void OnPaint(wxPaintEvent& WXUNUSED(event));
         void OnEraseBackground(wxEraseEvent& event);
                 
     private:
-        CTransparentStaticText*     m_institution;
-        CTransparentStaticText*     m_scienceArea;
         CScrolledTextBox*           m_description;
         wxTimer*                    m_ChangeSlideTimer;
         wxBitmap                    m_SlideBitmap;
         bool                        m_bCurrentSlideIsDefault;
         bool                        m_bGotAllProjectsList;
+        bool                        m_bHasBeenDrawn;
         ALL_PROJECTS_LIST           m_AllProjectsList;
 };
 

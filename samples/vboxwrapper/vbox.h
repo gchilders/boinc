@@ -21,6 +21,25 @@
 #ifndef _VBOX_H_
 #define _VBOX_H_
 
+// Known VirtualBox/COM error codes
+//
+#ifndef RPC_S_SERVER_UNAVAILABLE
+#define RPC_S_SERVER_UNAVAILABLE        0x800706ba
+#endif
+#ifndef VBOX_E_INVALID_OBJECT_STATE
+#define VBOX_E_INVALID_OBJECT_STATE     0x80bb0007
+#endif
+
+// Vboxwrapper errors
+//
+#define VBOXWRAPPER_ERR_RECOVERABLE     -1000
+
+// Vboxwrapper diagnostics
+//
+#define REPLAYLOG_FILENAME "vbox_replay.txt"
+#define TRACELOG_FILENAME "vbox_trace.txt"
+
+
 // raw floppy drive device
 class FloppyIO;
 
@@ -123,7 +142,7 @@ struct VBOX_VM {
     int deregister_vm(bool delete_media);
     int deregister_stale_vm();
 
-    int run(double elapsed_time);
+    int run(bool restore_snapshot);
     void cleanup();
 
     int start();
@@ -134,10 +153,10 @@ struct VBOX_VM {
     int createsnapshot(double elapsed_time);
     int cleanupsnapshots(bool delete_active);
     int restoresnapshot();
-    void dumphypervisorlogs();
+    void dumphypervisorlogs(bool include_error_logs);
 
+    int is_registered();
     bool is_system_ready(std::string& message);
-    bool is_registered();
     bool is_vm_machine_configuration_available();
     bool is_hdd_registered();
     bool is_extpack_installed();
@@ -155,11 +174,11 @@ struct VBOX_VM {
     int get_remote_desktop_port();
     int get_vm_network_bytes_sent(double& sent);
     int get_vm_network_bytes_received(double& received);
-    int get_vm_process_id(int& process_id);
+    int get_vm_process_id();
     int get_vm_exit_code(unsigned long& exit_code);
-    int get_vboxsvc_process_id(int& process_id);
 
     int get_system_log(std::string& log, bool tail_only = true);
+    int get_vm_log(std::string& log, bool tail_only = true);
 
     int set_network_access(bool enabled);
     int set_cpu_usage(int percentage);
@@ -172,12 +191,21 @@ struct VBOX_VM {
     void reset_vm_process_priority();
 
     int launch_vboxsvc();
+    int launch_vboxvm();
+
+    void sanitize_output(std::string& output);
 
     int vbm_popen(
-        std::string& command, std::string& output, const char* item, bool log_error = true, bool retry_failures = true, unsigned int timeout = 45
+        std::string& command, std::string& output, const char* item, bool log_error = true, bool retry_failures = true, unsigned int timeout = 45, bool log_trace = true
     );
     int vbm_popen_raw(
         std::string& command, std::string& output, unsigned int timeout
+    );
+    void vbm_replay(
+        std::string& command
+    );
+    void vbm_trace(
+        std::string& command, std::string& ouput, int retval
     );
 };
 

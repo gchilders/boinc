@@ -386,9 +386,8 @@ int main(int argc, char** argv) {
     double bytes_sent = 0;
     double bytes_received = 0;
     double ncpus = 0;
-    bool report_vm_pid = false;
+    double timeout = 0.0;
     bool report_net_usage = false;
-    int vm_pid = 0;
 	int vm_image = 0;
     unsigned long vm_exit_code = 0;
     string message;
@@ -511,6 +510,31 @@ int main(int argc, char** argv) {
             "%s Detected: Sandbox Configuration Enabled\n",
             vboxwrapper_msg_prefix(buf, sizeof(buf))
         );
+    }
+
+    // Record which mode VirtualBox should be started in.
+    //
+    if (aid.vbox_window) {
+        fprintf(
+            stderr,
+            "%s Detected: Headless Mode Disabled\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf))
+        );
+        vm.headless = false;
+    }
+
+    // Check for invalid confgiurations.
+    //
+    if (aid.using_sandbox && aid.vbox_window) {
+        vboxwrapper_msg_prefix(buf, sizeof(buf));
+        fprintf(
+            stderr,
+            "%s Invalid configuration detected.\n"
+            "%s NOTE: BOINC cannot be installed as a service and run VirtualBox in headfull mode at the same time.\n",
+            buf,
+            buf
+        );
+        boinc_temporary_exit(86400, "Incompatible confgiuration detected.");
     }
 
     // Check against known incompatible versions of VirtualBox.  
@@ -650,16 +674,40 @@ int main(int argc, char** argv) {
         return EXIT_TIME_LIMIT_EXCEEDED;
     }
 
-    retval = vm.run(elapsed_time);
+    retval = vm.run((elapsed_time > 0));
     if (retval) {
-        // All failure to start error are unrecoverable by default
+        // All 'failure to start' errors are unrecoverable by default
         bool   unrecoverable_error = true;
+        bool   skip_cleanup = false;
         bool   dump_hypervisor_logs = false;
         string error_reason;
         char*  temp_reason = (char*)"";
         int    temp_delay = 300;
 
-        if (vm.is_logged_failure_vm_extensions_disabled()) {
+        if (VBOXWRAPPER_ERR_RECOVERABLE == retval) {
+            error_reason =
+                "    BOINC will be notified that it needs to clean up the environment.\n"
+                "    This is a temporary problem and so this job will be rescheduled for another time.\n";
+            unrecoverable_error = false;
+            temp_reason = (char*)"VM environment needed to be cleaned up.";
+        } else if (ERR_NOT_EXITED == retval) {
+            error_reason =
+                "   NOTE: VM was already running.\n"
+                "    BOINC will be notified that it needs to clean up the environment.\n"
+                "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
+            unrecoverable_error = false;
+            temp_reason = (char*)"VM environment needed to be cleaned up.";
+        } else if (ERR_INVALID_PARAM == retval) {
+            unrecoverable_error = false;
+            temp_reason = (char*)"Please upgrade BOINC to the latest version.";
+            temp_delay = 86400;
+        } else if (RPC_S_SERVER_UNAVAILABLE == retval) {
+            error_reason =
+                "    VboxSvc crashed while attempting to restore the current snapshot.  This is a critical\n"
+                "    operation and this job cannot be recovered.\n";
+            skip_cleanup = true;
+            retval = ERR_EXEC;
+        } else if (vm.is_logged_failure_vm_extensions_disabled()) {
             error_reason =
                 "   NOTE: BOINC has detected that your computer's processor supports hardware acceleration for\n"
                 "    virtual machines but the hypervisor failed to successfully launch with this feature enabled.\n"
@@ -688,13 +736,6 @@ int main(int argc, char** argv) {
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
             temp_reason = (char*)"VM Hypervisor was unable to allocate enough memory to start VM.";
-        } else if (ERR_NOT_EXITED == retval) {
-            error_reason =
-                "   NOTE: VM was already running.\n"
-                "    BOINC will be notified that it needs to clean up the environment.\n"
-                "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
-            unrecoverable_error = false;
-            temp_reason = (char*)"VM environment needed to be cleaned up.";
         } else if (vm.is_virtualbox_error_recoverable(retval)) {
             error_reason =
                 "   NOTE: VM session lock error encountered.\n"
@@ -702,17 +743,15 @@ int main(int argc, char** argv) {
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
             temp_reason = (char*)"VM environment needed to be cleaned up.";
-        } else if (ERR_INVALID_PARAM == retval) {
-            unrecoverable_error = false;
-            temp_reason = (char*)"Please upgrade BOINC to the latest version.";
-            temp_delay = 86400;
         } else {
             dump_hypervisor_logs = true;
         }
 
         if (unrecoverable_error) {
             // Attempt to cleanup the VM and exit.
-            vm.cleanup();
+            if (!skip_cleanup) {
+                vm.cleanup();
+            }
             write_checkpoint(elapsed_time, vm);
 
             if (error_reason.size()) {
@@ -726,7 +765,7 @@ int main(int argc, char** argv) {
             }
 
             if (dump_hypervisor_logs) {
-                vm.dumphypervisorlogs();
+                vm.dumphypervisorlogs(true);
             }
 
             boinc_finish(retval);
@@ -734,8 +773,7 @@ int main(int argc, char** argv) {
             // if the VM is already running notify BOINC about the process ID so it can
             // clean up the environment.  We should be safe to run after that.
             //
-            vm.get_vm_process_id(vm_pid);
-            if (vm_pid) {
+            if (vm.vm_pid) {
                 retval = boinc_report_app_status_aux(
                     elapsed_time,
                     checkpoint_cpu_time,
@@ -764,11 +802,62 @@ int main(int argc, char** argv) {
         }
     }
 
+    // Report the VM pid to BOINC so BOINC can deal with it when needed.
+    //
+    vboxwrapper_msg_prefix(buf, sizeof(buf));
+    fprintf(
+        stderr,
+        "%s Reporting VM Process ID to BOINC.\n",
+        buf
+    );
+    retval = boinc_report_app_status_aux(
+        elapsed_time,
+        checkpoint_cpu_time,
+        fraction_done,
+        vm.vm_pid,
+        bytes_sent,
+        bytes_received
+    );
+
+    // Wait for up to 5 minutes for the VM to switch states.  A system
+    // under load can take a while.  Since the poll function can wait for up
+    // to 60 seconds to execute a command we need to make this time based instead
+    // of iteration based.
+    timeout = dtime() + 300;
+    do {
+        vm.poll(false);
+        if (vm.online && !vm.restoring) break;
+        boinc_sleep(1.0);
+    } while (timeout >= dtime());
+
+    // Lower the VM process priority after it has successfully brought itself online.
+    vm.lower_vm_process_priority();
+
+    // Log our current state 
+    vm.poll(true);
+
+    // Did we timeout?
+    if (timeout <= dtime()) {
+        vboxwrapper_msg_prefix(buf, sizeof(buf));
+        fprintf(
+            stderr,
+            "%s NOTE: VM failed to enter an online state within the timeout period.\n"
+            "%s   This might be a temporary problem and so this job will be rescheduled for another time.\n",
+            buf,
+            buf
+        );
+        vm.reset_vm_process_priority();
+        vm.poweroff();
+        boinc_temporary_exit(300, "VM Hypervisor failed to enter an online state in a timely fashion.");
+    }
+
     set_floppy_image(aid, vm);
     set_port_forwarding_info(aid, vm);
     set_remote_desktop_info(aid, vm);
-    set_throttles(aid, vm);
     write_checkpoint(elapsed_time, vm);
+
+    // Force throttling on our first pass through the loop
+    boinc_status.reread_init_data_file = true;
 
     while (1) {
         // Begin stopwatch timer
@@ -790,11 +879,13 @@ int main(int argc, char** argv) {
         if (!vm.online) {
             // Is this a type of event we can recover from?
             if (vm.is_logged_failure_host_out_of_memory()) {
+                vboxwrapper_msg_prefix(buf, sizeof(buf));
                 fprintf(
                     stderr,
                     "%s NOTE: VirtualBox has failed to allocate enough memory to continue.\n"
-                    "    This might be a temporary problem and so this job will be rescheduled for another time.\n",
-                    vboxwrapper_msg_prefix(buf, sizeof(buf))
+                    "%s   This might be a temporary problem and so this job will be rescheduled for another time.\n",
+                    buf,
+                    buf
                 );
                 vm.reset_vm_process_priority();
                 vm.poweroff();
@@ -807,7 +898,7 @@ int main(int argc, char** argv) {
                         "%s VM Premature Shutdown Detected.\n",
                         vboxwrapper_msg_prefix(buf, sizeof(buf))
                     );
-                    vm.dumphypervisorlogs();
+                    vm.dumphypervisorlogs(true);
                     vm.get_vm_exit_code(vm_exit_code);
                     if (vm_exit_code) {
                         boinc_finish(vm_exit_code);
@@ -820,6 +911,7 @@ int main(int argc, char** argv) {
                         "%s Virtual machine exited.\n",
                         vboxwrapper_msg_prefix(buf, sizeof(buf))
                     );
+                    vm.dumphypervisorlogs(false);
                     boinc_finish(0);
                 }
             }
@@ -833,7 +925,7 @@ int main(int argc, char** argv) {
                     vboxwrapper_msg_prefix(buf, sizeof(buf))
                 );
                 vm.reset_vm_process_priority();
-                vm.dumphypervisorlogs();
+                vm.dumphypervisorlogs(true);
                 vm.poweroff();
                 boinc_finish(EXIT_OUT_OF_MEMORY);
             }
@@ -863,20 +955,6 @@ int main(int argc, char** argv) {
                     vm.poweroff();
                     boinc_temporary_exit(300, "VM job unmanageable, restarting later.");
                }
-            }
-
-            if (!vm_pid) {
-                vm.get_vm_process_id(vm_pid);
-                if (vm_pid) {
-                    fprintf(
-                        stderr,
-                        "%s Status Report: Detected vboxheadless.exe/virtualbox.exe. (PID = %d)\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf)),
-                        vm_pid
-                    );
-                    vm.lower_vm_process_priority();
-                    report_vm_pid = true;
-                }
             }
 
             if (boinc_time_to_checkpoint()) {
@@ -1052,17 +1130,16 @@ int main(int argc, char** argv) {
             }
         }
 
-        if (report_vm_pid || report_net_usage) {
+        if (report_net_usage) {
             retval = boinc_report_app_status_aux(
                 elapsed_time,
                 checkpoint_cpu_time,
                 fraction_done,
-                vm_pid,
+                vm.vm_pid,
                 bytes_sent,
                 bytes_received
             );
             if (!retval) {
-                report_vm_pid = false;
                 report_net_usage = false;
             }
         }

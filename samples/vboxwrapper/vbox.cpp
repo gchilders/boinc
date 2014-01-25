@@ -41,6 +41,7 @@ using std::string;
 
 #if defined(_MSC_VER)
 #define getcwd      _getcwd
+#define stricmp     _stricmp
 #endif
 
 #include "diagnostics.h"
@@ -57,11 +58,7 @@ using std::string;
 #include "vboxwrapper.h"
 #include "vbox.h"
 
-
-// Known VirtualBox error codes
-//
-#define VBOX_E_INVALID_OBJECT_STATE     0x80bb0007
-
+//#define NEW_EXECUTION_PATH 1
 
 VBOX_VM::VBOX_VM() {
     virtualbox_home_directory.clear();
@@ -239,6 +236,7 @@ void VBOX_VM::poll(bool log_state) {
     string output;
     string::iterator iter;
     string vmstate;
+    static string vmstate_old = "poweroff";
     size_t vmstate_start;
     size_t vmstate_end;
 
@@ -279,7 +277,7 @@ void VBOX_VM::poll(bool log_state) {
     command  = "showvminfo \"" + vm_name + "\" ";
     command += "--machinereadable ";
 
-    if (vbm_popen(command, output, "VM state", false, false) == 0) {
+    if (vbm_popen(command, output, "VM state", false, false, 45, false) == 0) {
         vmstate_start = output.find("VMState=\"");
         if (vmstate_start != string::npos) {
             vmstate_start += 9;
@@ -301,78 +299,36 @@ void VBOX_VM::poll(bool log_state) {
                 restoring = false;
                 suspended = false;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is running.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "paused") {
                 online = true;
                 saving = false;
                 restoring = false;
                 suspended = true;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is paused.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "starting") {
                 online = true;
                 saving = false;
                 restoring = false;
                 suspended = false;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is starting.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "stopping") {
                 online = true;
                 saving = false;
                 restoring = false;
                 suspended = false;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is stopping.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "saving") {
                 online = true;
                 saving = true;
                 restoring = false;
                 suspended = false;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is saving.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "restoring") {
                 online = true;
                 saving = false;
                 restoring = true;
                 suspended = false;
                 crashed = false;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM is restoring.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "livesnapshotting") {
                 online = true;
                 saving = false;
@@ -397,26 +353,12 @@ void VBOX_VM::poll(bool log_state) {
                 restoring = false;
                 suspended = false;
                 crashed = true;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM was aborted.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else if (vmstate == "gurumeditation") {
                 online = false;
                 saving = false;
                 restoring = false;
                 suspended = false;
                 crashed = true;
-                if (log_state) {
-                    fprintf(
-                        stderr,
-                        "%s VM has crashed.\n",
-                        vboxwrapper_msg_prefix(buf, sizeof(buf))
-                    );
-                }
             } else {
                 online = false;
                 saving = false;
@@ -432,6 +374,16 @@ void VBOX_VM::poll(bool log_state) {
                     );
                 }
             }
+            if (log_state && (vmstate_old != vmstate)) {
+                fprintf(
+                    stderr,
+                    "%s VM state change detected. (old = '%s', new = '%s')\n",
+                    vboxwrapper_msg_prefix(buf, sizeof(buf)),
+                    vmstate_old.c_str(),
+                    vmstate.c_str()
+                );
+                vmstate_old = vmstate;
+            }
         }
     }
 
@@ -439,30 +391,7 @@ void VBOX_VM::poll(bool log_state) {
     // Grab a snapshot of the latest log file.  Avoids multiple queries across several
     // functions.
     //
-
-    command  = "showvminfo \"" + vm_name + "\" ";
-    command += "--log 0 ";
-
-    if (vbm_popen(command, output, "get vm log", false, false, 10) == 0) {
-        // Keep only the last 16k if it is larger than that.
-        size_t size = output.size();
-        if (size > 16384) {
-            vm_log = output.substr(size - 16384, size);
-            if (vm_log.size() >= 16384) {
-                // Look for the next whole line of text.
-                iter = vm_log.begin();
-                while (iter != vm_log.end()) {
-                    if (*iter == '\n') {
-                        vm_log.erase(iter);
-                        break;
-                    }
-                    iter = vm_log.erase(iter);
-                }
-            }
-        } else {
-            vm_log = output;
-        }
-    }
+    get_vm_log(vm_log);
 }
 
 int VBOX_VM::create_vm() {
@@ -1092,19 +1021,25 @@ int VBOX_VM::deregister_stale_vm() {
         // Did the user delete the VM in VirtualBox and not the medium?  If so,
         // just remove the medium.
         command  = "closemedium disk \"" + virtual_machine_slot_directory + "/" + image_filename + "\" ";
-        vbm_popen(command, output, "remove virtual disk", false);
+        vbm_popen(command, output, "remove virtual disk", false, false);
         if (enable_floppyio) {
             command  = "closemedium floppy \"" + virtual_machine_slot_directory + "/" + floppy_image_filename + "\" ";
-            vbm_popen(command, output, "remove virtual floppy disk", false);
+            vbm_popen(command, output, "remove virtual floppy disk", false, false);
         }
     }
     return 0;
 }
 
-int VBOX_VM::run(double elapsed_time) {
+int VBOX_VM::run(bool restore_snapshot) {
     int retval;
 
-    if (!is_registered()) {
+    retval = is_registered();
+    if (ERR_TIMEOUT == retval) {
+
+        return VBOXWRAPPER_ERR_RECOVERABLE;
+
+    } else if (ERR_NOT_FOUND == retval) {
+
         if (is_vm_machine_configuration_available()) {
             retval = register_vm();
             if (retval) return retval;
@@ -1119,6 +1054,7 @@ int VBOX_VM::run(double elapsed_time) {
             retval = create_vm();
             if (retval) return retval;
         }
+
     }
 
     // The user has requested that we exit after registering the VM, so return an
@@ -1139,8 +1075,9 @@ int VBOX_VM::run(double elapsed_time) {
 
     // If our last checkpoint time is greater than 0, restore from the previously
     // saved snapshot
-    if (elapsed_time) {
-        restoresnapshot();
+    if (restore_snapshot) {
+        retval = restoresnapshot();
+        if (retval) return retval;
     }
 
     // Start the VM
@@ -1159,9 +1096,6 @@ void VBOX_VM::cleanup() {
 }
 
 int VBOX_VM::start() {
-    string command;
-    string output;
-    double timeout;
     char buf[256];
     int retval;
 
@@ -1170,41 +1104,46 @@ int VBOX_VM::start() {
         "%s Starting VM.\n",
         vboxwrapper_msg_prefix(buf, sizeof(buf))
     );
+
+#ifdef NEW_EXECUTION_PATH
+    retval = launch_vboxvm();
+#else
+    string command;
+    string output;
+    int timeout = 0;
+
     command = "startvm \"" + vm_name + "\"";
     if (headless) {
         command += " --type headless";
     }
     retval = vbm_popen(command, output, "start VM", true, false, 0);
 
-    // Wait for up to 5 minutes for the VM to switch states.  A system
-    // under load can take a while.  Since the poll function can wait for up
-    // to 45 seconds to execute a command we need to make this time based instead
-    // of iteration based.
-    if (!retval) {
-        timeout = dtime() + 300;
-        do {
-            poll(false);
-            if (online && !restoring) break;
-            boinc_sleep(1.0);
-        } while (timeout >= dtime());
-        if (timeout <= dtime()) {
-            poll(true);
+    // Get the VM pid as soon as possible
+    while (!retval) {
+        boinc_sleep(1.0);
+        timeout += 1;
+
+        get_vm_process_id();
+
+#ifdef _WIN32
+        if (vm_pid && vm_pid_handle) break;
+#else
+        if (vm_pid) break;
+#endif
+
+        if (timeout > 45) {
             retval = ERR_TIMEOUT;
+            break;
         }
     }
+#endif
 
-    if (online) {
+    if (BOINC_SUCCESS == retval) {
         fprintf(
             stderr,
-            "%s Successfully started VM.\n",
-            vboxwrapper_msg_prefix(buf, sizeof(buf))
-        );
-        retval = BOINC_SUCCESS;
-    } else if (ERR_TIMEOUT == retval) {
-        fprintf(
-            stderr,
-            "%s VM did not start within 5 minutes.\n",
-            vboxwrapper_msg_prefix(buf, sizeof(buf))
+            "%s Successfully started VM. (PID = '%d')\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf)),
+            vm_pid
         );
     } else {
         fprintf(
@@ -1212,7 +1151,6 @@ int VBOX_VM::start() {
             "%s VM failed to start.\n",
             vboxwrapper_msg_prefix(buf, sizeof(buf))
         );
-        retval = ERR_EXEC;
     }
 
     return retval;
@@ -1398,6 +1336,7 @@ int VBOX_VM::createsnapshot(double elapsed_time) {
 int VBOX_VM::cleanupsnapshots(bool delete_active) {
     string command;
     string output;
+    string snapshotlist;
     string line;
     string uuid;
     size_t eol_pos;
@@ -1414,7 +1353,7 @@ int VBOX_VM::cleanupsnapshots(bool delete_active) {
 
     // Only log the error if we are not attempting to deregister the VM.
     // delete_active is only set to true when we are deregistering the VM.
-    retval = vbm_popen(command, output, "enumerate snapshot(s)", !delete_active, false, 0);
+    retval = vbm_popen(command, snapshotlist, "enumerate snapshot(s)", !delete_active, false, 0);
     if (retval) return retval;
 
     // Output should look a little like this:
@@ -1422,16 +1361,29 @@ int VBOX_VM::cleanupsnapshots(bool delete_active) {
     //      Name: Snapshot 3 (UUID: 92fa8b35-873a-4197-9d54-7b6b746b2c58)
     //         Name: Snapshot 4 (UUID: c049023a-5132-45d5-987d-a9cfadb09664) *
     //
-    eol_prev_pos = 0;
-    eol_pos = output.find("\n");
+    // Traverse the list from newest to oldest.  Otherwise we end up with an error:
+    //   VBoxManage.exe: error: Snapshot operation failed
+    //   VBoxManage.exe: error: Hard disk 'C:\ProgramData\BOINC\slots\23\vm_image.vdi' has 
+    //     more than one child hard disk (2)
+    //
+
+    // Prepend a space and line feed to the output since we are going to traverse it backwards
+    snapshotlist = " \n" + snapshotlist;
+
+    eol_prev_pos = snapshotlist.rfind("\n");
+    eol_pos = snapshotlist.rfind("\n", eol_prev_pos - 1);
     while (eol_pos != string::npos) {
-        line = output.substr(eol_prev_pos, eol_pos - eol_prev_pos);
+        line = snapshotlist.substr(eol_pos, eol_prev_pos - eol_pos);
+
+        // Find the previous line to use in the next iteration
+        eol_prev_pos = eol_pos;
+        eol_pos = snapshotlist.rfind("\n", eol_prev_pos - 1);
 
         // This VM does not yet have any snapshots
         if (line.find("does not have any snapshots") != string::npos) break;
 
         // The * signifies that it is the active snapshot and one we do not want to delete
-        if (!delete_active && (line.find("*") != string::npos)) break;
+        if (!delete_active && (line.rfind("*") != string::npos)) continue;
 
         uuid_start = line.find("(UUID: ");
         if (uuid_start != string::npos) {
@@ -1457,9 +1409,6 @@ int VBOX_VM::cleanupsnapshots(bool delete_active) {
             retval = vbm_popen(command, output, "delete stale snapshot", !delete_active, false, 0);
             if (retval) return retval;
         }
-
-        eol_prev_pos = eol_pos + 1;
-        eol_pos = output.find("\n", eol_prev_pos);
     }
 
     return 0;
@@ -1491,37 +1440,126 @@ int VBOX_VM::restoresnapshot() {
     return retval;
 }
 
-void VBOX_VM::dumphypervisorlogs() {
-    string system_log;
+void VBOX_VM::dumphypervisorlogs(bool include_error_logs) {
+    string local_system_log;
+    string local_vm_log;
+    string local_guest_log;
+    string prefiltered_guest_log;
+    string filtered_guest_log;
+    string line;
+    string::iterator iter;
+    size_t eol_pos;
+    size_t eol_prev_pos;
     unsigned long vm_exit_code = 0;
 
-    get_system_log(system_log);
+    get_system_log(local_system_log);
+    get_vm_log(local_vm_log);
+    get_vm_log(prefiltered_guest_log, false);
     get_vm_exit_code(vm_exit_code);
 
-    if (vm_exit_code) {
-        fprintf(
-            stderr,
-            "    Hypervisor System Log:\n\n"
-            "%s\n"
-            "    VM Execution Log:\n\n"
-            "%s\n"
-            "    VM Exit Code: %d (0x%x)\n\n",
-            system_log.c_str(),
-            vm_log.c_str(),
-            (unsigned int)vm_exit_code,
-            (unsigned int)vm_exit_code
-        );
+    // Filter the guest log messages which are generated by applications running within
+    // the guest VM from other VM log messages.
+    eol_prev_pos = 0;
+    eol_pos = prefiltered_guest_log.find("\n");
+    while (eol_pos != string::npos) {
+        line = prefiltered_guest_log.substr(eol_prev_pos, eol_pos - eol_prev_pos);
+
+        if (line.find("Guest Log:") != string::npos) {
+            filtered_guest_log += line + "\n";
+        }
+
+        eol_prev_pos = eol_pos + 1;
+        eol_pos = prefiltered_guest_log.find("\n", eol_prev_pos);
+    }
+
+    // Take the last 16k
+    if (filtered_guest_log.size() >= 16384) {
+        local_guest_log = filtered_guest_log.substr(filtered_guest_log.size() - 16384, 16384);
+
+        // Look for the next whole line of text.
+        iter = local_guest_log.begin();
+        while (iter != local_guest_log.end()) {
+            if (*iter == '\n') {
+                local_guest_log.erase(iter);
+                break;
+            }
+            iter = local_guest_log.erase(iter);
+        }
+
     } else {
+        local_guest_log = filtered_guest_log;
+    }
+
+    sanitize_output(local_guest_log);
+
+    if (include_error_logs) {
         fprintf(
             stderr,
+            "\n"
             "    Hypervisor System Log:\n\n"
             "%s\n"
             "    VM Execution Log:\n\n"
             "%s\n",
-            system_log.c_str(),
-            vm_log.c_str()
+            local_system_log.c_str(),
+            local_vm_log.c_str()
         );
     }
+
+    fprintf(
+        stderr,
+        "    VM Guest Log:\n\n"
+        "%s\n",
+        local_guest_log.c_str()
+    );
+
+    if (vm_exit_code) {
+        fprintf(
+            stderr,
+            "    VM Exit Code: %d (0x%x)\n\n",
+            (unsigned int)vm_exit_code,
+            (unsigned int)vm_exit_code
+        );
+    }
+}
+
+int VBOX_VM::is_registered() {
+    string command;
+    string output;
+    string needle;
+    char buf[256];
+    int retval;
+
+    command  = "showvminfo \"" + vm_master_name + "\" ";
+    command += "--machinereadable ";
+
+    // Look for this string in the output
+    //
+    needle = "name=\"" + vm_master_name + "\"";
+
+    retval = vbm_popen(command, output, "registration detection", false, false);
+
+    // Handle explicit cases first
+    if (ERR_TIMEOUT == retval) {
+        return ERR_TIMEOUT;
+    }
+    if (output.find("VBOX_E_OBJECT_NOT_FOUND") != string::npos) {
+        return ERR_NOT_FOUND;
+    }
+    if (!retval && output.find(needle.c_str()) != string::npos) {
+        return BOINC_SUCCESS;
+    }
+
+    // Something unexpected has happened.  Dump diagnostic output.
+    fprintf(
+        stderr,
+        "%s Error in registration for VM: %d\nArguments:\n%s\nOutput:\n%s\n",
+        vboxwrapper_msg_prefix(buf, sizeof(buf)),
+        retval,
+        command.c_str(),
+        output.c_str()
+    );
+
+    return retval;
 }
 
 // Attempt to detect any condition that would prevent VirtualBox from running a VM properly, like:
@@ -1579,44 +1617,6 @@ bool VBOX_VM::is_system_ready(std::string& message) {
     }
 
     return rc;
-}
-
-bool VBOX_VM::is_registered() {
-    string command;
-    string output;
-    string needle;
-    char buf[256];
-    int retval;
-    bool rc = false;
-
-    command  = "showvminfo \"" + vm_master_name + "\" ";
-    command += "--machinereadable ";
-
-    // Look for this string in the output
-    //
-    needle = "name=\"" + vm_master_name + "\"";
-
-    retval = vbm_popen(command, output, "registration", false, false);
-
-    // Handle explicit cases first
-    if (output.find(needle.c_str()) != string::npos) {
-        return true;
-    }
-    if (output.find("VBOX_E_OBJECT_NOT_FOUND") != string::npos) {
-        return false;
-    }
-
-    // Something unexpected has happened.  Dump diagnostic output.
-    fprintf(
-        stderr,
-        "%s Error in registration for VM: %d\nArguments:\n%s\nOutput:\n%s\n",
-        vboxwrapper_msg_prefix(buf, sizeof(buf)),
-        retval,
-        command.c_str(),
-        output.c_str()
-    );
-
-    return false;
 }
 
 bool VBOX_VM::is_vm_machine_configuration_available() {
@@ -1862,18 +1862,14 @@ int VBOX_VM::get_vm_network_bytes_received(double& received) {
     return 0;
 }
 
-int VBOX_VM::get_vm_process_id(int& process_id) {
-    string command;
+int VBOX_VM::get_vm_process_id() {
     string output;
     string pid;
     size_t pid_start;
     size_t pid_end;
     int retval;
 
-    command  = "showvminfo \"" + vm_name + "\" ";
-    command += "--log 0 ";
-
-    retval = vbm_popen(command, output, "get process ID");
+    retval = get_vm_log(output, false);
     if (retval) return retval;
 
     // Output should look like this:
@@ -1900,7 +1896,16 @@ int VBOX_VM::get_vm_process_id(int& process_id) {
         return ERR_NOT_FOUND;
     }
 
-    process_id = atol(pid.c_str());
+    vm_pid = atol(pid.c_str());
+
+#ifdef _WIN32
+    vm_pid_handle = OpenProcess(
+        PROCESS_QUERY_INFORMATION | PROCESS_SET_INFORMATION,
+        FALSE,
+        vm_pid
+    );
+#endif
+
     return 0;
 }
 
@@ -1912,44 +1917,6 @@ int VBOX_VM::get_vm_exit_code(unsigned long& exit_code) {
 #else
     GetExitCodeProcess(vm_pid_handle, &exit_code);
 #endif
-    return 0;
-}
-
-int VBOX_VM::get_vboxsvc_process_id(int& process_id) {
-    string output;
-    string pid;
-    size_t pid_start;
-    size_t pid_end;
-    int retval;
-
-    retval = get_system_log(output, false);
-    if (retval) return retval;
-
-    // Output should look like this:
-    // VirtualBox COM Server 4.2.16 r86992 win.amd64 (Jul  4 2013 15:51:44) release log
-    // 00:00:00.000000 main     Log opened 2013-12-02T18:21:12.011052800Z
-    // 00:00:00.000000 main     OS Product: Windows 7
-    // 00:00:00.000000 main     OS Release: 6.1.7601
-    // 00:00:00.000000 main     OS Service Pack: 1
-    // 00:00:00.031000 main     DMI Product Name: To Be Filled By O.E.M.
-    // 00:00:00.046000 main     DMI Product Version: To Be Filled By O.E.M.
-    // 00:00:00.046000 main     Host RAM: 16311MB total, 9435MB available
-    // 00:00:00.046000 main     Executable: C:\Program Files\Oracle\VirtualBox\VBoxSVC.exe
-    // 00:00:00.046000 main     Process ID: 8992
-    // 00:00:00.046000 main     Package type: WINDOWS_64BITS_GENERIC
-    //
-    pid_start = output.find("Process ID: ");
-    if (pid_start == string::npos) {
-        return ERR_NOT_FOUND;
-    }
-    pid_start += 12;
-    pid_end = output.find("\n", pid_start);
-    pid = output.substr(pid_start, pid_end - pid_start);
-    if (pid.size() <= 0) {
-        return ERR_NOT_FOUND;
-    }
-
-    process_id = atol(pid.c_str());
     return 0;
 }
 
@@ -2030,7 +1997,6 @@ int VBOX_VM::get_system_log(string& log, bool tail_only) {
     string virtualbox_system_log_src;
     string virtualbox_system_log_dst;
     string::iterator iter;
-    char buf[256];
     int retval = BOINC_SUCCESS;
 
     // Where should we copy temp files to?
@@ -2045,23 +2011,17 @@ int VBOX_VM::get_system_log(string& log, bool tail_only) {
         // copy of the log file.
         boinc_copy(virtualbox_system_log_src.c_str(), virtualbox_system_log_dst.c_str());
 
-        // Keep only the last 16k if it is larger than that.
-        read_file_string(virtualbox_system_log_dst.c_str(), log, 16384, true);
-
-#ifdef _WIN32
-        // Remove \r from the log spew
-        iter = log.begin();
-        while (iter != log.end()) {
-            if (*iter == '\r') {
-                iter = log.erase(iter);
-            } else {
-                ++iter;
-            }
+        if (tail_only) {
+            // Keep only the last 8k if it is larger than that.
+            read_file_string(virtualbox_system_log_dst.c_str(), log, 8192, true);
+        } else {
+            read_file_string(virtualbox_system_log_dst.c_str(), log);
         }
-#endif
+
+        sanitize_output(log);
 
         if (tail_only) {
-            if (log.size() >= 16384) {
+            if (log.size() >= 8000) {
                 // Look for the next whole line of text.
                 iter = log.begin();
                 while (iter != log.end()) {
@@ -2074,12 +2034,55 @@ int VBOX_VM::get_system_log(string& log, bool tail_only) {
             }
         }
     } else {
-        fprintf(
-            stderr,
-            "%s Could not find the Hypervisor System Log at '%s'.\n",
-            vboxwrapper_msg_prefix(buf, sizeof(buf)),
-            virtualbox_system_log_src.c_str()
-        );
+        retval = ERR_NOT_FOUND;
+    }
+
+    return retval;
+}
+
+int VBOX_VM::get_vm_log(string& log, bool tail_only) {
+    string slot_directory;
+    string virtualbox_vm_log_src;
+    string virtualbox_vm_log_dst;
+    string::iterator iter;
+    int retval = BOINC_SUCCESS;
+
+    // Where should we copy temp files to?
+    get_slot_directory(slot_directory);
+
+    // Locate and read log file
+    virtualbox_vm_log_src = vm_master_name + "/Logs/VBox.log";
+    virtualbox_vm_log_dst = slot_directory + "/VBox.log";
+
+    if (boinc_file_exists(virtualbox_vm_log_src.c_str())) {
+        // Skip having to deal with various forms of file locks by just making a temp
+        // copy of the log file.
+        boinc_copy(virtualbox_vm_log_src.c_str(), virtualbox_vm_log_dst.c_str());
+
+        if (tail_only) {
+            // Keep only the last 8k if it is larger than that.
+            read_file_string(virtualbox_vm_log_dst.c_str(), log, 8192, true);
+        } else {
+            read_file_string(virtualbox_vm_log_dst.c_str(), log);
+        }
+
+        sanitize_output(log);
+
+        if (tail_only) {
+            if (log.size() >= 8000) {
+                // Look for the next whole line of text.
+                iter = log.begin();
+                while (iter != log.end()) {
+                    if (*iter == '\n') {
+                        log.erase(iter);
+                        break;
+                    }
+                    iter = log.erase(iter);
+                }
+            }
+        }
+
+    } else {
         retval = ERR_NOT_FOUND;
     }
 
@@ -2236,25 +2239,47 @@ int VBOX_VM::write_floppy(std::string& data) {
 }
 
 void VBOX_VM::lower_vm_process_priority() {
-#ifndef _WIN32
-    if (vm_pid) {
-        setpriority(PRIO_PROCESS, vm_pid, PROCESS_IDLE_PRIORITY);
-    }
-#else
+    char buf[256];
+#ifdef _WIN32
     if (vm_pid_handle) {
         SetPriorityClass(vm_pid_handle, IDLE_PRIORITY_CLASS);
+        fprintf(
+            stderr,
+            "%s Lowering VM Process priority.\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf))
+        );
+    }
+#else
+    if (vm_pid) {
+        setpriority(PRIO_PROCESS, vm_pid, PROCESS_IDLE_PRIORITY);
+        fprintf(
+            stderr,
+            "%s Lowering VM Process priority.\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf))
+        );
     }
 #endif
 }
 
 void VBOX_VM::reset_vm_process_priority() {
-#ifndef _WIN32
-    if (vm_pid) {
-        setpriority(PRIO_PROCESS, vm_pid, PROCESS_MEDIUM_PRIORITY);
-    }
-#else
+    char buf[256];
+#ifdef _WIN32
     if (vm_pid_handle) {
         SetPriorityClass(vm_pid_handle, NORMAL_PRIORITY_CLASS);
+        fprintf(
+            stderr,
+            "%s Restoring VM Process priority.\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf))
+        );
+    }
+#else
+    if (vm_pid) {
+        setpriority(PRIO_PROCESS, vm_pid, PROCESS_MEDIUM_PRIORITY);
+        fprintf(
+            stderr,
+            "%s Restoring VM Process priority.\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf))
+        );
     }
 #endif
 }
@@ -2264,16 +2289,21 @@ void VBOX_VM::reset_vm_process_priority() {
 // to VBOX_USER_HOME which is required for running in the BOINC account-based
 // sandbox on Windows.
 int VBOX_VM::launch_vboxsvc() {
+    APP_INIT_DATA aid;
+    PROC_MAP pm;
+    PROCINFO p;
+    string command;
     int retval = ERR_EXEC;
 
 #ifdef _WIN32
+    char buf[256];
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
-    APP_INIT_DATA aid;
-    string command;
-    char buf[256];
-    int pid = 0;
+    int pidVboxSvc = 0;
     HANDLE hVboxSvc = NULL;
+
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
 
     boinc_get_init_data_p(&aid);
 
@@ -2283,30 +2313,42 @@ int VBOX_VM::launch_vboxsvc() {
 
             if (vboxsvc_pid_handle) CloseHandle(vboxsvc_pid_handle);
 
-            get_vboxsvc_process_id(pid);
-            if (pid) hVboxSvc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, pid);
-            if (pid && hVboxSvc) {
+            procinfo_setup(pm);
+            for (PROC_MAP::iterator i = pm.begin(); i != pm.end(); ++i) {
+                p = i->second;
+
+                // We are only looking for vboxsvc
+                if (0 != stricmp(p.command, "vboxsvc.exe")) continue;
+
+                // Store process id for later use
+                pidVboxSvc = p.id;
+
+                // Is this the vboxsvc for the current user?
+                // Non-service install it would be the current username
+                // Service install it would be boinc_project
+                hVboxSvc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, p.id);
+                if (hVboxSvc) break;
+            }
+            
+            if (pidVboxSvc && hVboxSvc) {
                 
                 fprintf(
                     stderr,
-                    "%s Status Report: Detected vboxsvc.exe. (PID = %d)\n",
+                    "%s Status Report: Detected vboxsvc.exe. (PID = '%d')\n",
                     vboxwrapper_msg_prefix(buf, sizeof(buf)),
-                    pid
+                    pidVboxSvc
                 );
-                vboxsvc_pid = pid;
+                vboxsvc_pid = pidVboxSvc;
                 vboxsvc_pid_handle = hVboxSvc;
                 retval = BOINC_SUCCESS;
 
             } else {
 
-                memset(&si, 0, sizeof(si));
-                memset(&pi, 0, sizeof(pi));
-
                 si.cb = sizeof(STARTUPINFO);
                 si.dwFlags |= STARTF_FORCEOFFFEEDBACK | STARTF_USESHOWWINDOW;
                 si.wShowWindow = SW_HIDE;
 
-                command = "\"" + virtualbox_install_directory + "\\VBoxSVC.exe\" --logrotate 1";
+                command = "\"VBoxSVC.exe\" --logrotate 1";
 
                 CreateProcess(NULL, (LPTSTR)command.c_str(), NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
 
@@ -2314,7 +2356,7 @@ int VBOX_VM::launch_vboxsvc() {
                 if (pi.hProcess) {
                     fprintf(
                         stderr,
-                        "%s Status Report: Launching vboxsvc.exe. (PID = %d)\n",
+                        "%s Status Report: Launching vboxsvc.exe. (PID = '%d')\n",
                         vboxwrapper_msg_prefix(buf, sizeof(buf)),
                         pi.dwProcessId
                     );
@@ -2331,6 +2373,7 @@ int VBOX_VM::launch_vboxsvc() {
                     );
                 }
 
+                vbm_trace(command, std::string(""), retval);
             }
         }
     }
@@ -2339,17 +2382,220 @@ int VBOX_VM::launch_vboxsvc() {
     return retval;
 }
 
+// Launch the VM.
+int VBOX_VM::launch_vboxvm() {
+    char buf[256];
+    char error_msg[256];
+    char cmdline[1024];
+    char* argv[5];
+    int argc;
+    std::string output;
+    int retval = ERR_EXEC;
+
+    // Construct the command line parameters
+    //
+    if (headless) {
+        argv[0] = const_cast<char*>("vboxheadless.exe");
+    } else {
+        argv[0] = const_cast<char*>("virtualbox.exe");
+    }
+    argv[1] = const_cast<char*>("--startvm");
+    argv[2] = const_cast<char*>(vm_name.c_str());
+    if (headless) {
+        argv[3] = const_cast<char*>("--vrde config");
+    } else {
+        argv[3] = const_cast<char*>("--no-startvm-errormsgbox");
+    }
+    argv[4] = NULL;
+    argc = 4;
+
+    strcpy(cmdline, "");
+    for (int i=0; i<argc; i++) {
+        strcat(cmdline, argv[i]);
+        if (i<argc-1) {
+            strcat(cmdline, " ");
+        }
+    }
+
+#ifdef _WIN32
+    STARTUPINFO si;
+    PROCESS_INFORMATION pi;
+    SECURITY_ATTRIBUTES sa;
+    SECURITY_DESCRIPTOR sd;
+    HANDLE hReadPipe = NULL, hWritePipe = NULL;
+    void* pBuf = NULL;
+    DWORD dwCount = 0;
+    unsigned long ulExitCode = 0;
+    unsigned long ulExitTimeout = 0;
+
+    memset(&si, 0, sizeof(si));
+    memset(&pi, 0, sizeof(pi));
+    memset(&sa, 0, sizeof(sa));
+    memset(&sd, 0, sizeof(sd));
+
+    InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION);
+    SetSecurityDescriptorDacl(&sd, true, NULL, false);
+
+    sa.nLength = sizeof(SECURITY_ATTRIBUTES);
+    sa.bInheritHandle = TRUE;
+    sa.lpSecurityDescriptor = &sd;
+
+    if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, NULL)) {
+        fprintf(
+            stderr,
+            "%s CreatePipe failed! (%d).\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf)),
+            GetLastError()
+        );
+        goto CLEANUP;
+    }
+    SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
+
+    si.cb = sizeof(STARTUPINFO);
+    si.dwFlags |= STARTF_FORCEOFFFEEDBACK | STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+    si.wShowWindow = SW_HIDE;
+    si.hStdOutput = hWritePipe;
+    si.hStdError = hWritePipe;
+    si.hStdInput = NULL;
+
+    // Execute command
+    if (!CreateProcess(
+        NULL, 
+        cmdline,
+        NULL,
+        NULL,
+        TRUE,
+        CREATE_NO_WINDOW,
+        NULL,
+        NULL,
+        &si,
+        &pi
+    )) {
+        vboxwrapper_msg_prefix(buf, sizeof(buf)),
+        fprintf(
+            stderr,
+            "%s Status Report: Launching virtualbox.exe/vboxheadless.exe failed!.\n"
+            "%s         Error: %s (%d)\n",
+            buf,
+            buf,
+            windows_format_error_string(GetLastError(), error_msg, sizeof(error_msg)),
+            GetLastError()
+        );
+        goto CLEANUP;
+    } 
+
+    while(1) {
+        GetExitCodeProcess(pi.hProcess, &ulExitCode);
+
+        // Copy stdout/stderr to output buffer, handle in the loop so that we can
+        // copy the pipe as it is populated and prevent the child process from blocking
+        // in case the output is bigger than pipe buffer.
+        PeekNamedPipe(hReadPipe, NULL, NULL, NULL, &dwCount, NULL);
+        if (dwCount) {
+            pBuf = malloc(dwCount+1);
+            memset(pBuf, 0, dwCount+1);
+
+            if (ReadFile(hReadPipe, pBuf, dwCount, &dwCount, NULL)) {
+                output += (char*)pBuf;
+            }
+
+            free(pBuf);
+        }
+
+        if ((ulExitCode != STILL_ACTIVE) || (ulExitTimeout >= 1000)) break;
+
+        Sleep(250);
+        ulExitTimeout += 250;
+    }
+
+    if (ulExitCode != STILL_ACTIVE) {
+        sanitize_output(output);
+        vboxwrapper_msg_prefix(buf, sizeof(buf)),
+        fprintf(
+            stderr,
+            "%s Status Report: Virtualbox.exe/Vboxheadless.exe exited prematurely!.\n"
+            "%s        Exit Code: %d\n"
+            "%s        Output:\n"
+            "%s\n",
+            buf,
+            buf,
+            ulExitCode,
+            buf,
+            output.c_str()
+        );
+    }
+
+    if (pi.hProcess && (ulExitCode == STILL_ACTIVE)) {
+        vm_pid = pi.dwProcessId;
+        vm_pid_handle = pi.hProcess;
+        retval = BOINC_SUCCESS;
+    }
+
+CLEANUP:
+    if (pi.hThread) CloseHandle(pi.hThread);
+    if (hReadPipe) CloseHandle(hReadPipe);
+    if (hWritePipe) CloseHandle(hWritePipe);
+
+#else
+    int pid = fork();
+    if (-1 == pid) {
+        output = strerror(errno);
+        fprintf(
+            stderr,
+            "%s Status Report: Launching virtualbox.exe/vboxheadless.exe failed!.\n"
+            "           Error: %s",
+            vboxwrapper_msg_prefix(buf, sizeof(buf)),
+            output.c_str()
+        );
+        retval = ERR_FORK;
+    } else if (0 == pid) {
+        if (-1 == execv(argv[0], argv)) {
+            _exit(errno);
+        }
+    } else {
+        vm_pid = pid;
+        retval = BOINC_SUCCESS;
+    }
+#endif
+
+    vbm_trace(std::string(cmdline), output, retval);
+
+    return retval;
+}
+
+void VBOX_VM::sanitize_output(std::string& output) {
+#ifdef _WIN32
+    // Remove \r from the log spew
+    string::iterator iter = output.begin();
+    while (iter != output.end()) {
+        if (*iter == '\r') {
+            iter = output.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+#endif
+}
+
 // If there are errors we can recover from, process them here.
 //
-int VBOX_VM::vbm_popen(string& arguments, string& output, const char* item, bool log_error, bool retry_failures, unsigned int timeout) {
+int VBOX_VM::vbm_popen(string& command, string& output, const char* item, bool log_error, bool retry_failures, unsigned int timeout, bool log_trace) {
     int retval = 0;
     int retry_count = 0;
     double sleep_interval = 1.0;
     char buf[256];
     string retry_notes;
 
+    // Initialize command line
+    command = "VBoxManage -q " + command;
+
     do {
-        retval = vbm_popen_raw(arguments, output, timeout);
+        retval = vbm_popen_raw(command, output, timeout);
+
+        if (log_trace) {
+            vbm_trace(command, output, retval);
+        }
+
         if (retval) {
 
             // VirtualBox designed the concept of sessions to prevent multiple applications using
@@ -2396,32 +2642,22 @@ int VBOX_VM::vbm_popen(string& arguments, string& output, const char* item, bool
     }
     while (retval);
 
-#ifdef _WIN32
-    // Remove \r from the log spew
-    string::iterator iter = output.begin();
-    while (iter != output.end()) {
-        if (*iter == '\r') {
-            iter = output.erase(iter);
-        } else {
-            ++iter;
-        }
-    }
-#endif
-
     // Add all relivent notes to the output string and log errors
     //
     if (retval && log_error) {
+        sanitize_output(output);
+
         if (!retry_notes.empty()) {
             output += "\nNotes:\n\n" + retry_notes;
         }
 
         fprintf(
             stderr,
-            "%s Error in %s for VM: %d\nArguments:\n%s\nOutput:\n%s\n",
+            "%s Error in %s for VM: %d\nCommand:\n%s\nOutput:\n%s\n",
             vboxwrapper_msg_prefix(buf, sizeof(buf)),
             item,
             retval,
-            arguments.c_str(),
+            command.c_str(),
             output.c_str()
         );
     }
@@ -2431,9 +2667,8 @@ int VBOX_VM::vbm_popen(string& arguments, string& output, const char* item, bool
 
 // Execute the vbox manage application and copy the output to the buffer.
 //
-int VBOX_VM::vbm_popen_raw(string& arguments, string& output, unsigned int timeout) {
+int VBOX_VM::vbm_popen_raw(string& command, string& output, unsigned int timeout) {
     char buf[256];
-    string command;
     size_t errcode_start;
     size_t errcode_end;
     string errcode;
@@ -2441,9 +2676,6 @@ int VBOX_VM::vbm_popen_raw(string& arguments, string& output, unsigned int timeo
 
     // Launch vboxsvc in case it was shutdown for being idle
     launch_vboxsvc();
-
-    // Initialize command line
-    command = "VBoxManage -q " + arguments;
 
     // Reset output buffer
     output.clear();
@@ -2497,7 +2729,8 @@ int VBOX_VM::vbm_popen_raw(string& arguments, string& output, unsigned int timeo
         NULL,
         NULL,
         TRUE,
-        CREATE_NO_WINDOW, NULL,
+        CREATE_NO_WINDOW,
+        NULL,
         NULL,
         &si,
         &pi
@@ -2566,6 +2799,13 @@ CLEANUP:
             sscanf(errcode.c_str(), "%x", &retval);
         }
 
+        // Is this a RPC_S_SERVER_UNAVAILABLE returned by vboxsvc?
+        if (!retval) {
+            if (output.find("RPC_S_SERVER_UNAVAILABLE") != string::npos) {
+                retval = RPC_S_SERVER_UNAVAILABLE;
+            }
+        }
+
         // If something couldn't be found, just return ERR_FOPEN
         if (!retval) retval = ERR_FOPEN;
 
@@ -2612,3 +2852,30 @@ CLEANUP:
 
     return retval;
 }
+
+void VBOX_VM::vbm_replay(std::string& command) {
+    FILE* f = fopen(REPLAYLOG_FILENAME, "a");
+    if (f) {
+        fprintf(f, "%s\n", command.c_str());
+        fclose(f);
+    }
+}
+
+void VBOX_VM::vbm_trace(std::string& command, std::string& output, int retval) {
+    vbm_replay(command);
+
+    char buf[256];
+    FILE* f = fopen(TRACELOG_FILENAME, "a");
+    if (f) {
+        fprintf(
+            f,
+            "%s\nCommand: %s\nExit Code: %d\nOutput:\n%s\n",
+            vboxwrapper_msg_prefix(buf, sizeof(buf)),
+            command.c_str(),
+            retval,
+            output.c_str()
+        );
+        fclose(f);
+    }
+}
+

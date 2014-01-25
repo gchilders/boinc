@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2013-10-18 00:00-0700\n"
-"PO-Revision-Date: 2013-11-13 20:16+0000\n"
+"PO-Revision-Date: 2014-01-11 08:59+0000\n"
 "Last-Translator: Christian <djangofett@gmx.net>\n"
 "Language-Team: de <LL@li.org>\n"
 "Language: de\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Pootle 2.5.0\n"
 "Generated-By: Babel 1.0dev\n"
-"X-POOTLE-MTIME: 1384373799.0\n"
+"X-POOTLE-MTIME: 1389430788.0\n"
 
 #. app global
 msgctxt "app_name"
@@ -342,6 +342,7 @@ msgid "Synchronize"
 msgstr "Synchronisieren"
 
 #. main activity
+#, fuzzy
 msgctxt "main_noproject_warning"
 msgid "Tab here to choose a project."
 msgstr "Hier tippen um ein Projekt auszuwählen."
@@ -1126,3 +1127,13 @@ msgid ""
 msgstr ""
 "© 2003–2013 Universität von Kalifornien, Berkeley.\n"
 "Alle Rechte vorbehalten."
+
+#, fuzzy
+#~ msgctxt "main_noproject_warning"
+#~ msgid "Tap here to choose a project."
+#~ msgstr "Hier tippen um ein Projekt auszuwählen."
+
+#, fuzzy
+#~ msgctxt "prefs_power_source_usb"
+#~ msgid "USB connection"
+#~ msgstr "Keine Internetverbindung"

@@ -82,6 +82,17 @@ function read_input_template($app) {
     return simplexml_load_file($path);
 }
 
+function check_max_jobs_in_progress($r, $user_submit) {
+    if (!$user_submit->max_jobs_in_progress) return;
+    $query = "select count(*) as total from DBNAME.result, DBNAME.batch where batch.user_id=$userid and result.batch = batch.id and result.server_state<".RESULT_SERVER_STATE_OVER;
+    $db = BoincDb::get();
+    $n = $db->get_int($query);
+    if ($n === false) return;
+    if ($n + count($r->batch->job) > $user_submit->max_jobs_in_progress) {
+        xml_error(-1, "BOINC server: limit on jobs in progress exceeded");
+    }
+}
+
 function estimate_batch($r) {
     $app = get_app((string)($r->batch->app_name));
     list($user, $user_submit) = authenticate_user($r, $app);
@@ -379,9 +390,18 @@ function query_batch2($r) {
         $batches[] = $batch;
     }
 
+    $min_mod_time = (double)$r->min_mod_time;
+    if ($min_mod_time) {
+        $mod_time_clause = "and mod_time > FROM_UNIXTIME($min_mod_time)";
+    } else {
+        $mod_time_clause = "";
+    }
+
+    $t = dtime();
+    echo "<server_time>$t</server_time>\n";
     echo "<jobs>\n";
     foreach ($batches as $batch) {
-        $wus = BoincWorkunit::enum("batch = $batch->id");
+        $wus = BoincWorkunit::enum("batch = $batch->id $mod_time_clause");
         echo "   <batch_size>".count($wus)."</batch_size>\n";
         foreach ($wus as $wu) {
             if ($wu->canonical_resultid) {

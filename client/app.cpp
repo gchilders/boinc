@@ -139,7 +139,7 @@ ACTIVE_TASK::ACTIVE_TASK() {
 // called from the CLIENT_STATE::enforce_schedule()
 // and ACTIVE_TASK_SET::suspend_all()
 //
-int ACTIVE_TASK::preempt(int preempt_type) {
+int ACTIVE_TASK::preempt(int preempt_type, int reason) {
     bool remove=false;
 
     switch (preempt_type) {
@@ -169,8 +169,9 @@ int ACTIVE_TASK::preempt(int preempt_type) {
         break;
     }
 
+    bool show_msg = log_flags.cpu_sched && reason != SUSPEND_REASON_CPU_THROTTLE;
     if (remove) {
-        if (log_flags.cpu_sched) {
+        if (show_msg) {
             msg_printf(result->project, MSG_INFO,
                 "[cpu_sched] Preempting %s (removed from memory)",
                 result->name
@@ -178,7 +179,7 @@ int ACTIVE_TASK::preempt(int preempt_type) {
         }
         return request_exit();
     } else {
-        if (log_flags.cpu_sched) {
+        if (show_msg) {
             msg_printf(result->project, MSG_INFO,
                 "[cpu_sched] Preempting %s (left in memory)",
                 result->name
@@ -586,6 +587,15 @@ int ACTIVE_TASK::write(MIOFILE& fout) {
 #ifndef SIM
 
 int ACTIVE_TASK::write_gui(MIOFILE& fout) {
+    // if the app hasn't reported fraction done, and time has elapsed,
+    // estimate fraction done
+    //
+    double fd = fraction_done;
+    if (fd == 0 && elapsed_time > 0) {
+        double est_time = wup->rsc_fpops_est/app_version->flops;
+        double x = elapsed_time/est_time;
+		fd = 1 - exp(-x);
+    }
     fout.printf(
         "<active_task>\n"
         "    <active_task_state>%d</active_task_state>\n"
@@ -609,7 +619,7 @@ int ACTIVE_TASK::write_gui(MIOFILE& fout) {
         pid,
         scheduler_state,
         checkpoint_cpu_time,
-        fraction_done,
+        fd,
         current_cpu_time,
         elapsed_time,
         procinfo.swap_size,
@@ -1021,7 +1031,6 @@ void ACTIVE_TASK::set_task_state(int val, const char* where) {
 
 #ifndef SIM
 #ifdef NEW_CPU_THROTTLE
-#define THROTTLE_PERIOD 1.
 #ifdef _WIN32
 DWORD WINAPI throttler(LPVOID) {
 #else
@@ -1039,15 +1048,30 @@ void* throttler(void*) {
             boinc_sleep(10);
             continue;
         }
-        double on = THROTTLE_PERIOD * gstate.global_prefs.cpu_usage_limit / 100;
-        double off = THROTTLE_PERIOD - on;
+		double on, off, on_frac = gstate.global_prefs.cpu_usage_limit / 100;
+#if 0
+// sub-second CPU throttling
+#define THROTTLE_PERIOD 1.
+        on = THROTTLE_PERIOD * on_frac;
+        off = THROTTLE_PERIOD - on;
+#else
+// throttling w/ at least 1 sec between suspend/resume
+		if (on_frac > .5) {
+			off = 1;
+			on = on_frac/(1.-on_frac);
+		} else {
+			on = 1;
+			off = (1.-on_frac)/on_frac;
+		}
+#endif
+
         gstate.tasks_throttled = true;
         gstate.active_tasks.suspend_all(SUSPEND_REASON_CPU_THROTTLE);
         client_mutex.unlock();
         boinc_sleep(off);
         client_mutex.lock();
         if (!gstate.tasks_suspended) {
-            gstate.active_tasks.unsuspend_all();
+            gstate.active_tasks.unsuspend_all(SUSPEND_REASON_CPU_THROTTLE);
         }
         gstate.tasks_throttled = false;
         client_mutex.unlock();
