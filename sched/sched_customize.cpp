@@ -693,6 +693,25 @@ static inline bool app_plan_sse3(
     return true;
 }
 
+static inline bool app_plan_notphenomiix6(
+    SCHEDULER_REQUEST& sreq, HOST_USAGE& hu
+) {
+    if (strstr(sreq.host.p_model, "Phenom(tm) II X6")) {
+       return false;
+    }
+    if (strstr(sreq.host.p_model, "FX(tm)-6300 Six-Core")) {
+       return false;
+    }
+    if (strstr(sreq.host.p_model, "FX(tm)-6100 Six-Core")) {
+       return false;
+    }
+    hu.avg_ncpus = 1;
+    hu.max_ncpus = 1;
+    hu.projected_flops = 1.0*capped_host_fpops();
+    hu.peak_flops = capped_host_fpops();
+    return true;
+}
+
 static inline bool opencl_check(
     COPROC& cp, HOST_USAGE& hu,
     int min_opencl_device_version,
@@ -1031,6 +1050,8 @@ bool app_plan(SCHEDULER_REQUEST& sreq, char* plan_class, HOST_USAGE& hu) {
         return app_plan_nci(sreq, hu);
     } else if (!strcmp(plan_class, "sse3")) {
         return app_plan_sse3(sreq, hu);
+    } else if (!strcmp(plan_class, "notphenomiix6")) {
+        return app_plan_notphenomiix6(sreq, hu);
     } else if (strstr(plan_class, "vbox")) {
         return app_plan_vbox(sreq, plan_class, hu);
     } else if (strstr(plan_class, "opencl_cpu_intel")) {

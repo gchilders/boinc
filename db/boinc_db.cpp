@@ -61,6 +61,8 @@ void APP::clear() {memset(this, 0, sizeof(*this));}
 void APP_VERSION::clear() {memset(this, 0, sizeof(*this));}
 void USER::clear() {memset(this, 0, sizeof(*this));}
 void TEAM::clear() {memset(this, 0, sizeof(*this));}
+void WORKUSER::clear() {memset(this, 0, sizeof(*this));}
+void WORKTEAM::clear() {memset(this, 0, sizeof(*this));}
 void HOST::clear() {memset(this, 0, sizeof(*this));}
 void RESULT::clear() {
     memset(this, 0, sizeof(*this));
@@ -105,6 +107,10 @@ DB_USER::DB_USER(DB_CONN* dc) :
     DB_BASE("user", dc?dc:&boinc_db){}
 DB_TEAM::DB_TEAM(DB_CONN* dc) :
     DB_BASE("team", dc?dc:&boinc_db){}
+DB_WORKUSER::DB_WORKUSER(DB_CONN* dc) :
+    DB_BASE("work_user", dc?dc:&boinc_db){}
+DB_WORKTEAM::DB_WORKTEAM(DB_CONN* dc) :
+    DB_BASE("work_team", dc?dc:&boinc_db){}
 DB_HOST::DB_HOST(DB_CONN* dc) :
     DB_BASE("host", dc?dc:&boinc_db){}
 DB_WORKUNIT::DB_WORKUNIT(DB_CONN* dc) :
@@ -167,6 +173,8 @@ int DB_APP::get_id() {return id;}
 int DB_APP_VERSION::get_id() {return id;}
 int DB_USER::get_id() {return id;}
 int DB_TEAM::get_id() {return id;}
+int DB_WORKUSER::get_id() {return id;}
+int DB_WORKTEAM::get_id() {return id;}
 int DB_HOST::get_id() {return id;}
 int DB_WORKUNIT::get_id() {return id;}
 int DB_RESULT::get_id() {return id;}
@@ -418,6 +426,38 @@ void DB_TEAM::db_print(char* buf){
     UNESCAPE(url);
     UNESCAPE(name_html);
     UNESCAPE(description);
+}
+
+void DB_WORKUSER::db_parse(MYSQL_ROW &r) {
+	int i=0;
+	clear();
+	id = atoi(r[i++]);
+	appid = atoi(r[i++]);
+	wus = atoi(r[i++]);
+	credit = atof(r[i++]);
+}
+
+void DB_WORKUSER::db_print(char* buf){
+    sprintf(buf,
+        "id=%d, appid=%d, wus=%d, credit=%.15e",
+        id, appid, wus, credit
+    );
+}
+
+void DB_WORKTEAM::db_parse(MYSQL_ROW &r) {
+	int i=0;
+	clear();
+	id = atoi(r[i++]);
+	appid = atoi(r[i++]);
+	wus = atoi(r[i++]);
+	credit = atof(r[i++]);
+}
+	
+void DB_WORKTEAM::db_print(char* buf){
+    sprintf(buf,
+        "id=%d, appid=%d, wus=%d, credit=%.15e",
+        id, appid, wus, credit
+    );
 }
 
 void DB_TEAM::db_parse(MYSQL_ROW &r) {

@@ -159,6 +159,22 @@ public:
     void db_parse(MYSQL_ROW &row);
 };
 
+class DB_WORKUSER : public DB_BASE, public WORKUSER {
+public:
+    DB_WORKUSER(DB_CONN* p=0);
+    int get_id();
+    void db_print(char*);
+    void db_parse(MYSQL_ROW &row);
+};
+
+class DB_WORKTEAM : public DB_BASE, public WORKTEAM {
+public:
+    DB_WORKTEAM(DB_CONN* p=0);
+    int get_id();
+    void db_print(char*);
+    void db_parse(MYSQL_ROW &row);
+};
+
 class DB_HOST : public DB_BASE, public HOST {
 public:
     DB_HOST(DB_CONN* p=0);

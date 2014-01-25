@@ -757,4 +757,22 @@ struct VDA_CHUNK_HOST {
     void print_status(int level);
 };
 
+struct WORKUSER {
+	int id;
+	int appid;
+	int wus;
+	double credit;
+    void clear();
+
+};
+
+struct WORKTEAM {
+	int id;
+	int appid;
+	int wus;
+	double credit;
+    void clear();
+
+};
+
 #endif

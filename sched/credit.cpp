@@ -44,6 +44,49 @@ double cpu_time_to_credit(double cpu_time, double cpu_flops_sec) {
     return fpops_to_credit(cpu_time*cpu_flops_sec);
 }
 
+int grant_credit_by_app (RESULT &result, double credit) {
+
+	DB_WORKUSER workuser;
+        DB_WORKTEAM workteam;
+        int count_n = -1;
+        char clause1[500];
+        char clause2[500];
+                    
+	sprintf(clause1,"where id=%d and appid=%d", result.userid, result.appid);
+        workuser.count(count_n, clause1);
+	if (count_n < 0) { printf("Error!\n"); return 0;} 
+        if (count_n == 0) {
+           workuser.id = result.userid;
+           workuser.appid = result.appid;
+           workuser.wus = 0;
+           workuser.credit = 0;
+           workuser.insert();
+         }
+	 sprintf(clause1,"credit=credit+%.15e, wus=wus+1", credit);
+         sprintf(clause2,"id=%d and appid=%d", result.userid, result.appid);
+         workuser.update_fields_noid(clause1, clause2);
+ 
+	if (result.teamid) {
+
+	sprintf(clause1,"where id=%d and appid=%d", result.teamid, result.appid);
+        workteam.count(count_n, clause1); 
+	if (count_n < 0) { printf("Error!\n"); return 0;} 
+        if (count_n == 0) {
+           workteam.id = result.teamid;
+           workteam.appid = result.appid;
+           workteam.wus = 0;
+           workteam.credit = 0;
+           workteam.insert();
+         }
+	 sprintf(clause1,"credit=credit+%.15e, wus=wus+1", credit);
+         sprintf(clause2,"id=%d and appid=%d", result.teamid, result.appid);
+         workteam.update_fields_noid(clause1, clause2);
+
+	}
+
+	return 0;
+}
+
 // Grant the host (and associated user and team)
 // the given amount of credit for work that started at the given time.
 // Update the user and team records,
@@ -123,6 +166,8 @@ int grant_credit(DB_HOST &host, double start_time, double credit) {
     }
     return 0;
 }
+
+
 
 ///////////////////// V2 CREDIT STUFF STARTS HERE ///////////////////
 

@@ -40,6 +40,7 @@ extern double fpops_to_credit(double fpops);
     // floating-point ops
 extern double cpu_time_to_credit(double cpu_time, double cpu_flops_sec);
 extern int grant_credit(DB_HOST& host, double start_time, double credit);
+extern int grant_credit_by_app(RESULT& result, double credit);
 
 extern int update_av_scales(struct SCHED_SHMEM*);
 extern int assign_credit_set(
