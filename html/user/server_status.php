@@ -192,7 +192,7 @@ if ($sched_host == "") {
 }
 $uldl_pid = parse_element($config_vars,"<uldl_pid>");
 if ($uldl_pid == "") {
-    $uldl_pid = "/etc/httpd/run/httpd.pid";
+    $uldl_pid = "/var/run/apache2.pid";
 }
 $uldl_host = parse_element($config_vars,"<uldl_host>");
 if ($uldl_host == "") {
@@ -463,6 +463,48 @@ if ($retval) {
     } else {
         end_table();
     }
+}
+
+ if (!$xml) {
+        
+        echo "<center>
+            <h2>Last 24 Hours</h2>
+            <table border=0 cellpadding=4>
+            <tr><th>State</th><th>#</th></tr>
+        ";
+        $query_received_time = time() - 86400;
+        show_counts(
+            "14e results completed",
+            "14e results completed",
+            get_mysql_count("result", "appid=6 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
+        );
+        show_counts(
+            "15e results completed",
+            "15e results completed",
+            get_mysql_count("result", "appid=7 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
+        );
+        show_counts(
+            "16e results completed",
+            "16e results completed",
+            get_mysql_count("result", "appid=8 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
+        );
+        show_counts(
+            "16e v5 results completed",
+            "16e v5 results completed",
+            get_mysql_count("result", "appid=9 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
+        );
+
+        $query = "SELECT SUM(granted_credit) AS credits FROM result where outcome=1 and received_time>$query_received_time";
+        $gresult = mysql_query($query);
+        if ($gresult) { 
+            $value = mysql_fetch_object($gresult);
+            $formattedvalue = number_format($value->credits);
+           echo "
+              <tr><td>Total credit granted</td><td> 
+              $formattedvalue</td>";
+        }
+        echo "</table>\n";
+        echo "<h4><a href=\"http://boincstats.com/en/stats/88/project/detail/credit\">60-day credit graph</a> courtesy of <a href=\"http://boincstats.com/\">BOINCstats</a></h4></center>";
 }
 
 $xmlstring = "  </database_file_states>\n</server_status>\n";
