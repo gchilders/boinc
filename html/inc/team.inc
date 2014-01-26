@@ -100,7 +100,20 @@ function display_team_page($team, $user) {
     if (!no_computing()) {
         row2(tra('Total credit'), format_credit_large($team->total_credit));
         row2(tra('Recent average credit'), format_credit_large($team->expavg_credit));
-        show_badges(false, $team);
+        // display app credits
+    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=6)");
+    	$x = mysql_fetch_array($query);
+    	mysql_free_result($query);
+    	row2(tra("14e credit"), format_credit_large($x[0]));
+    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=7)");
+    	$x = mysql_fetch_array($query);
+    	mysql_free_result($query);
+    	row2(tra("15e credit"), format_credit_large($x[0]));
+    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=8 or appid=9)");
+    	$x = mysql_fetch_array($query);
+    	mysql_free_result($query);
+    	row2(tra("16e credit"), format_credit_large($x[0]));
+	show_badges(false, $team);
 
         $x = "";
         shuffle($team_name_sites);
