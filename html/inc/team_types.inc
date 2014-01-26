@@ -18,7 +18,7 @@
 
 $team_types = array(
     "",
-    "None",
+    "Unclassified",
     "Company",
     "Primary school",
     "Secondary school",
