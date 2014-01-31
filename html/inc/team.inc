@@ -221,7 +221,7 @@ function display_team_members($team, $offset, $sort_by) {
     start_table();
     echo '<tr>
         <th>'.tra('Name').'</th>
-    ';
+    <th>Badges</th>';
     if (!no_computing()) {
         if ($nosort) {
             echo '
@@ -270,7 +270,9 @@ function display_team_members($team, $offset, $sort_by) {
         }
         echo "<tr class=row1>
             <td align=left>$j) $x
-        ";
+        </td><td align=left>";
+	show_badges_small(true, $user);
+	echo "</td>";
         if (!no_computing()) {
             echo "
                 <td align=right>$user_total_credit</td>

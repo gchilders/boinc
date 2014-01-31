@@ -941,6 +941,21 @@ function show_badges($is_user, $item) {
     row2("Badges", $x);
 }
 
+function show_badges_small($is_user, $item) {
+    if ($is_user) {
+        $bus = BoincBadgeUser::enum("user_id=$item->id");
+    } else {
+        $bus = BoincBadgeTeam::enum("team_id=$item->id");
+    }
+    if (!$bus) return;
+    $x = "";
+    foreach ($bus as $bu) {
+        $badge = BoincBadge::lookup_id($bu->badge_id);
+        $x .= "<img title=\"$badge->title\" height=16 src=$badge->image_url> ";
+    }
+    echo $x;
+}
+
 function dtime() {
     return microtime(true);
 }
