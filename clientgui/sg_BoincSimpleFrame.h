@@ -98,7 +98,7 @@ class CSimpleFrame : public CBOINCBaseFrame
 
 public:
     CSimpleFrame();
-    CSimpleFrame(wxString title, wxIcon* icon, wxIcon* icon32, wxPoint position, wxSize size);
+    CSimpleFrame(wxString title, wxIconBundle* icons, wxPoint position, wxSize size);
 
    ~CSimpleFrame();
 
@@ -124,8 +124,10 @@ public:
 	void SetMsgsDlgOpen(CDlgMessages* newDlgPtr) { dlgMsgsPtr = newDlgPtr; }
     bool isMessagesDlgOpen() { return (dlgMsgsPtr != NULL); }
 
+    bool SaveWindowPosition();
     bool SaveState();
     bool RestoreState();
+    void OnMove(wxMoveEvent& event);
 
 protected:
     virtual int     _GetCurrentViewPage();

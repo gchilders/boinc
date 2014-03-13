@@ -76,6 +76,7 @@ BEGIN_EVENT_TABLE(CSimpleFrame, CBOINCBaseFrame)
     EVT_MENU(ID_HELPBOINCWEBSITE, CSimpleFrame::OnHelpBOINC)
     EVT_MENU(wxID_ABOUT, CSimpleFrame::OnHelpAbout)
 	EVT_MENU(ID_EVENTLOG, CSimpleFrame::OnEventLog)
+    EVT_MOVE(CSimpleFrame::OnMove)
 #ifdef __WXMAC__
 	EVT_MENU(wxID_PREFERENCES, CSimpleFrame::OnPreferences)
 #endif
@@ -88,21 +89,14 @@ CSimpleFrame::CSimpleFrame() {
 }
 
 
-CSimpleFrame::CSimpleFrame(wxString title, wxIcon* icon, wxIcon* icon32, wxPoint position, wxSize size) : 
+CSimpleFrame::CSimpleFrame(wxString title, wxIconBundle* icons, wxPoint position, wxSize size) : 
     CBOINCBaseFrame((wxFrame *)NULL, ID_SIMPLEFRAME, title, position, size,
                     wxMINIMIZE_BOX | wxSYSTEM_MENU | wxCAPTION | wxCLOSE_BOX | wxCLIP_CHILDREN)
 {
     wxLogTrace(wxT("Function Start/End"), wxT("CSimpleFrame:: - Overloaded Constructor Function Begin"));
 
     // Initialize Application
-#ifdef __WXMSW__
-    SetIcons(wxICON(BOINCGUIAPP));
-#else
-    wxIconBundle icons;
-    icons.AddIcon(*icon);
-    icons.AddIcon(*icon32);
-    SetIcons(icons);
-#endif
+    SetIcons(*icons);
     
     CSkinAdvanced*     pSkinAdvanced = wxGetApp().GetSkinManager()->GetAdvanced();
     wxString           strMenuName;
@@ -311,8 +305,7 @@ CSimpleFrame::~CSimpleFrame() {
 }
 
 
-bool CSimpleFrame::SaveState() {
-	CBOINCBaseFrame::SaveState();
+bool CSimpleFrame::SaveWindowPosition() {
     wxConfigBase*   pConfig = wxConfigBase::Get(FALSE);
 	wxString        strBaseConfigLocation = wxString(wxT("/Simple"));
     wxPoint         pos = GetPosition();
@@ -325,31 +318,29 @@ bool CSimpleFrame::SaveState() {
     //   pointer, return false.
     if (!pConfig) return false;
 
-#ifdef __WXMAC__
-    // We don't call Hide() or Show(false) for the main frame
-    // under wxCocoa 2.9.5 because it bounces the Dock icon
-    // (as in notification.)  We work around this by moving
-    // the main window/frame off screen when displaying the
-    // CDlgAbout modal dialog while the main window is hidden
-    // by CTaskBarIcon::OnAbout().
-    pos = GetOnScreenFramePosition();
-#endif
-
-    //
-    // Save Frame State
-    //
     pConfig->SetPath(strBaseConfigLocation);
 
     pConfig->Write(wxT("XPos"), pos.x);
     pConfig->Write(wxT("YPos"), pos.y);
-
     return true;
+}
+
+
+bool CSimpleFrame::SaveState() {
+	CBOINCBaseFrame::SaveState();
+    return SaveWindowPosition();
 }
 
 
 bool CSimpleFrame::RestoreState() {
 	CBOINCBaseFrame::RestoreState();
     return true;
+}
+
+
+void CSimpleFrame::OnMove(wxMoveEvent& event) {
+    SaveWindowPosition();
+    event.Skip();
 }
 
 
@@ -567,7 +558,7 @@ void CSimpleFrame::OnReloadSkin(CFrameEvent& WXUNUSED(event)) {
 
     m_pBackgroundPanel->ReskinInterface();
     SetTitle(pSkinAdvanced->GetApplicationName());
-    SetIcon(*pSkinAdvanced->GetApplicationIcon());
+    SetIcon(pSkinAdvanced->GetApplicationIcon()->GetIcon(wxDefaultSize));
 
     wxLogTrace(wxT("Function Start/End"), wxT("CSimpleFrame::OnReloadSkin - Function End"));
 }
@@ -653,6 +644,8 @@ void CSimpleFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
     ACCT_MGR_INFO ami;
     PROJECT_INIT_STATUS pis;
 	CC_STATUS     status;
+    int wasShown = 0;
+    int wasVisible = 0;
 
     wxASSERT(pDoc);
     wxASSERT(wxDynamicCast(pDoc, CMainDocument));
@@ -671,21 +664,53 @@ void CSimpleFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
 
     pDoc->rpc.get_project_init_status(pis);
     pDoc->rpc.acct_mgr_info(ami);
-    if (ami.acct_mgr_url.size() && !ami.have_credentials) {
+
+    if (ami.acct_mgr_url.size() && ami.have_credentials) {
+        // Fall through
+        //
+        // There isn't a need to bring up the attach wizard, the account manager will
+        // take care of ataching to projects when it completes the RPCs
+        //
+    } else if (ami.acct_mgr_url.size() && !ami.have_credentials) {
+        wasShown = IsShown();
         Show();
-        MoveFrameOnScreen();
-        wxGetApp().ShowApplication(true);
+        wasVisible = wxGetApp().IsApplicationVisible();
+        if (!wasVisible) {
+            wxGetApp().ShowApplication(true);
+        }
 
         pWizard = new CWizardAttach(this);
         if (pWizard->SyncToAccountManager()) {
-            // If successful, hide the main window
-            wxGetApp().ShowApplication(false);
-            MoveFrameOffScreen();
-            Hide();
+            // _GRIDREPUBLIC, _PROGRESSTHRUPROCESSORS and _CHARITYENGINE
+            // are defined for those branded builds on Windows only
+#if defined(_GRIDREPUBLIC) || defined(_PROGRESSTHRUPROCESSORS) || defined(_CHARITYENGINE) || defined(__WXMAC__)
+#ifdef __WXMAC__
+            // For GridRepublic, Charity Engine or ProgressThruProcessors, 
+            // the Mac installer put a branding file in our data directory
+            long iBrandID = 0;  // 0 is unbranded (default) BOINC
+
+            FILE *f = boinc_fopen("/Library/Application Support/BOINC Data/Branding", "r");
+            if (f) {
+                fscanf(f, "BrandId=%ld\n", &iBrandID);
+                fclose(f);
+            }
+            if ((iBrandID > 0) && (iBrandID < 4))
+#endif
+            {
+                // If successful, hide the main window if we showed it
+                if (!wasVisible) {
+                    wxGetApp().ShowApplication(false);
+                }
+#ifndef __WXMAC__   // See comment in CBOINCGUIApp::OnFinishInit()
+                if (!wasShown) {
+                    Hide();
+                }
+#endif
+            }
+#endif
         }
     } else if ((pis.url.size() || (0 >= pDoc->GetSimpleProjectCount())) && !status.disallow_attach) {
         Show();
-        MoveFrameOnScreen();
         wxGetApp().ShowApplication(true);
 
         strName = wxString(pis.name.c_str(), wxConvUTF8);

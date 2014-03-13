@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
 "POT-Creation-Date: 2013-10-18 00:00-0700\n"
-"PO-Revision-Date: 2014-01-17 17:20+0000\n"
+"PO-Revision-Date: 2014-01-31 21:49+0000\n"
 "Last-Translator: Sami Nordlund <sami.nordlund@kolumbus.fi>\n"
 "Language-Team: fi <LL@li.org>\n"
 "Language: fi\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: Pootle 2.5.0\n"
 "Generated-By: Babel 1.0dev\n"
-"X-POOTLE-MTIME: 1389979204.0\n"
+"X-POOTLE-MTIME: 1391204976.0\n"
 
 #. app global
 msgctxt "app_name"
@@ -27,7 +27,7 @@ msgstr "BOINC"
 #. generic. used by multiple Activities/tabs
 msgctxt "generic_loading"
 msgid "Loading! Please wait…"
-msgstr "Ladataan! Odota…"
+msgstr "Ladataan, odota…"
 
 #. attach project
 #. project list
@@ -37,7 +37,7 @@ msgstr "Valitse projekti:"
 
 msgctxt "attachproject_list_manual_button"
 msgid "Add project by URL"
-msgstr "Lisää projekti URL-osoitteella"
+msgstr "Lisää projekti URLin avulla"
 
 msgctxt "attachproject_list_manual_dialog_title"
 msgid "Enter project URL:"
@@ -57,7 +57,7 @@ msgstr "Lisää tilihallitsija"
 
 msgctxt "attachproject_list_no_internet"
 msgid "No Internet connection"
-msgstr "Ei internet-yhteyttä"
+msgstr "Ei internetyhteyttä"
 
 #. project login
 msgctxt "attachproject_login_loading"
@@ -100,19 +100,20 @@ msgctxt "attachproject_login_platform_not_supported"
 msgid "This project does not support Android devices"
 msgstr "Tämä projekti ei tue Android-laitteita"
 
+#, fuzzy
 msgctxt "attachproject_login_category_terms_of_use"
 msgid "Terms of use for"
-msgstr ""
+msgstr "Nutzungsbedingungen für"
 
 msgctxt "attachproject_login_accept_terms_of_use"
 msgid ""
 "By creating an account with this project, you accept the terms of use as "
 "shown above."
-msgstr "Luomalla tilin tässä projektissa, hyväksyt ylläolevat käyttöoikeudet."
+msgstr "Luomalla tilin tässä projektissa hyväksyt ylläolevat käyttöehdot."
 
 msgctxt "attachproject_login_category_login"
 msgid "Sign in with existing account"
-msgstr "Kirjaudu sisään käytössä olevalla tilillä"
+msgstr "Kirjaudu olemassa olevalla tilillä"
 
 msgctxt "attachproject_login_header_id_email"
 msgid "eMail:"
@@ -128,7 +129,7 @@ msgstr "Salasana:"
 
 msgctxt "attachproject_login_category_creation"
 msgid "New to"
-msgstr ""
+msgstr "Neu bei"
 
 msgctxt "attachproject_login_header_creation_enabled"
 msgid "Register an account to participate:"
@@ -136,7 +137,7 @@ msgstr "Rekisteröi tili osallistuaksesi:"
 
 msgctxt "attachproject_login_header_creation_client_disabled"
 msgid "Visit project website to create an account:"
-msgstr "Käy projektin nettisivulla luodaksesi tilin:"
+msgstr "Käy projektin nettisivulla luomassa tili:"
 
 msgctxt "attachproject_login_header_creation_disabled"
 msgid "Project does currently now allow creation of new accounts!"
@@ -165,7 +166,7 @@ msgstr "Liitetty"
 #. project registration
 msgctxt "attachproject_registration_header"
 msgid "Account registration for"
-msgstr ""
+msgstr "Tilin rekisteröinti"
 
 msgctxt "attachproject_registration_header_url"
 msgid "Project:"
@@ -189,7 +190,7 @@ msgstr "Salasana:"
 
 msgctxt "attachproject_registration_header_pwd_confirm"
 msgid "… Retype:"
-msgstr "… Kirjoita uudelleen:"
+msgstr "… Toista:"
 
 msgctxt "attachproject_registration_button"
 msgid "Create"
@@ -214,7 +215,7 @@ msgstr "Salasana:"
 
 msgctxt "attachproject_acctmgr_header_pwd_confirm"
 msgid "… Retype:"
-msgstr "… Kirjoita uudelleen:"
+msgstr "… Toista:"
 
 msgctxt "attachproject_acctmgr_button"
 msgid "Add"
@@ -223,7 +224,7 @@ msgstr "Lisää"
 #. error strings
 msgctxt "attachproject_error_wrong_name"
 msgid "User not found"
-msgstr "Käyttäjää ei löydy"
+msgstr "Käyttäjää ei löytynyt"
 
 msgctxt "attachproject_error_short_pwd"
 msgid "Password too short"
@@ -239,19 +240,19 @@ msgstr "Salasanat eivät täsmää"
 
 msgctxt "attachproject_error_no_url"
 msgid "Please enter URL"
-msgstr "Anna URL"
+msgstr "Syötä URL"
 
 msgctxt "attachproject_error_no_email"
 msgid "Please enter eMail address"
-msgstr "Anna sähköpostiosoite"
+msgstr "Syötä sähköpostiosoite"
 
 msgctxt "attachproject_error_no_pwd"
 msgid "Please enter a password"
-msgstr "Anna salasana"
+msgstr "Syötä salasana"
 
 msgctxt "attachproject_error_no_name"
 msgid "Please enter user name"
-msgstr "Anna käyttäjänimi"
+msgstr "Syötä käyttäjänimi"
 
 msgctxt "attachproject_error_unknown"
 msgid "failed"
@@ -259,11 +260,11 @@ msgstr "epäonnistui"
 
 msgctxt "attachproject_error_bad_username"
 msgid "User name refused"
-msgstr "Käyttäjänimi hylätty"
+msgstr "Käyttäjänimi ei kelpaa"
 
 msgctxt "attachproject_error_email_in_use"
 msgid "eMail is already in use"
-msgstr "Sähköposti on jo käytössä"
+msgstr "sähköpostiosoite on jo käytössä"
 
 msgctxt "attachproject_error_project_down"
 msgid "Project is offline"
@@ -271,11 +272,11 @@ msgstr "Projekti on sammutettu"
 
 msgctxt "attachproject_error_email_bad_syntax"
 msgid "eMail refused"
-msgstr "Sähköposti hylätty"
+msgstr "sähköpostiosoite ei kelpaa"
 
 msgctxt "attachproject_error_bad_pwd"
 msgid "Password refused"
-msgstr "Salasana hylätty"
+msgstr "Salasana ei kelpaa"
 
 msgctxt "attachproject_error_creation_disabled"
 msgid "Account creation is disabled on this project"
@@ -353,11 +354,11 @@ msgid ""
 "Click on the icon to try again."
 msgstr ""
 "…tätä ei olisi pitänyt tapahtua!\n"
-"Napsauta kuvaketta yrittääksesi uudelleen."
+"Yritä uudelleen napsauttamalla kuvaketta."
 
 msgctxt "main_title_icon_desc"
 msgid "BOINC icon"
-msgstr "BOINC kuvake"
+msgstr "BOINCin kuvake"
 
 #. tab names
 msgctxt "tab_status"
@@ -370,7 +371,7 @@ msgstr "Projektit"
 
 msgctxt "tab_tasks"
 msgid "Tasks"
-msgstr "Tehtävät"
+msgstr "Paketit"
 
 msgctxt "tab_transfers"
 msgid "Transfers"
@@ -391,7 +392,7 @@ msgstr "Navigointi"
 #. status strings
 msgctxt "status_running"
 msgid "Computing"
-msgstr "Laskenta"
+msgstr "Laskenta käynnissä"
 
 msgctxt "status_running_long"
 msgid "Thank you for participating."
@@ -407,7 +408,7 @@ msgstr "Ei mitään tehtävää"
 
 msgctxt "status_idle_long"
 msgid "Waiting for tasks…"
-msgstr "Odottaa tehtäviä…"
+msgstr "Odotetaan paketteja…"
 
 msgctxt "status_computing_disabled"
 msgid "Suspended"
@@ -415,7 +416,7 @@ msgstr "Hyllytetty"
 
 msgctxt "status_computing_disabled_long"
 msgid "Press play to resume network and computation."
-msgstr ""
+msgstr "Paina play palauttaaksesi verkkoyhteyden ja jatkaaksesi laskentaa."
 
 msgctxt "status_launching"
 msgid "Starting…"
@@ -423,7 +424,7 @@ msgstr "Käynnistetään…"
 
 msgctxt "status_noproject"
 msgid "Choose a project to participate in."
-msgstr "Valitse projekti, johon osallistut."
+msgstr "Valitse projekti johon osallistut."
 
 msgctxt "status_closing"
 msgid "Closing…"
@@ -431,7 +432,7 @@ msgstr "Suljetaan…"
 
 msgctxt "status_benchmarking"
 msgid "Benchmarking…"
-msgstr "Suorituskykytestaus…"
+msgstr "Suorituskykymittaus…"
 
 msgctxt "status_image_description"
 msgid "project image"
@@ -448,7 +449,7 @@ msgstr "Tallenna"
 
 msgctxt "prefs_dialog_title"
 msgid "Enter new value:"
-msgstr "Anna uusi arvo:"
+msgstr "Syötä uusi arvo:"
 
 msgctxt "prefs_dialog_title_selection"
 msgid "Select:"
@@ -472,7 +473,7 @@ msgstr "CPU"
 
 msgctxt "prefs_category_storage"
 msgid "Storage"
-msgstr "Tilankäyttö"
+msgstr "Tallennustila"
 
 msgctxt "prefs_category_memory"
 msgid "Memory"
@@ -529,7 +530,7 @@ msgstr "Kuinka paljon laitteesi tallennustilasta jätetään vapaaksi?"
 
 msgctxt "prefs_network_daily_xfer_limit_mb_header"
 msgid "Daily transfer limit"
-msgstr "Päivittäinen siirtoraja"
+msgstr "Päivittäinen tiedonsiirtoraja"
 
 msgctxt "prefs_network_daily_xfer_limit_mb_description"
 msgid "Limits the daily data traffic caused by BOINC."
@@ -537,7 +538,7 @@ msgstr "Rajoitus BOINCin päivittäiselle tiedonsiirrolle."
 
 msgctxt "prefs_network_wifi_only_header"
 msgid "Transfer tasks on WiFi only"
-msgstr "Siirrä tehtävät vain WiFin kautta"
+msgstr "Siirrä paketit vain WiFillä"
 
 msgctxt "prefs_autostart_header"
 msgid "Autostart"
@@ -545,19 +546,19 @@ msgstr "Automaattikäynnistys"
 
 msgctxt "prefs_show_notification_header"
 msgid "Show notification when suspended"
-msgstr "Näytä ilmoitus kun hyllytetty"
+msgstr "Näytä ilmoitus hyllytettäessä"
 
 msgctxt "prefs_cpu_number_cpus_header"
 msgid "Used CPU cores"
-msgstr "Käytetyt CPU-ytimet"
+msgstr "Käytettävät prosessoriytimet"
 
 msgctxt "prefs_cpu_number_cpus_description"
 msgid "Limits the number of CPU cores BOINC uses for computation."
-msgstr "Rajoittaa CPU-ytimien määrää, jota BOINC käyttää laskentaan."
+msgstr "Rajoittaa BOINCin laskentaan käyttämien prosessoriytimien määrän."
 
 msgctxt "prefs_cpu_other_load_suspension_header"
 msgid "Pause at CPU usage above"
-msgstr "Tauota prosessorikäytön ylittäessä"
+msgstr "Tauota kun prosessorin käyttö on yli"
 
 msgctxt "prefs_cpu_other_load_suspension_description"
 msgid "Determines when BOINC pauses computation due to other app's CPU usage."
@@ -573,15 +574,15 @@ msgstr "Rajoittaa prosessoriaikaa, jota BOINC käyttää laskentaan."
 
 msgctxt "prefs_memory_max_idle_header"
 msgid "RAM limit"
-msgstr "RAM raja"
+msgstr "Muistiraja"
 
 msgctxt "prefs_memory_max_idle_description"
 msgid "Limits the amount of RAM tasks are allowed to occupy."
-msgstr "Rajoittaa RAM-muistin määrää, joka tehtäville annetaan."
+msgstr "Rajoittaa tehtävän käytettävissä olevan muistin määrän."
 
 msgctxt "prefs_client_log_flags_header"
 msgid "BOINC Client log flags"
-msgstr ""
+msgstr "BOINC Client Protokolleinstellungen"
 
 msgctxt "prefs_gui_log_level_header"
 msgid "GUI log level"
@@ -631,7 +632,7 @@ msgstr "(tällä laitteella)"
 
 msgctxt "projects_credits_user_header"
 msgid "(total)"
-msgstr "(kaikki)"
+msgstr "(yhteensä)"
 
 #. project status strings
 msgctxt "projects_status_suspendedviagui"
@@ -640,7 +641,7 @@ msgstr "Käyttäjän hyllyttämä"
 
 msgctxt "projects_status_dontrequestmorework"
 msgid "Won't get new tasks"
-msgstr "Ei uusia töitä"
+msgstr "Älä lataa uutta työtä"
 
 msgctxt "projects_status_ended"
 msgid "Project ended - OK to remove"
@@ -648,7 +649,7 @@ msgstr "Projekti päättynyt - voi poistaa"
 
 msgctxt "projects_status_detachwhendone"
 msgid "Will remove when tasks done"
-msgstr "Poistetaan kun paketit on suoritettu"
+msgstr "Poistetaan tehtävien valmistuttua"
 
 msgctxt "projects_status_schedrpcpending"
 msgid "Scheduler request pending"
@@ -664,7 +665,7 @@ msgstr "Väliaikaviesti odottaa"
 
 msgctxt "projects_status_backoff"
 msgid "Communication scheduled in:"
-msgstr ""
+msgstr "Seuraava yhteydenotto:"
 
 #. project controls
 msgctxt "projects_control_dialog_title"
@@ -673,7 +674,7 @@ msgstr "Projektin komennot:"
 
 msgctxt "projects_control_visit_website"
 msgid "Visit website"
-msgstr "Käy sivulla"
+msgstr "Käy nettisivulla"
 
 msgctxt "projects_control_update"
 msgid "Update"
@@ -693,7 +694,7 @@ msgstr "Jatka"
 
 msgctxt "projects_control_nonewtasks"
 msgid "No new tasks"
-msgstr "Ei uutta työtä"
+msgstr "Ei uusia töitä"
 
 msgctxt "projects_control_allownewtasks"
 msgid "Allow new tasks"
@@ -713,7 +714,7 @@ msgstr "Synkronoi"
 
 msgctxt "projects_control_remove_acctmgr"
 msgid "Disable"
-msgstr "Poista"
+msgstr "Poista käytöstä"
 
 #. project confirm dialog
 msgctxt "projects_confirm_detach_title"
@@ -722,7 +723,7 @@ msgstr "Poista projekti?"
 
 msgctxt "projects_confirm_detach_message"
 msgid "Are you sure you want to remove"
-msgstr "Haluatko varmasti poistaa"
+msgstr "Haluatko poistaa"
 
 msgctxt "projects_confirm_detach_message2"
 msgid "from BOINC?"
@@ -746,7 +747,7 @@ msgstr "Nollaa"
 
 msgctxt "projects_confirm_remove_acctmgr_title"
 msgid "Disable account manager"
-msgstr "Poista tilihallitsija"
+msgstr "Poista tilihallitsija käytöstä"
 
 msgctxt "projects_confirm_remove_acctmgr_message"
 msgid "Are you sure you want to stop using"
@@ -754,7 +755,7 @@ msgstr "Haluatko lopettaa käyttämästä"
 
 msgctxt "projects_confirm_remove_acctmgr_confirm"
 msgid "Disable"
-msgstr "Poista käytöstä"
+msgstr "Poista"
 
 #. tasks tab strings
 msgctxt "tasks_header_name"
@@ -763,7 +764,7 @@ msgstr "Tehtävän nimi:"
 
 msgctxt "tasks_header_elapsed_time"
 msgid "Elapsed time:"
-msgstr "Käytetty aika:"
+msgstr "Kulunut aika:"
 
 msgctxt "tasks_header_project_paused"
 msgid "(suspended)"
@@ -791,7 +792,7 @@ msgstr "laskentavirhe"
 
 msgctxt "tasks_result_files_uploading"
 msgid "uploading"
-msgstr "lähetetään"
+msgstr "lähetys"
 
 msgctxt "tasks_result_files_uploaded"
 msgid "upload complete"
@@ -799,7 +800,7 @@ msgstr "lähetys valmis"
 
 msgctxt "tasks_result_aborted"
 msgid "aborted"
-msgstr "hylätty"
+msgstr "keskeytetty"
 
 msgctxt "tasks_result_upload_failed"
 msgid "upload failed"
@@ -835,7 +836,7 @@ msgstr "projekti hyllytetty"
 
 msgctxt "tasks_custom_ready_to_report"
 msgid "ready to report"
-msgstr "valmis raportoitavaksi"
+msgstr "valmiina raportoitavaksi"
 
 #. confirmation dialog
 msgctxt "confirm_abort_task_title"
@@ -865,11 +866,11 @@ msgstr "Luetaan siirtoja…"
 
 msgctxt "trans_upload"
 msgid "Upload"
-msgstr "Lähetä"
+msgstr "Lähetys"
 
 msgctxt "trans_download"
 msgid "Download"
-msgstr "Lataa"
+msgstr "Lataus"
 
 msgctxt "trans_retryin"
 msgid "retry in"
@@ -923,7 +924,7 @@ msgstr "Luetaan ilmoituksia…"
 #. eventlog tab strings
 msgctxt "eventlog_loading"
 msgid "Loading log messages…"
-msgstr "Ladataan lokiviestit…"
+msgstr "Ladataan lokiviestejä…"
 
 msgctxt "eventlog_client_header"
 msgid "Client Messages"
@@ -956,11 +957,11 @@ msgstr "Käyttäjä aktiivinen."
 
 msgctxt "suspend_tod"
 msgid "Out of computation time-frame."
-msgstr ""
+msgstr "Laskennalle varattu aika ylitetty."
 
 msgctxt "suspend_bm"
 msgid "BOINC is benchmarking your device…"
-msgstr "BOINC suorityskykytestaa laitettasi…"
+msgstr "BOINC suorituskykymittaa laitettasi…"
 
 msgctxt "suspend_disksize"
 msgid "Out of disk space."
@@ -972,11 +973,12 @@ msgstr ""
 
 msgctxt "suspend_noinput"
 msgid "No recent user activity."
-msgstr ""
+msgstr "Ei käyttäjän toimintaa lähiaikoina."
 
+#, fuzzy
 msgctxt "suspend_delay"
 msgid "Initialization delay."
-msgstr ""
+msgstr "Startverzögerung"
 
 msgctxt "suspend_exclusiveapp"
 msgid "An exclusive app is running."
@@ -1000,15 +1002,16 @@ msgstr "Ei WiFi-yhteyttä."
 
 msgctxt "suspend_battery_charging"
 msgid "Battery needs to charge before resuming computation."
-msgstr "Akku tulee ladata ennen kuin laskentaa jatketaan."
+msgstr "Akku täytyy ladata ennen kuin laskentaa voidaan jatkaa."
 
 msgctxt "suspend_battery_charging_long"
 msgid "Computing will resume when battery charge reaches"
-msgstr "Laskenta jatkuu akun varaustilan saavuttaessa"
+msgstr "Laskenta jatkuu kun akun varaustila saavuttaa"
 
+#, fuzzy
 msgctxt "suspend_battery_charging_current"
 msgid "currently"
-msgstr ""
+msgstr "aktuell"
 
 msgctxt "suspend_battery_overheating"
 msgid "Waiting for battery to cool down"
@@ -1037,7 +1040,7 @@ msgstr "Raportoidaan valmiit paketit"
 
 msgctxt "rpcreason_trickleup"
 msgid "To send trickle-up message"
-msgstr "Lähetetään väliaikaviesti"
+msgstr "Väliaikaviestin lähetys"
 
 msgctxt "rpcreason_acctmgrreq"
 msgid "Requested by account manager"
@@ -1074,7 +1077,7 @@ msgstr "Tapahtumaloki"
 
 msgctxt "menu_exit"
 msgid "Exit BOINC"
-msgstr "Lopeta BOINC"
+msgstr "Sulje BOINC"
 
 msgctxt "menu_run_mode_disable"
 msgid "Suspend"
@@ -1090,12 +1093,13 @@ msgstr "Tietoja"
 
 msgctxt "menu_help"
 msgid "Help"
-msgstr "Ohje"
+msgstr "Apua"
 
 #. about dialog
+#, fuzzy
 msgctxt "about_button"
 msgid "Return"
-msgstr ""
+msgstr "Zurück"
 
 msgctxt "about_title"
 msgid "About"

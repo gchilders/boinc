@@ -466,6 +466,7 @@ int HTTP_OP::libcurl_exec(
     // To control lying, see CURLOPT_SSL_VERIFYPEER.
     //
     curl_easy_setopt(curlEasy, CURLOPT_SSL_VERIFYHOST, 2L);
+    //curl_easy_setopt(curlEasy, CURLOPT_SSL_VERIFYHOST, 0);
 
     // the following sets "tough" certificate checking
     // (i.e. whether self-signed is OK)
@@ -474,6 +475,7 @@ int HTTP_OP::libcurl_exec(
     // if non-zero below, you need a valid 3rd party CA (i.e. Verisign, Thawte)
     //
     curl_easy_setopt(curlEasy, CURLOPT_SSL_VERIFYPEER, 1L);
+    //curl_easy_setopt(curlEasy, CURLOPT_SSL_VERIFYPEER, FALSE);
 
     // if the above is nonzero, you need the following:
     //
@@ -592,7 +594,7 @@ int HTTP_OP::libcurl_exec(
     pcurlList = curl_slist_append(pcurlList, g_content_type);
 
 	if (strlen(gstate.language)) {
-		sprintf(buf, "ACCEPT_LANGUAGE: %s", gstate.language);
+		sprintf(buf, "Accept-Language: %s", gstate.language);
 		pcurlList = curl_slist_append(pcurlList, buf);
 	}
 
@@ -1001,16 +1003,16 @@ void HTTP_OP::handle_messages(CURLMsg *pcurlMsg) {
 
     if (CurlResult == CURLE_OK) {
         switch ((response/100)*100) {
-        case HTTP_STATUS_OK:
+        case HTTP_STATUS_OK:                        // 200
             http_op_retval = 0;
             break;
-        case HTTP_STATUS_CONTINUE:
+        case HTTP_STATUS_CONTINUE:                  // 100
             return;
-        case HTTP_STATUS_INTERNAL_SERVER_ERROR:
+        case HTTP_STATUS_INTERNAL_SERVER_ERROR:     // 500
             http_op_retval = ERR_HTTP_TRANSIENT;
             safe_strcpy(error_msg, boincerror(response));
             break;
-        default:
+        default:                                    // 400
             http_op_retval = ERR_HTTP_PERMANENT;
             safe_strcpy(error_msg, boincerror(response));
             break;

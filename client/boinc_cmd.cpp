@@ -54,8 +54,11 @@ void version(){
 
 void usage() {
     fprintf(stderr, "\n\
-usage: boinccmd [--host hostname] [--passwd passwd] command\n\n\
+usage: boinccmd [--host hostname] [--passwd passwd] [--unix_domain] command\n\n\
+default hostname: localhost\n\
+default password: contents of gui_rpc_auth.cfg\n\
 Commands:\n\
+ --client_version                   show client version\n\
  --create_account URL email passwd name\n\
  --file_transfer URL filename op    file transfer operation\n\
    op = retry | abort\n\
@@ -95,7 +98,6 @@ Commands:\n\
    mode = always | auto | never\n\
  --task url task_name op            task operation\n\
    op = suspend | resume | abort\n\
- --version, -V                      show client version\n\
 "
 );
     exit(1);
@@ -126,6 +128,7 @@ int main(int argc, char** argv) {
     NOTICES notices;
     char passwd_buf[256], hostname_buf[256], *hostname=0;
     char* passwd = passwd_buf, *p;
+    bool unix_domain = false;
 
 #ifdef _WIN32
     chdir_to_data_dir();
@@ -164,14 +167,28 @@ int main(int argc, char** argv) {
         passwd = argv[i];
         i++;
     }
+    if (i == argc) usage();
+    if (!strcmp(argv[i], "--unix_domain")) {
+        unix_domain = true;
+        i++;
+    }
+    if (i == argc) usage();
 
     // change the following to debug GUI RPC's asynchronous connection mechanism
     //
 #if 1
-    retval = rpc.init(hostname, port);
-    if (retval) {
-        fprintf(stderr, "can't connect to %s\n", hostname?hostname:"local host");
-        exit(1);
+    if (unix_domain) {
+        retval = rpc.init_unix_domain();
+        if (retval) {
+            fprintf(stderr, "can't connect to Unix domain socket\n");
+            exit(1);
+        }
+    } else {
+        retval = rpc.init(hostname, port);
+        if (retval) {
+            fprintf(stderr, "can't connect to %s\n", hostname?hostname:"local host");
+            exit(1);
+        }
     }
 #else
     retval = rpc.init_asynch(hostname, 60., false);
@@ -198,7 +215,13 @@ int main(int argc, char** argv) {
     }
 
     char* cmd = next_arg(argc, argv, i);
-    if (!strcmp(cmd, "--get_state")) {
+    if (!strcmp(cmd, "--client_version")) {
+        VERSION_INFO vi;
+        retval = rpc.exchange_versions(vi);
+        if (!retval) {
+            printf("Client version: %d.%d.%d\n", vi.major, vi.minor, vi.release);
+        }
+    } else if (!strcmp(cmd, "--get_state")) {
         CC_STATE state;
         retval = rpc.get_state(state);
         if (!retval) state.print();

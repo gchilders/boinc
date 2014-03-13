@@ -206,7 +206,7 @@ CAdvancedFrame::CAdvancedFrame() {
 }
 
 
-CAdvancedFrame::CAdvancedFrame(wxString title, wxIcon* icon, wxIcon* icon32, wxPoint position, wxSize size) : 
+CAdvancedFrame::CAdvancedFrame(wxString title, wxIconBundle* icons, wxPoint position, wxSize size) : 
     CBOINCBaseFrame((wxFrame *)NULL, ID_ADVANCEDFRAME, title, position, size, wxDEFAULT_FRAME_STYLE)
 {
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::CAdvancedFrame - Function Begin"));
@@ -219,14 +219,7 @@ CAdvancedFrame::CAdvancedFrame(wxString title, wxIcon* icon, wxIcon* icon32, wxP
     m_strBaseTitle = title;
 
     // Initialize Application
-#ifdef __WXMSW__
-    SetIcons(wxICON(BOINCGUIAPP));
-#else
-    wxIconBundle icons;
-    icons.AddIcon(*icon);
-    icons.AddIcon(*icon32);
-    SetIcons(icons);
-#endif
+    SetIcons(*icons);
 
     // Create UI elements
     wxCHECK_RET(CreateMenu(), _T("Failed to create menu bar."));
@@ -890,7 +883,6 @@ bool CAdvancedFrame::SaveState() {
     int             iItemCount = 0;
 
 
-    wxASSERT(pConfig);
     wxASSERT(m_pNotebook);
 
     CBOINCBaseFrame::SaveState();
@@ -1017,16 +1009,6 @@ void CAdvancedFrame::SaveWindowDimensions() {
     wxPoint         pos = GetPosition();
 
     wxASSERT(pConfig);
-
-#ifdef __WXMAC__
-    // We don't call Hide() or Show(false) for the main frame
-    // under wxCocoa 2.9.5 because it bounces the Dock icon
-    // (as in notification.)  We work around this by moving
-    // the main window/frame off screen when displaying the
-    // CDlgAbout modal dialog while the main window is hidden
-    // by CTaskBarIcon::OnAbout().
-    pos = GetOnScreenFramePosition();
-#endif
 
     pConfig->SetPath(strBaseConfigLocation);
 
@@ -1709,26 +1691,48 @@ void CAdvancedFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
 
     pDoc->rpc.get_project_init_status(pis);
     pDoc->rpc.acct_mgr_info(ami);
-    if (ami.acct_mgr_url.size() && !ami.have_credentials) {
+
+    if (ami.acct_mgr_url.size() && ami.have_credentials) {
+        // Fall through
+        //
+        // There isn't a need to bring up the attach wizard, the account manager will
+        // take care of attaching to projects when it completes the RPCs
+        //
+    } else if (ami.acct_mgr_url.size() && !ami.have_credentials) {
         wasShown = IsShown();
         Show();
         wasVisible = wxGetApp().IsApplicationVisible();
         if (!wasVisible) {
-            MoveFrameOnScreen();
             wxGetApp().ShowApplication(true);
         }
         
         pWizard = new CWizardAttach(this);
         if (pWizard->SyncToAccountManager()) {
+            // _GRIDREPUBLIC, _PROGRESSTHRUPROCESSORS and _CHARITYENGINE
+            // are defined for those branded builds on Windows only
+#if defined(_GRIDREPUBLIC) || defined(_PROGRESSTHRUPROCESSORS) || defined(_CHARITYENGINE) || defined(__WXMAC__)
+#ifdef __WXMAC__
+            // For GridRepublic, Charity Engine or ProgressThruProcessors, 
+            // the Mac installer put a branding file in our data directory
+            long iBrandID = 0;  // 0 is unbranded (default) BOINC
 
-#if defined(__WXMSW__) || defined(__WXMAC__)
-            // If successful, hide the main window if we showed it
-            if (!wasVisible) {
-                wxGetApp().ShowApplication(false);
-                MoveFrameOffScreen();
+            FILE *f = boinc_fopen("/Library/Application Support/BOINC Data/Branding", "r");
+            if (f) {
+                fscanf(f, "BrandId=%ld\n", &iBrandID);
+                fclose(f);
             }
-            if (!wasShown) {
-                Hide();
+            if ((iBrandID > 0) && (iBrandID < 4))
+#endif
+            {
+                // If successful, hide the main window if we showed it
+                if (!wasVisible) {
+                    wxGetApp().ShowApplication(false);
+                }
+#ifndef __WXMAC__   // See comment in CBOINCGUIApp::OnFinishInit()
+                if (!wasShown) {
+                    Hide();
+                }
+#endif
             }
 #endif
 
@@ -1761,7 +1765,6 @@ void CAdvancedFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
         }
     } else if ((pis.url.size() || (0 >= pDoc->GetProjectCount())) && !status.disallow_attach) {
         Show();
-        MoveFrameOnScreen();
         wxGetApp().ShowApplication(true);
         
         pWizard = new CWizardAttach(this);

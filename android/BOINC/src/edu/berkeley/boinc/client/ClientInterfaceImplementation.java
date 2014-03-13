@@ -31,15 +31,6 @@ public class ClientInterfaceImplementation extends RpcClient{
 	private final Integer maxRetryDuration = 3000;
 	// interval between polling retries in ms
 	private final Integer minRetryInterval = 500;
-
-	/**
-	 * Establishes socket connection to BOINC client.
-	 * Requirement for information exchange via RPC
-	 * @return success
-	 */
-    public Boolean connect() {
-    	return open("127.0.0.1", 31416);
-    }
     
     /**
      * Reads authentication key from specified file path and authenticates GUI for advanced RPCs with the client
@@ -104,11 +95,11 @@ public class ClientInterfaceImplementation extends RpcClient{
 	 * @return GUI RPC authentication code
 	 */
 	public String readAuthToken(String authFilePath) {
-		File authFile = new File(authFilePath);
     	StringBuffer fileData = new StringBuffer(100);
     	char[] buf = new char[1024];
     	int read = 0;
     	try{
+    		File authFile = new File(authFilePath);
     		BufferedReader br = new BufferedReader(new FileReader(authFile));
     		while((read=br.read(buf)) != -1){
     	    	String readData = String.valueOf(buf, 0, read);
@@ -467,6 +458,13 @@ public class ClientInterfaceImplementation extends RpcClient{
 		return true;
 	}
 	
+	@Override
+	public synchronized boolean setCcConfig(String ccConfig) {
+		// set CC config and trigger re-read.
+		super.setCcConfig(ccConfig);
+		return super.readCcConfig();
+	}
+
 	/**
 	 * Returns List of event log messages
 	 * @param seqNo lower bound of sequence number
@@ -485,6 +483,7 @@ public class ClientInterfaceImplementation extends RpcClient{
 		// less than desired number of messsages available, adapt lower bound
 		if(lowerBound < 0) lowerBound = 0;
 		ArrayList<Message> msgs= getMessages(lowerBound); // returns ever messages with seqNo > lowerBound
+		if(msgs == null) msgs = new ArrayList<Message>(); // getMessages might return null in case of parsing or IO error
 		
 		if(seqNo > 0) {
 			// remove messages that are >= seqNo

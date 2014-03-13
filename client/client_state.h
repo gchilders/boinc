@@ -265,6 +265,8 @@ struct CLIENT_STATE {
     int report_result_error(RESULT&, const char *format, ...);
     int reset_project(PROJECT*, bool detaching);
     bool no_gui_rpc;
+    bool gui_rpc_unix_domain;
+        // do GUI RPC over Unix-domain sockets rather than TCP
     void start_abort_sequence();
     bool abort_sequence_done();
     int quit_activities();
@@ -567,7 +569,7 @@ extern THREAD throttle_thread;
     // so if the project develops a GPU app,
     // we'll find out about it within a day.
 
-#define WF_DEFER_INTERVAL   300
+#define WF_UPLOAD_DEFER_INTERVAL   300
     // if a project is uploading,
     // and the last upload started within this interval,
     // don't fetch work from it.
@@ -627,5 +629,8 @@ extern THREAD throttle_thread;
     // (i.e. through scheduler replies)
     // Don't do this on Android
 #endif
+
+#define NEED_NETWORK_MSG _("BOINC can't access Internet - check network connection or proxy configuration.")
+#define NO_WORK_MSG _("Your current settings do not allow tasks from this project.")
 
 #endif

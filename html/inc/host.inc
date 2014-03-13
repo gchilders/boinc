@@ -48,7 +48,6 @@ function location_form($host) {
     if ($host->venue == "home") $h = "selected";
     if ($host->venue == "work") $w = "selected";
     if ($host->venue == "school") $s = "selected";
-    if ($host->venue == "mobile") $m = "selected";
     $x = "<form action=host_venue_action.php>
         <input type=hidden name=hostid value=$host->id>
         <select name=venue>
@@ -56,7 +55,6 @@ function location_form($host) {
         <option value=home $h>".tra("Home")."
         <option value=work $w>".tra("Work")."
         <option value=school $s>".tra("School")."
-        <option value=mobile $m>".tra("Mobile")."
         </select>
         <input type=submit value=".tra("Update").">
         </form>
@@ -184,11 +182,12 @@ function show_host($host, $user, $ipprivate) {
     if ($user) {
         row2(tra("Number of times client has contacted server"), $host->rpc_seqno);
         row2(tra("Last time contacted server"), sched_log_link($host->rpc_time));
-        row2(tra("% of time BOINC is running"), 100*$host->on_frac." %");
+        row2(tra("% of time BOINC is running"), number_format(100*$host->on_frac, 2)."%");
         if ($host->connected_frac > 0) {
-            row2(tra("While BOINC running, % of time host has an Internet connection"), 100*$host->connected_frac." %");
+            row2(tra("While BOINC running, % of time host has an Internet connection"), number_format(100*$host->connected_frac, 2)."%");
         }
-        row2(tra("While BOINC running, % of time work is allowed"), 100*$host->active_frac." %");
+        row2(tra("While BOINC running, % of time work is allowed"), number_format(100*$host->active_frac, 2)."%");
+        row2(tra("While BOINC running, % of time GPU work is allowed"), number_format(100*$host->gpu_active_frac, 2)."%");
         if ($host->cpu_efficiency) {
             row2(tra("Average CPU efficiency"), $host->cpu_efficiency);
         }

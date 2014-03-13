@@ -681,27 +681,27 @@ int main(int argc, char** argv) {
         bool   skip_cleanup = false;
         bool   dump_hypervisor_logs = false;
         string error_reason;
-        char*  temp_reason = (char*)"";
-        int    temp_delay = 300;
+        const char*  temp_reason = "";
+        int    temp_delay = 86400;
 
         if (VBOXWRAPPER_ERR_RECOVERABLE == retval) {
             error_reason =
                 "    BOINC will be notified that it needs to clean up the environment.\n"
                 "    This is a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
-            temp_reason = (char*)"VM environment needed to be cleaned up.";
+            temp_reason = "VM environment needed to be cleaned up.";
         } else if (ERR_NOT_EXITED == retval) {
             error_reason =
                 "   NOTE: VM was already running.\n"
                 "    BOINC will be notified that it needs to clean up the environment.\n"
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
-            temp_reason = (char*)"VM environment needed to be cleaned up.";
+            temp_reason = "VM environment needed to be cleaned up.";
         } else if (ERR_INVALID_PARAM == retval) {
             unrecoverable_error = false;
-            temp_reason = (char*)"Please upgrade BOINC to the latest version.";
+            temp_reason = "Please upgrade BOINC to the latest version.";
             temp_delay = 86400;
-        } else if (RPC_S_SERVER_UNAVAILABLE == retval) {
+        } else if (retval == (int)RPC_S_SERVER_UNAVAILABLE) {
             error_reason =
                 "    VboxSvc crashed while attempting to restore the current snapshot.  This is a critical\n"
                 "    operation and this job cannot be recovered.\n";
@@ -728,21 +728,21 @@ int main(int argc, char** argv) {
                 "   NOTE: VirtualBox hypervisor reports that another hypervisor has locked the hardware acceleration\n"
                 "    for virtual machines feature in exclusive mode.\n";
             unrecoverable_error = false;
-            temp_reason = (char*)"Forign VM Hypervisor locked hardware acceleration features.";
+            temp_reason = "Forign VM Hypervisor locked hardware acceleration features.";
             temp_delay = 86400;
         } else if (vm.is_logged_failure_host_out_of_memory()) {
             error_reason =
                 "   NOTE: VirtualBox has failed to allocate enough memory to start the configured virtual machine.\n"
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
-            temp_reason = (char*)"VM Hypervisor was unable to allocate enough memory to start VM.";
+            temp_reason = "VM Hypervisor was unable to allocate enough memory to start VM.";
         } else if (vm.is_virtualbox_error_recoverable(retval)) {
             error_reason =
                 "   NOTE: VM session lock error encountered.\n"
                 "    BOINC will be notified that it needs to clean up the environment.\n"
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
-            temp_reason = (char*)"VM environment needed to be cleaned up.";
+            temp_reason = "VM environment needed to be cleaned up.";
         } else {
             dump_hypervisor_logs = true;
         }
@@ -848,7 +848,7 @@ int main(int argc, char** argv) {
         );
         vm.reset_vm_process_priority();
         vm.poweroff();
-        boinc_temporary_exit(300, "VM Hypervisor failed to enter an online state in a timely fashion.");
+        boinc_temporary_exit(86400, "VM Hypervisor failed to enter an online state in a timely fashion.");
     }
 
     set_floppy_image(aid, vm);
@@ -869,11 +869,12 @@ int main(int argc, char** argv) {
         if (boinc_status.no_heartbeat || boinc_status.quit_request) {
             vm.reset_vm_process_priority();
             vm.poweroff();
-            boinc_temporary_exit(300);
+            boinc_temporary_exit(86400);
         }
         if (boinc_status.abort_request) {
             vm.reset_vm_process_priority();
             vm.cleanup();
+            vm.dumphypervisorlogs(true);
             boinc_finish(EXIT_ABORTED_BY_CLIENT);
         }
         if (!vm.online) {
@@ -889,7 +890,7 @@ int main(int argc, char** argv) {
                 );
                 vm.reset_vm_process_priority();
                 vm.poweroff();
-                boinc_temporary_exit(300, "VM Hypervisor was unable to allocate enough memory.");
+                boinc_temporary_exit(86400, "VM Hypervisor was unable to allocate enough memory.");
             } else {
                 vm.cleanup();
                 if (vm.crashed || (elapsed_time < vm.job_duration)) {
@@ -940,7 +941,7 @@ int main(int argc, char** argv) {
                         vboxwrapper_msg_prefix(buf, sizeof(buf))
                     );
                     vm.poweroff();
-                    boinc_temporary_exit(300, "VM job unmanageable, restarting later.");
+                    boinc_temporary_exit(86400, "VM job unmanageable, restarting later.");
                }
             }
         } else {
@@ -953,7 +954,7 @@ int main(int argc, char** argv) {
                         vboxwrapper_msg_prefix(buf, sizeof(buf))
                     );
                     vm.poweroff();
-                    boinc_temporary_exit(300, "VM job unmanageable, restarting later.");
+                    boinc_temporary_exit(86400, "VM job unmanageable, restarting later.");
                }
             }
 
@@ -1007,6 +1008,8 @@ int main(int argc, char** argv) {
                                 );
                             }
                         }
+
+                        vm.dumphypervisorstatusreports();
                     }
 
                     // Checkpoint
@@ -1022,7 +1025,7 @@ int main(int argc, char** argv) {
                             retval
                         );
                         vm.poweroff();
-                        boinc_temporary_exit(300, "VM job unmanageable, restarting later.");
+                        boinc_temporary_exit(86400, "VM job unmanageable, restarting later.");
                     } else {
                         // Inform BOINC that we have successfully created a checkpoint.
                         //

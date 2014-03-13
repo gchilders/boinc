@@ -204,8 +204,16 @@ $earth = array(
     ),
 );
 $astro_phys_chem = array(
-    tra("Astronomy, Physics, and Chemistry"),
+    tra("Physical Science"),
     array(
+        array(
+            "CONVECTOR",
+            "http://convector.fsv.cvut.cz/",
+            "Czech Technical University in Prague",
+            tra("Mechanical engineering"),
+            tra("Currently we are calculating the optimum design of a structure call the 52 bar truss"),
+            "convector.jpg"
+        ),
         array(
             "theSkyNet POGS",
             "http://pogs.theskynet.org/pogs/",
