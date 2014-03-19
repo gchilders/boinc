@@ -519,8 +519,13 @@ bool CBOINCGUIApp::OnInit() {
 void CBOINCGUIApp::OnFinishInit() {
     if (!m_bGUIVisible) {
         HideThisApp();
+    
+        m_pFrame->wxWindow::Show();
+        
+        if (m_pEventLog) {
+            m_pEventLog->wxWindow::Show();
+        }
     }
-    m_pFrame->wxWindow::Show();
 }
 #endif
 
@@ -1256,6 +1261,8 @@ int CBOINCGUIApp::SafeMessageBox(const wxString& message, const wxString& captio
 }
 
 
+#ifndef __WXMAC__
+// See clientgui/mac/BOINCGUIApp.mm for the Mac versions.
 ///
 /// Determines if the current process is visible.
 ///
@@ -1263,11 +1270,6 @@ int CBOINCGUIApp::SafeMessageBox(const wxString& message, const wxString& captio
 ///  true if the current process is visible, otherwise false.
 /// 
 bool CBOINCGUIApp::IsApplicationVisible() {
-#ifdef __WXMAC__
-    if (IsProcessVisible(&m_psnCurrentProcess)) {
-        return true;
-    }
-#endif
     return false;
 }
 
@@ -1277,15 +1279,6 @@ bool CBOINCGUIApp::IsApplicationVisible() {
 /// @param bShow
 ///   true will show the process, false will hide the process.
 ///
-#ifdef __WXMAC__
-void CBOINCGUIApp::ShowApplication(bool bShow) {
-    if (bShow) {
-        SetFrontProcess(&m_psnCurrentProcess);
-    } else {
-        HideThisApp();
-    }
-}
-#else
 void CBOINCGUIApp::ShowApplication(bool) {
 }
 #endif

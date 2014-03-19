@@ -23,14 +23,6 @@
 
 
 // Cocoa routines which are part of CBOINCGUIApp
-
-// HideThisApp() is called from CBOINCGUIApp::ShowApplication(bool)
-// and replaces a call of ShowHideProcess() which is deprecated
-// under OS 10.9.
-void CBOINCGUIApp::HideThisApp() {
-    [ NSApp hide:NSApp ];
-}
-
 // Override standard wxCocoa wxApp::CallOnInit() to allow Manager
 // to run properly when launched hidden on login via Login Item. 
 bool CBOINCGUIApp::CallOnInit() {
@@ -51,3 +43,69 @@ bool CBOINCGUIApp::CallOnInit() {
     return retVal;
 }
 
+
+// Our application can get into a strange state 
+// if our login item launched it hidden and the
+// first time the user "opens" it he either
+// double-clicks on our Finder icon or uses
+// command-tab.  It becomes the frontmost
+// application (with its menu in the menubar)
+// but the windows remain hidden, and it does
+// not receive an activate event, so we must 
+// handle this case by polling.
+//
+// We can stop the polling after the windows
+// have been shown once, since this state only
+// occurs if the windows have never appeared.
+//
+// TODO: Can we avoid polling by using notification
+// TODO: [NSApplicationDelegate applicationDidUnhide: ] ?
+//
+void CBOINCGUIApp::CheckPartialActivation() {
+    // This code is not needed and has bad effects on OS 10.5.
+    // Initializing wasHidden this way avoids the problem 
+    // because we are briefly shown at login on OS 10.5.
+    static bool wasHidden = [ NSApp isHidden ];
+    
+    if (wasHidden) {
+        if (m_bAboutDialogIsOpen) return;
+        
+        if (! [ NSApp isHidden ]) {
+            wasHidden = false;
+            ShowInterface();
+        }
+    }
+}
+
+
+// HideThisApp() is called from CBOINCGUIApp::ShowApplication(bool)
+// and replaces a call of ShowHideProcess() which is deprecated
+// under OS 10.9.
+void CBOINCGUIApp::HideThisApp() {
+    [ NSApp hide:NSApp ];
+}
+
+
+/// Determines if the current process is visible.
+///
+/// @return
+///  true if the current process is visible, otherwise false.
+/// 
+bool CBOINCGUIApp::IsApplicationVisible() {
+    return (! [ NSApp isHidden ]);
+}
+
+
+///
+/// Shows or hides the current process.
+///
+/// @param bShow
+///   true will show the process, false will hide the process.
+///
+void CBOINCGUIApp::ShowApplication(bool bShow) {
+    if (bShow) {
+        [ NSApp activateIgnoringOtherApps:YES ];
+    } else {
+        [ NSApp hide:NSApp ];
+    }
+}
