@@ -105,7 +105,7 @@ int g_argc;
 char **g_argv;
 
 WORKUNIT* g_wup;
-vector<DB_APP_VERSION> app_versions;
+vector<DB_APP_VERSION_VAL> app_versions;
     // cache of app_versions; the PFC statistics of these are
     // updated in memory, and periodically flushed to the DB
 
@@ -786,12 +786,7 @@ int main(int argc, char** argv) {
         } else if (is_arg(argv[i], "no_credit")) {
             no_credit = true;
         } else {
-            fprintf(stderr,
-                "Invalid option '%s'\nTry `%s --help` for more information\n",
-                argv[i], argv[0]
-            );
-            log_messages.printf(MSG_CRITICAL, "unrecognized arg: %s\n", argv[i]);
-            exit(1);
+            //log_messages.printf(MSG_CRITICAL, "unrecognized arg: %s\n", argv[i]);
         }
     }
     g_argc = argc;

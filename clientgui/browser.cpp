@@ -747,11 +747,7 @@ static int find_site_cookie_chrome(
         &expires
     );
     sscanf( argv[4],
-#ifdef _WIN32
-        "%I64d",
-#else
         "%ld",
-#endif
         &httponly
     );
 

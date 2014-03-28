@@ -137,12 +137,6 @@ struct APP_VERSION {
     //
     BEST_APP_VERSION* bavp;
 
-    // used by validator, not in DB
-    //
-    std::vector<double>pfc_samples;
-    std::vector<double>credit_samples;
-    std::vector<double>credit_times;
-
     int write(FILE*);
     void clear();
 
@@ -342,6 +336,7 @@ struct HOST {
     // the following items are passed in scheduler requests,
     // and used in the scheduler,
     // but not stored in the DB
+    // TODO: move this stuff to a derived class HOST_SCHED
     //
     char p_features[1024];
     char virtualbox_version[256];
