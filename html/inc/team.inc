@@ -106,6 +106,7 @@ function display_team_page($team, $user) {
         row2(tra('Recent average credit'), format_credit_large($team->expavg_credit));
 
         // display app credits
+	db_init();
     	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=6)");
     	$x = mysql_fetch_array($query);
     	mysql_free_result($query);
@@ -118,7 +119,6 @@ function display_team_page($team, $user) {
     	$x = mysql_fetch_array($query);
     	mysql_free_result($query);
     	row2(tra("16e credit"), format_credit_large($x[0]));
-	// show_badges(false, $team);
         show_badges_row(false, $team);
 
 
@@ -227,8 +227,7 @@ function display_team_members($team, $offset, $sort_by) {
 
     start_table();
     echo '<tr>
-        <th>'.tra('Name').'</th>
-    <th>Badges</th>';
+        <th>'.tra('Name').'</th>';
     if (!no_computing()) {
         if ($nosort) {
             echo '
@@ -277,9 +276,7 @@ function display_team_members($team, $offset, $sort_by) {
         }
         echo "<tr class=row1>
             <td align=left>$j) $x
-        </td><td align=left>";
-	show_badges_small(true, $user);
-	echo "</td>";
+        </td>";
         if (!no_computing()) {
             echo "
                 <td align=right>$user_total_credit</td>
