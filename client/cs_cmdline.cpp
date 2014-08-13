@@ -68,9 +68,7 @@ static void print_options(char* prog) {
         "    --gui_rpc_port <port>          port for GUI RPCs\n"
         "    --gui_rpc_unix_domain          use Unix domain for GUI RPCs\n"
         "    --help                         show options\n"
-#ifdef SANDBOX
         "    --insecure                     disable app sandboxing (Unix)\n"
-#endif
 #ifdef __APPLE__
         "    --launched_by_manager          client was launched by Manager\n"
 #endif
@@ -127,11 +125,11 @@ void CLIENT_STATE::parse_cmdline(int argc, char** argv) {
     for (i=1; i<argc; i++) {
         if (0) {
         } else if (ARG(abort_jobs_on_exit)) {
-            config.abort_jobs_on_exit = true;
+            cc_config.abort_jobs_on_exit = true;
         } else if (ARG(allow_multiple_clients)) {
-            config.allow_multiple_clients = true;
+            cc_config.allow_multiple_clients = true;
         } else if (ARG(allow_remote_gui_rpc)) {
-            config.allow_remote_gui_rpc = true;
+            cc_config.allow_remote_gui_rpc = true;
         } else if (ARG(attach_project)) {
             if (i >= argc-2) {
                 show_options = true;
@@ -161,16 +159,16 @@ void CLIENT_STATE::parse_cmdline(int argc, char** argv) {
             if (i == argc-1) show_options = true;
             else exit_after_app_start_secs = atoi(argv[++i]);
         } else if (ARG(exit_after_finish)) {
-            config.exit_after_finish = true;
+            cc_config.exit_after_finish = true;
         } else if (ARG(exit_before_start)) {
-            config.exit_before_start = true;
+            cc_config.exit_before_start = true;
         } else if (ARG(exit_before_upload)) {
             exit_before_upload = true;
         } else if (ARG(exit_when_idle)) {
-            config.exit_when_idle = true;
-            config.report_results_immediately = true;
+            cc_config.exit_when_idle = true;
+            cc_config.report_results_immediately = true;
         } else if (ARG(fetch_minimal_work)) {
-            config.fetch_minimal_work = true;
+            cc_config.fetch_minimal_work = true;
         } else if (ARG(file_xfer_giveup_period)) {
             if (i == argc-1) show_options = true;
             else file_xfer_giveup_period = atoi(argv[++i]);
@@ -183,9 +181,7 @@ void CLIENT_STATE::parse_cmdline(int argc, char** argv) {
             print_options(argv[0]);
             exit(0);
         } else if (ARG(insecure)) {
-#ifdef SANDBOX
             g_use_sandbox = false;
-#endif
         } else if (ARG(launched_by_manager)) {
             launched_by_manager = true;
         } else if (ARG(master_fetch_interval)) {
@@ -198,13 +194,13 @@ void CLIENT_STATE::parse_cmdline(int argc, char** argv) {
             if (i == argc-1) show_options = true;
             else master_fetch_retry_cap = atoi(argv[++i]);
         } else if (ARG(no_gpus)) {
-            config.no_gpus = true;
+            cc_config.no_gpus = true;
         } else if (ARG(no_gui_rpc)) {
             no_gui_rpc = true;
         } else if (ARG(no_info_fetch)) {
-            config.no_info_fetch = true;
+            cc_config.no_info_fetch = true;
         } else if (ARG(no_priority_change)) {
-            config.no_priority_change = true;
+            cc_config.no_priority_change = true;
         } else if (ARG(pers_giveup)) {
             if (i == argc-1) show_options = true;
             else pers_giveup = atoi(argv[++i]);
@@ -239,15 +235,15 @@ void CLIENT_STATE::parse_cmdline(int argc, char** argv) {
         } else if (ARG(show_projects)) {
             show_projects = true;
         } else if (ARG(skip_cpu_benchmarks)) {
-            config.skip_cpu_benchmarks = true;
+            cc_config.skip_cpu_benchmarks = true;
         } else if (ARG(start_delay)) {
             if (i == argc-1) show_options = true;
-            else config.start_delay = atof(argv[++i]);
+            else cc_config.start_delay = atof(argv[++i]);
         } else if (ARG(suppress_net_info)) {
-            config.suppress_net_info = true;
+            cc_config.suppress_net_info = true;
         } else if (ARG(unsigned_apps_ok)) {
-            config.unsigned_apps_ok = true;
-            config.dont_check_file_sizes = true;
+            cc_config.unsigned_apps_ok = true;
+            cc_config.dont_check_file_sizes = true;
         } else if (ARG(update_prefs)) {
             if (i == argc-1) show_options = true;
             else safe_strcpy(update_prefs_url, argv[++i]);

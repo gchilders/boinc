@@ -23,7 +23,7 @@
 #define snprintf _snprintf
 #endif
 
-#ifndef __CYGWIN__
+#ifdef HAVE_INTRIN_H
 #include <intrin.h>
 #endif
 
@@ -40,231 +40,8 @@
 #include "idlemon.h"
 
 
-// Newer system metrics values than what is currently defined in
-//   Visual Studio 2005
-#ifndef SM_TABLETPC
-#define SM_TABLETPC 86
-#endif
-#ifndef SM_MEDIACENTER
-#define SM_MEDIACENTER 87
-#endif
-#ifndef SM_STARTER
-#define SM_STARTER 88
-#endif
-#ifndef SM_SERVERR2
-#define SM_SERVERR2 89
-#endif
-
-
 // Newer product types than what is currently defined in
-//   Visual Studio 2005
-#ifndef PRODUCT_ULTIMATE
-#define PRODUCT_ULTIMATE                            0x00000001
-#endif
-#ifndef PRODUCT_HOME_BASIC
-#define PRODUCT_HOME_BASIC                          0x00000002
-#endif
-#ifndef PRODUCT_HOME_PREMIUM
-#define PRODUCT_HOME_PREMIUM                        0x00000003
-#endif
-#ifndef PRODUCT_ENTERPRISE
-#define PRODUCT_ENTERPRISE                          0x00000004
-#endif
-#ifndef PRODUCT_HOME_BASIC_N
-#define PRODUCT_HOME_BASIC_N                        0x00000005
-#endif
-#ifndef PRODUCT_BUSINESS
-#define PRODUCT_BUSINESS                            0x00000006
-#endif
-#ifndef PRODUCT_STANDARD_SERVER
-#define PRODUCT_STANDARD_SERVER                     0x00000007
-#endif
-#ifndef PRODUCT_DATACENTER_SERVER
-#define PRODUCT_DATACENTER_SERVER                   0x00000008
-#endif
-#ifndef PRODUCT_SMALLBUSINESS_SERVER
-#define PRODUCT_SMALLBUSINESS_SERVER                0x00000009
-#endif
-#ifndef PRODUCT_ENTERPRISE_SERVER
-#define PRODUCT_ENTERPRISE_SERVER                   0x0000000A
-#endif
-#ifndef PRODUCT_STARTER
-#define PRODUCT_STARTER                             0x0000000B
-#endif
-#ifndef PRODUCT_DATACENTER_SERVER_CORE
-#define PRODUCT_DATACENTER_SERVER_CORE              0x0000000C
-#endif
-#ifndef PRODUCT_STANDARD_SERVER_CORE
-#define PRODUCT_STANDARD_SERVER_CORE                0x0000000D
-#endif
-#ifndef PRODUCT_ENTERPRISE_SERVER_CORE
-#define PRODUCT_ENTERPRISE_SERVER_CORE              0x0000000E
-#endif
-#ifndef PRODUCT_ENTERPRISE_SERVER_IA64
-#define PRODUCT_ENTERPRISE_SERVER_IA64              0x0000000F
-#endif
-#ifndef PRODUCT_BUSINESS_N
-#define PRODUCT_BUSINESS_N                          0x00000010
-#endif
-#ifndef PRODUCT_WEB_SERVER
-#define PRODUCT_WEB_SERVER                          0x00000011
-#endif
-#ifndef PRODUCT_CLUSTER_SERVER
-#define PRODUCT_CLUSTER_SERVER                      0x00000012
-#endif
-#ifndef PRODUCT_HOME_SERVER
-#define PRODUCT_HOME_SERVER                         0x00000013
-#endif
-#ifndef PRODUCT_STORAGE_EXPRESS_SERVER
-#define PRODUCT_STORAGE_EXPRESS_SERVER              0x00000014
-#endif
-#ifndef PRODUCT_STORAGE_STANDARD_SERVER
-#define PRODUCT_STORAGE_STANDARD_SERVER             0x00000015
-#endif
-#ifndef PRODUCT_STORAGE_WORKGROUP_SERVER
-#define PRODUCT_STORAGE_WORKGROUP_SERVER            0x00000016
-#endif
-#ifndef PRODUCT_STORAGE_ENTERPRISE_SERVER
-#define PRODUCT_STORAGE_ENTERPRISE_SERVER           0x00000017
-#endif
-#ifndef PRODUCT_SERVER_FOR_SMALLBUSINESS
-#define PRODUCT_SERVER_FOR_SMALLBUSINESS            0x00000018
-#endif
-#ifndef PRODUCT_SMALLBUSINESS_SERVER_PREMIUM
-#define PRODUCT_SMALLBUSINESS_SERVER_PREMIUM        0x00000019
-#endif
-#ifndef PRODUCT_HOME_PREMIUM_N
-#define PRODUCT_HOME_PREMIUM_N                      0x0000001A
-#endif
-#ifndef PRODUCT_ENTERPRISE_N
-#define PRODUCT_ENTERPRISE_N                        0x0000001B
-#endif
-#ifndef PRODUCT_ULTIMATE_N
-#define PRODUCT_ULTIMATE_N                          0x0000001C
-#endif
-#ifndef PRODUCT_WEB_SERVER_CORE
-#define PRODUCT_WEB_SERVER_CORE                     0x0000001D
-#endif
-#ifndef PRODUCT_MEDIUMBUSINESS_SERVER_MANAGEMENT
-#define PRODUCT_MEDIUMBUSINESS_SERVER_MANAGEMENT    0x0000001E
-#endif
-#ifndef PRODUCT_MEDIUMBUSINESS_SERVER_SECURITY
-#define PRODUCT_MEDIUMBUSINESS_SERVER_SECURITY      0x0000001F
-#endif
-#ifndef PRODUCT_MEDIUMBUSINESS_SERVER_MESSAGING
-#define PRODUCT_MEDIUMBUSINESS_SERVER_MESSAGING     0x00000020
-#endif
-#ifndef PRODUCT_SMALLBUSINESS_SERVER_PRIME
-#define PRODUCT_SMALLBUSINESS_SERVER_PRIME          0x00000021
-#endif
-#ifndef PRODUCT_HOME_PREMIUM_SERVER
-#define PRODUCT_HOME_PREMIUM_SERVER                 0x00000022
-#endif
-#ifndef PRODUCT_SERVER_FOR_SMALLBUSINESS_V
-#define PRODUCT_SERVER_FOR_SMALLBUSINESS_V          0x00000023
-#endif
-#ifndef PRODUCT_STANDARD_SERVER_V
-#define PRODUCT_STANDARD_SERVER_V                   0x00000024
-#endif
-#ifndef PRODUCT_DATACENTER_SERVER_V
-#define PRODUCT_DATACENTER_SERVER_V                 0x00000025
-#endif
-#ifndef PRODUCT_ENTERPRISE_SERVER_V
-#define PRODUCT_ENTERPRISE_SERVER_V                 0x00000026
-#endif
-#ifndef PRODUCT_DATACENTER_SERVER_CORE_V
-#define PRODUCT_DATACENTER_SERVER_CORE_V            0x00000027
-#endif
-#ifndef PRODUCT_STANDARD_SERVER_CORE_V
-#define PRODUCT_STANDARD_SERVER_CORE_V              0x00000028
-#endif
-#ifndef PRODUCT_ENTERPRISE_SERVER_CORE_V
-#define PRODUCT_ENTERPRISE_SERVER_CORE_V            0x00000029
-#endif
-#ifndef PRODUCT_HYPERV
-#define PRODUCT_HYPERV                              0x0000002A
-#endif
-#ifndef PRODUCT_STORAGE_EXPRESS_SERVER_CORE
-#define PRODUCT_STORAGE_EXPRESS_SERVER_CORE         0x0000002B
-#endif
-#ifndef PRODUCT_STORAGE_STANDARD_SERVER_CORE
-#define PRODUCT_STORAGE_STANDARD_SERVER_CORE        0x0000002C
-#endif
-#ifndef PRODUCT_STORAGE_WORKGROUP_SERVER_CORE
-#define PRODUCT_STORAGE_WORKGROUP_SERVER_CORE       0x0000002D
-#endif
-#ifndef PRODUCT_STORAGE_ENTERPRISE_SERVER_CORE
-#define PRODUCT_STORAGE_ENTERPRISE_SERVER_CORE      0x0000002E
-#endif
-#ifndef PRODUCT_PROFESSIONAL
-#define PRODUCT_PROFESSIONAL                        0x00000030
-#endif
-#ifndef PRODUCT_PROFESSIONAL_N
-#define PRODUCT_PROFESSIONAL_N                      0x00000031
-#endif
-#ifndef PRODUCT_SB_SOLUTION_SERVER
-#define PRODUCT_SB_SOLUTION_SERVER                  0x00000032
-#endif
-#ifndef PRODUCT_SERVER_FOR_SB_SOLUTIONS
-#define PRODUCT_SERVER_FOR_SB_SOLUTIONS             0x00000033
-#endif
-#ifndef PRODUCT_STANDARD_SERVER_SOLUTIONS
-#define PRODUCT_STANDARD_SERVER_SOLUTIONS           0x00000034
-#endif
-#ifndef PRODUCT_STANDARD_SERVER_SOLUTIONS_CORE
-#define PRODUCT_STANDARD_SERVER_SOLUTIONS_CORE      0x00000035
-#endif
-#ifndef PRODUCT_SB_SOLUTION_SERVER_EM
-#define PRODUCT_SB_SOLUTION_SERVER_EM               0x00000036
-#endif
-#ifndef PRODUCT_SERVER_FOR_SB_SOLUTIONS_EM
-#define PRODUCT_SERVER_FOR_SB_SOLUTIONS_EM          0x00000037
-#endif
-#ifndef PRODUCT_SOLUTION_EMBEDDEDSERVER
-#define PRODUCT_SOLUTION_EMBEDDEDSERVER             0x00000038
-#endif
-#ifndef PRODUCT_SOLUTION_EMBEDDEDSERVER_CORE
-#define PRODUCT_SOLUTION_EMBEDDEDSERVER_CORE        0x00000039
-#endif
-#ifndef PRODUCT_SMALLBUSINESS_SERVER_PREMIUM_CORE
-#define PRODUCT_SMALLBUSINESS_SERVER_PREMIUM_CORE   0x0000003F
-#endif
-#ifndef PRODUCT_ESSENTIALBUSINESS_SERVER_MGMT
-#define PRODUCT_ESSENTIALBUSINESS_SERVER_MGMT       0x0000003B
-#endif
-#ifndef PRODUCT_ESSENTIALBUSINESS_SERVER_ADDL
-#define PRODUCT_ESSENTIALBUSINESS_SERVER_ADDL       0x0000003C
-#endif
-#ifndef PRODUCT_ESSENTIALBUSINESS_SERVER_MGMTSVC
-#define PRODUCT_ESSENTIALBUSINESS_SERVER_MGMTSVC    0x0000003D
-#endif
-#ifndef PRODUCT_ESSENTIALBUSINESS_SERVER_ADDLSVC
-#define PRODUCT_ESSENTIALBUSINESS_SERVER_ADDLSVC    0x0000003E
-#endif
-#ifndef PRODUCT_CLUSTER_SERVER_V
-#define PRODUCT_CLUSTER_SERVER_V                    0x00000040
-#endif
-#ifndef PRODUCT_EMBEDDED
-#define PRODUCT_EMBEDDED                            0x00000041
-#endif
-#ifndef PRODUCT_STARTER_E
-#define PRODUCT_STARTER_E                           0x00000042
-#endif
-#ifndef PRODUCT_HOME_BASIC_E
-#define PRODUCT_HOME_BASIC_E                        0x00000043
-#endif
-#ifndef PRODUCT_HOME_PREMIUM_E
-#define PRODUCT_HOME_PREMIUM_E                      0x00000044
-#endif
-#ifndef PRODUCT_PROFESSIONAL_E
-#define PRODUCT_PROFESSIONAL_E                      0x00000045
-#endif
-#ifndef PRODUCT_ENTERPRISE_E
-#define PRODUCT_ENTERPRISE_E                        0x00000046
-#endif
-#ifndef PRODUCT_ULTIMATE_E
-#define PRODUCT_ULTIMATE_E                          0x00000047
-#endif
+//   Visual Studio 2010
 #ifndef PRODUCT_ENTERPRISE_EVALUATION
 #define PRODUCT_ENTERPRISE_EVALUATION               0x00000048
 #endif
@@ -363,27 +140,94 @@
 #define PRODUCT_CLOUD_STORAGE_SERVER                0x0000006E
 #endif
 
+/* HAVE_DECL__XGETBV should be set by autoconf or in boinc_win.h */
+#if !defined(HAVE_DECL__XGETBV) || !HAVE_DECL__XGETBV
+#if HAVE_DECL_XGETBV
+#define _xgetbv(x) xgetbv(x)
+#elif HAVE_DECL___XGETBV
+#define _xgetbv(x) __xgetbv(x)
+#else
+static unsigned long long _xgetbv(unsigned int index){
+      unsigned int A=0, D=0;
 
-
-// Newer suite types than what is currently defined in
-//   Visual Studio 2005
-#ifndef VER_SUITE_WH_SERVER
-#define VER_SUITE_WH_SERVER                         0x00008000
+#ifdef __GNUC__
+  #ifdef ASM_SUPPORTS_XGETBV  
+      __asm__ __volatile__("xgetbv" : "=a"(A), "=d"(D) : "c"(index));
+  #else
+      __asm__ __volatile__(".byte 0x0f, 0x01, 0xd0": "=a"(A), "=d"(D) : "c"(index));
+  #endif
+#elif defined(_MSC_VER)
+  #ifdef _M_IX86
+      __asm {
+                       mov ecx,index
+                       __emit 00fh
+                       __emit 001h
+                       __emit 0d0h
+                       mov D,edx
+                       mov A,eax
+       }
+  #elif defined(_M_AMD64)
+      // damn Microsoft for not having inline assembler in 64-bit code
+      // so this is in an NASM compiled library
+      return asm_xgetbv(index);
+  #endif
+#endif
+      return ((unsigned long long)D << 32) | A;
+}
+#endif
 #endif
 
-
-
+/* HAVE_DECL___CPUID should be set by autoconf or in boinc_win.h */
+#if !defined(HAVE_DECL___CPUID) || !HAVE_DECL___CPUID
+#if HAVE_DECL_CPUID
+#define __cpuid(x,y) cpuid(x,y)
+#elif HAVE_DECL__CPUID
+#define __cpuid(x,y) _cpuid(x,y)
+#else
+static void __cpuid(unsigned int cpuinfo[4], unsigned int type)  {
+#ifdef __GNUC__
+  #ifdef ASM_SUPPORTS_CPUID  
+      __asm__ __volatile__("cpuid" 
+                            : "=a" (cpuinfo[0]), "=b" (cpuinfo[1]), 
+                              "=c" (cpuinfo[2]), "=d" (cpuinfo[3]) 
+                            : "a" (type));
+  #else
+      __asm__ __volatile__(".byte 0x0f, 0xa2" 
+                            : "=a" (cpuinfo[0]), "=b" (cpuinfo[1]), 
+                              "=c" (cpuinfo[2]), "=d" (cpuinfo[3]) 
+                            : "a" (type));
+  #endif
+#elif defined(_MSC_VER)
+  #ifdef _M_IX86
+      __asm {
+                       mov eax,type
+                       __emit 00fh
+                       __emit 0a2h
+                       mov cpuinfo[0],eax
+                       mov cpuinfo[1],ebx
+                       mov cpuinfo[2],ecx
+                       mov cpuinfo[3],edx
+       }
+  #elif defined(_M_AMD64)
+      // damn Microsoft for not having inline assembler in 64-bit code
+      // so this is in an NASM compiled library
+      asm_cpuid(cpuinfo,type);
+  #endif
+#endif
+}
+#endif
+#endif
 
 // Returns the number of seconds difference from UTC
 //
-int get_timezone(int& timezone) {
+int get_timezone(int& tz) {
     TIME_ZONE_INFORMATION tzi;
     memset(&tzi, 0, sizeof(TIME_ZONE_INFORMATION));
     DWORD result = GetTimeZoneInformation(&tzi);
     if (result == TIME_ZONE_ID_DAYLIGHT) {
-        timezone = -(tzi.Bias + tzi.DaylightBias) * 60;
+        tz = -(tzi.Bias + tzi.DaylightBias) * 60;
     } else {
-        timezone = -(tzi.Bias + tzi.StandardBias) * 60;
+        tz = -(tzi.Bias + tzi.StandardBias) * 60;
     }
     return 0;
 }
@@ -405,7 +249,6 @@ int get_memory_info(double& bytes, double& swap) {
 // Returns the OS name and version
 //
 
-typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 typedef BOOL (WINAPI *PGPI)(DWORD, DWORD, DWORD, DWORD, PDWORD);
 
 int get_os_information(
@@ -419,7 +262,6 @@ int get_os_information(
     char szServicePack[128];
     OSVERSIONINFOEX osvi;
     SYSTEM_INFO si;
-    PGNSI pGNSI;
     PGPI pGPI;
     BOOL bOsVersionInfoEx;
     DWORD dwType = 0;
@@ -432,24 +274,20 @@ int get_os_information(
     osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFOEX);
 
 
+    // GetProductInfo is a Vista+ API
+    pGPI = (PGPI) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "GetProductInfo");
+
+
     // Try calling GetVersionEx using the OSVERSIONINFOEX structure.
     // If that fails, try using the OSVERSIONINFO structure.
-    bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO *) &osvi);
+    bOsVersionInfoEx = GetVersionEx ((OSVERSIONINFO*)&osvi);
     if(!bOsVersionInfoEx) {
-        osvi.dwOSVersionInfoSize = sizeof (OSVERSIONINFO);
-        GetVersionEx ( (OSVERSIONINFO *) &osvi );
+        osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+        GetVersionEx ((OSVERSIONINFO*)&osvi);
     }
 
 
-    // Call GetNativeSystemInfo if supported or GetSystemInfo otherwise.
-    pGNSI = (PGNSI) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "GetNativeSystemInfo");
-    if(NULL != pGNSI) {
-        pGNSI(&si);
-    } else {
-        GetSystemInfo(&si);
-    }
-
-    pGPI = (PGPI) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "GetProductInfo");
+    GetNativeSystemInfo(&si);
 
 
     // Windows is a Microsoft OS
@@ -887,13 +725,12 @@ int get_os_information(
 //
 int get_cpuid(unsigned int info_type, unsigned int& a, unsigned int& b, unsigned int& c, unsigned int& d) {
 
-#ifdef _MSC_VER
 
-    // Microsoft compiler - use intrinsic
     int retval = 1;
     int CPUInfo[4] = {0,0,0,0};
-
+#ifdef _MSC_VER
     __try {
+#endif
         __cpuid(CPUInfo, info_type);
 
         a = CPUInfo[0];
@@ -902,19 +739,11 @@ int get_cpuid(unsigned int info_type, unsigned int& a, unsigned int& b, unsigned
         d = CPUInfo[3];
 
         retval = 0;
+#ifdef _MSC_VER
     }
     __except (EXCEPTION_EXECUTE_HANDLER) {}
-    return retval;
-
-#elif defined(__GNUC__)
-
-    // GCC compiler
-    __asm__ __volatile__ ("cpuid": "=a" (ax), "=b" (bx), "=c" (cx), "=d" (dx) : "a" (info_type));
-    return 0;
-
-#else
-    return 1;
 #endif
+    return retval;
 }
 
 
@@ -1024,7 +853,9 @@ int get_processor_cache(int& cache) {
     return 0;
 }
 
-
+#ifndef _XCR_XFEATURE_ENABLED_MASK
+#define _XCR_XFEATURE_ENABLED_MASK 0
+#endif
 // Returns true if the AVX instruction set is supported with the current
 // combination of OS and CPU.
 // see: http://insufficientlycomplicated.wordpress.com/2011/11/07/detecting-intel-advanced-vector-extensions-avx-in-visual-studio/
@@ -1033,9 +864,7 @@ bool is_avx_supported() {
 
     bool supported = false;
  
-    // If Visual Studio 2010 SP1 or later
-#if (_MSC_FULL_VER >= 160040219)
-    // Checking for AVX requires 3 things:
+    // Checking for AVX on Windows requires 3 things:
     // 1) CPUID indicates that the OS uses XSAVE and XRSTORE
     //     instructions (allowing saving YMM registers on context
     //     switch)
@@ -1045,11 +874,11 @@ bool is_avx_supported() {
     //
     // Note that XGETBV is only available on 686 or later CPUs, so
     // the instruction needs to be conditionally run.
-    int cpuInfo[4];
-    __cpuid(cpuInfo, 1);
+    unsigned int a,b,c,d;
+    get_cpuid(1, a, b, c, d);
  
-    bool osUsesXSAVE_XRSTORE = cpuInfo[2] & (1 << 27) || false;
-    bool cpuAVXSuport = cpuInfo[2] & (1 << 28) || false;
+    bool osUsesXSAVE_XRSTORE = c & (1 << 27) || false;
+    bool cpuAVXSuport = c & (1 << 28) || false;
  
     if (osUsesXSAVE_XRSTORE && cpuAVXSuport)
     {
@@ -1057,7 +886,6 @@ bool is_avx_supported() {
         unsigned long long xcrFeatureMask = _xgetbv(_XCR_XFEATURE_ENABLED_MASK);
         supported = (xcrFeatureMask & 0x6) || false;
     }
-#endif
  
     return supported;
 }

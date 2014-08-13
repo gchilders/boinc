@@ -135,9 +135,15 @@ static volatile bool standalone = false;
 static volatile double initial_wu_cpu_time;
 static volatile bool have_new_trickle_up = false;
 static volatile bool have_trickle_down = true;
-    // on first call, scan slot dir for msgs
+    // set if the client notified us of a trickle-down.
+    // init to true so the first call to boinc_receive_trickle_down()
+    // will scan the slot dir for old trickle-down files
+static volatile bool handle_trickle_downs = false;
+    // whether we should check for notifications of trickle_downs
+    // and file upload status.
+    // set by boinc_receive_trickle_down() and boinc_upload_file().
 static volatile int heartbeat_giveup_count;
-    // interrupt count value at which to give up on core client
+    // interrupt count value at which to give up on client
 #ifdef _WIN32
 static volatile int nrunning_ticks = 0;
 #endif
@@ -175,7 +181,7 @@ int app_min_checkpoint_period = 0;
     // to the client, and of checkpoint enabling.
 #define HEARTBEAT_GIVEUP_SECS 30
 #define HEARTBEAT_GIVEUP_COUNT ((int)(HEARTBEAT_GIVEUP_SECS/TIMER_PERIOD))
-    // quit if no heartbeat from core in this #interrupts
+    // quit if no heartbeat from client in this #interrupts
 #define LOCKFILE_TIMEOUT_PERIOD 35
     // quit if we cannot aquire slot lock file in this #secs after startup
 
@@ -356,7 +362,7 @@ double boinc_worker_thread_cpu_time() {
     return cpu;
 }
 
-// Communicate to the core client (via shared mem)
+// Communicate to the client (via shared mem)
 // the current CPU time and fraction done.
 // NOTE: various bugs could cause some of these FP numbers to be enormous,
 // possibly overflowing the buffer.
@@ -661,7 +667,6 @@ int boinc_get_status(BOINC_STATUS *s) {
 //
 static void send_trickle_up_msg() {
     char buf[MSG_CHANNEL_SIZE];
-    BOINCINFO("Sending Trickle Up Message");
     if (standalone) return;
     strcpy(buf, "");
     if (have_new_trickle_up) {
@@ -671,6 +676,7 @@ static void send_trickle_up_msg() {
         strcat(buf, "<have_new_upload_file/>\n");
     }
     if (strlen(buf)) {
+        BOINCINFO("Sending Trickle Up Message");
         if (app_client_shm->shm->trickle_up.send_msg(buf)) {
             have_new_trickle_up = false;
             have_new_upload_file = false;
@@ -678,7 +684,7 @@ static void send_trickle_up_msg() {
     }
 }
 
-// NOTE: a non-zero status tells the core client that we're exiting with 
+// NOTE: a non-zero status tells the client that we're exiting with 
 // an "unrecoverable error", which will be reported back to server. 
 // A zero exit-status tells the client we've successfully finished the result.
 //
@@ -686,8 +692,8 @@ int boinc_finish(int status) {
     char buf[256];
     fraction_done = 1;
     fprintf(stderr,
-        "%s called boinc_finish\n",
-        boinc_msg_prefix(buf, sizeof(buf))
+        "%s called boinc_finish(%d)\n",
+        boinc_msg_prefix(buf, sizeof(buf)), status
     );
     finishing = true;
     boinc_sleep(2.0);   // let the timer thread send final messages
@@ -703,7 +709,7 @@ int boinc_finish(int status) {
     return 0;   // never reached
 }
 
-int boinc_temporary_exit(int delay, const char* reason) {
+int boinc_temporary_exit(int delay, const char* reason, bool is_notice) {
     FILE* f = fopen(TEMPORARY_EXIT_FILE, "w");
     if (!f) {
         return ERR_FOPEN;
@@ -711,6 +717,9 @@ int boinc_temporary_exit(int delay, const char* reason) {
     fprintf(f, "%d\n", delay);
     if (reason) {
         fprintf(f, "%s\n", reason);
+        if (is_notice) {
+            fprintf(f, "notice\n");
+        }
     }
     fclose(f);
     boinc_exit(0);
@@ -849,6 +858,8 @@ int boinc_parse_init_data_file() {
     return 0;
 }
 
+// used by wrappers
+//
 int boinc_report_app_status_aux(
     double cpu_time,
     double checkpoint_cpu_time,
@@ -1006,7 +1017,7 @@ static void handle_upload_file_status() {
     }
 }
 
-// handle trickle and file upload messages
+// handle trickle and file upload status messages
 //
 static void handle_trickle_down_msg() {
     char buf[MSG_CHANNEL_SIZE];
@@ -1126,13 +1137,13 @@ static void timer_handler() {
     if (!boinc_status.suspended) {
         running_interrupt_count++;
     }
-    // handle messages from the core client
+    // handle messages from the client
     //
     if (app_client_shm) {
         if (options.check_heartbeat) {
             handle_heartbeat_msg();
         }
-        if (options.handle_trickle_downs) {
+        if (handle_trickle_downs) {
             handle_trickle_down_msg();
         }
         if (options.handle_process_control) {
@@ -1155,7 +1166,7 @@ static void timer_handler() {
         }
     }
 
-    // see if the core client has died, which means we need to die too
+    // see if the client has died, which means we need to die too
     // (unless we're in a critical section)
     //
     if (in_critical_section==0 && options.check_heartbeat) {
@@ -1178,7 +1189,7 @@ static void timer_handler() {
         update_app_progress(last_wu_cpu_time, last_checkpoint_cpu_time);
     }
     
-    if (options.handle_trickle_ups) {
+    if (have_new_trickle_up || have_new_upload_file) {
         send_trickle_up_msg();
     }
     if (timer_callback) {
@@ -1344,11 +1355,13 @@ static int start_worker_signals() {
 #endif
 
 int boinc_send_trickle_up(char* variety, char* p) {
-    if (!options.handle_trickle_ups) return ERR_NO_OPTION;
     FILE* f = boinc_fopen(TRICKLE_UP_FILENAME, "wb");
     if (!f) return ERR_FOPEN;
     fprintf(f, "<variety>%s</variety>\n", variety);
-    size_t n = fwrite(p, strlen(p), 1, f);
+    size_t n = 1;
+    if (strlen(p)) {
+        n = fwrite(p, strlen(p), 1, f);
+    }
     fclose(f);
     if (n != 1) return ERR_WRITE;
     have_new_trickle_up = true;
@@ -1433,7 +1446,7 @@ int boinc_receive_trickle_down(char* buf, int len) {
     std::string filename;
     char path[MAXPATHLEN];
 
-    if (!options.handle_trickle_downs) return false;
+    handle_trickle_downs = true;
 
     if (have_trickle_down) {
         relative_to_absolute("", path);
@@ -1461,9 +1474,14 @@ int boinc_upload_file(std::string& name) {
     if (!f) return ERR_FOPEN;
     have_new_upload_file = true;
     fclose(f);
+
+    // file upload status messages are on same channel as
+    // trickle down messages, so listen to that channel
+    //
+    handle_trickle_downs = true;
+
     return 0;
 }
-
 
 int boinc_upload_status(std::string& name) {
     for (unsigned int i=0; i<upload_file_status.size(); i++) {

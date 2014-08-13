@@ -35,6 +35,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -44,6 +45,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import edu.berkeley.boinc.adapter.ProjectControlsListAdapter;
 import edu.berkeley.boinc.adapter.ProjectsListAdapter;
+import edu.berkeley.boinc.attach.ManualUrlInputFragment;
 import edu.berkeley.boinc.rpc.Notice;
 import edu.berkeley.boinc.rpc.AcctMgrInfo;
 import edu.berkeley.boinc.rpc.Project;
@@ -110,6 +112,20 @@ public class ProjectsFragment extends Fragment {
 		// appends the project specific menu to the main menu.
 		inflater.inflate(R.menu.projects_menu, menu);
 		super.onCreateOptionsMenu(menu, inflater);
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+	    if(Logging.VERBOSE) Log.v(Logging.TAG, "AttachProjectListActivity onOptionsItemSelected()");
+
+	    switch (item.getItemId()) {
+	    	case R.id.projects_add_url:
+	    		ManualUrlInputFragment dialog2 = new ManualUrlInputFragment();
+	    		dialog2.show(getFragmentManager(), getActivity().getString(R.string.attachproject_list_manual_button));
+	    		return true;
+			default:
+				return super.onOptionsItemSelected(item);
+		}
 	}
 
 	private void populateLayout() {

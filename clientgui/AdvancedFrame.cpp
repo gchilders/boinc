@@ -198,6 +198,7 @@ BEGIN_EVENT_TABLE (CAdvancedFrame, CBOINCBaseFrame)
     EVT_MOVE(CAdvancedFrame::OnMove)
 #ifdef __WXMAC__
 	EVT_MENU(wxID_PREFERENCES, CAdvancedFrame::OnPreferences)
+    EVT_CHAR_HOOK(CAdvancedFrame::OnKeyPressed)
 #endif
 END_EVENT_TABLE ()
 
@@ -458,11 +459,6 @@ bool CAdvancedFrame::CreateMenu() {
         _("Computing &preferences..."),
         _("Configure computing preferences")
     );
-    menuTools->Append(
-		ID_DIAGNOSTICLOGFLAGS,
-        _("Diagnostics..."),
-        _("Enable or disable diagnostics")
-    );
 
     // Activity menu
     wxMenu *menuActivity = new wxMenu;
@@ -613,6 +609,11 @@ bool CAdvancedFrame::CreateMenu() {
         ID_EVENTLOG, 
         _("Event Log...\tCtrl+Shift+E"),
         _("Display diagnostic messages.")
+    );
+    menuAdvanced->Append(
+		ID_DIAGNOSTICLOGFLAGS,
+        _("Event Log Diagnostic Flags...\tCtrl+Shift+F"),
+        _("Enable or disable various diagnostic messages")
     );
 
 
@@ -1435,11 +1436,9 @@ void CAdvancedFrame::OnRunBenchmarks(wxCommandEvent& WXUNUSED(event)) {
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::OnRunBenchmarks - Function Begin"));
 
     CMainDocument* pDoc = wxGetApp().GetDocument();
-    wxASSERT(m_pNotebook);
     wxASSERT(pDoc);
     wxASSERT(wxDynamicCast(pDoc, CMainDocument));
 
-    m_pNotebook->SetSelection(ID_ADVTASKSVIEW - ID_ADVVIEWBASE);
     pDoc->RunBenchmarks();
 
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::OnRunBenchmarks - Function End"));
@@ -1626,8 +1625,26 @@ void CAdvancedFrame::OnRefreshView(CFrameEvent& WXUNUSED(event)) {
                 strTabTitle = pView->GetViewDisplayName();
             }
 
-            m_pNotebook->SetPageText(ID_ADVNOTICESVIEW - ID_ADVVIEWBASE, strTabTitle);
+            size_t noticesPage = ID_ADVNOTICESVIEW - ID_ADVVIEWBASE;
+            m_pNotebook->SetPageText(noticesPage, strTabTitle);
             m_pNotebook->Layout();
+#ifdef __WXMSW__
+            // Ugly hack to work around a bug in wxWidgets 3.0
+            // which fails to center the updated tab label text.
+            m_pNotebook->Freeze();
+            if (m_pNotebook->GetSelection() == (int)noticesPage) {
+                size_t projectsPage = ID_ADVPROJECTSVIEW - ID_ADVVIEWBASE;
+                wxWindow * thePage = m_pNotebook->GetPage(projectsPage);
+                strTabTitle = m_pNotebook->GetPageText(projectsPage);
+                m_pNotebook->RemovePage(projectsPage);
+                m_pNotebook->InsertPage(projectsPage, thePage, strTabTitle, false, projectsPage);
+            } else {
+                wxWindow * thePage = m_pNotebook->GetPage(noticesPage);
+                m_pNotebook->RemovePage(noticesPage);
+                m_pNotebook->InsertPage(noticesPage, thePage, strTabTitle, false, noticesPage);
+            }
+            m_pNotebook->Thaw();
+#endif
         }
 
 
@@ -2190,3 +2207,11 @@ void CAdvancedFrame::StopTimers() {
     m_pFrameRenderTimer->Stop();
 }
 
+
+#ifdef __WXMAC__
+// Fix Keyboard navigation on Mac
+void CAdvancedFrame::OnKeyPressed(wxKeyEvent &event) {
+    CBOINCBaseView* pView = wxDynamicCast(m_pNotebook->GetPage(m_pNotebook->GetSelection()), CBOINCBaseView);
+    pView->OnKeyPressed(event);
+}
+#endif

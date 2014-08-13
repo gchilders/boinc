@@ -180,7 +180,7 @@ function notify_description($notify) {
     case NOTIFY_SUBSCRIBED_POST:
         return subscribed_post_web_line($notify);
     }
-    return tra("Unknown notification type: %1", $notify->type);
+    return null;
 }
 
 function weak_auth($user) {
@@ -235,19 +235,70 @@ function show_user_info_private($user) {
     }
 }
 
+function friend_links($user) {
+    if (is_banished($user)) {
+        return "";
+    }
+    $x = "<table height=\"100\" width=\"150\" border=\"0\" cellpadding=\"4\"><tr><td class=\"friend\">";
+    if ($user->has_profile) {
+        $profile = BoincProfile::lookup_fields("has_picture", "userid=$user->id");
+        if ($profile && $profile->has_picture) {
+            $img_url = profile_thumb_url($user->id);
+        } else {
+            $img_url = URL_BASE."img/head_20.png";
+        }
+        $title = tra("View the profile of %1", $user->name);
+        $alt = tra("Profile");
+        $x .= ' <a href="'.URL_BASE.'view_profile.php?userid='.$user->id.'"><img title="'.$title.'" src="'.$img_url.'" alt="'.$alt.'"></a><br>';
+    }
+    $x .= " <a href=\"".URL_BASE."show_user.php?userid=".$user->id."\">".$user->name."</a>";
+    if ($user->donated == 1) {
+        require_once("../project/donations.inc");
+        $x .= DONATION_LINK;
+    }
+    $x .= "</td></tr></table>\n";
+    return $x;
+}
+
+function user_links($user) {
+    BoincForumPrefs::lookup($user);
+    if (is_banished($user)) {
+        return "(banished: ID $user->id)";
+    }
+    $x = "";
+    if ($user->has_profile) {
+        $img_url = URL_BASE."img/head_20.png";
+        $x .= ' <a href="'.URL_BASE.'view_profile.php?userid='.$user->id.'"><img title="View the profile of '.$user->name.'" src="'.$img_url.'" alt="Profile"></a>';
+    }
+    $x .= " <a href=\"".URL_BASE."show_user.php?userid=".$user->id."\">".$user->name."</a>";
+    if ($user->donated == 1) {
+        require_once("../project/donations.inc");
+        $x .= DONATION_LINK;
+    }
+    $x .= badges_string(true, $user, 24);
+    if (function_exists("project_user_links")){
+        $x .= project_user_links($user);
+    }
+    return $x;
+}
+
 function show_community_private($user) {
     row1(tra("Community"));
 
-    show_badges(true, $user);
-    if ($user->has_profile) {
-        $x = "<a href=\"view_profile.php?userid=$user->id\">".tra("View")."</a> &middot; <a href=\"delete_profile.php\">".tra("Delete")."</a>";
-    } else {
-        $x = "<a href=\"create_profile.php\">".tra("Create")."</a>";
+    show_badges_row(true, $user);
+    if (!DISABLE_PROFILES) {
+        if ($user->has_profile) {
+            $x = "<a href=\"view_profile.php?userid=$user->id\">".tra("View")."</a> &middot; <a href=\"delete_profile.php\">".tra("Delete")."</a>";
+        } else {
+            $x = "<a href=\"create_profile.php\">".tra("Create")."</a>";
+        }
+        row2(tra("Profile"), $x);
     }
-    row2(tra("Profile"), $x);
-    $tot = total_posts($user);
-    if ($tot) {
-        row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+    if (!DISABLE_FORUMS) {
+        $tot = total_posts($user);
+        if ($tot) {
+            row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+        }
     }
     
     row2(tra("Private messages"), pm_notification($user).pm_email_remind($user));
@@ -256,15 +307,20 @@ function show_community_private($user) {
     if (count($notifies)) {
         $x = "";
         foreach ($notifies as $notify) {
-            $x .= "&bull; ".notify_description($notify)."<br>";
+            $y = notify_description($notify);
+            if ($y) {
+                $x .= "&bull; $y<br>";
+            } else {
+                $notify->delete();
+            }
         }
         $x .= "<a href=\"".notify_rss_url($user)."\"><img vspace=\"4\" border=\"0\" src=\"img/rss_icon.gif\" alt=\"RSS\" /></a>";
         row2(tra("Notifications"), $x);
     }
 
-    if (!defined('NO_TEAMS')) {
+    if (!DISABLE_TEAMS) {
         if ($user->teamid) {
-            $team = lookup_team($user->teamid);
+            $team = BoincTeam::lookup_id($user->teamid);
             $x = "<a href=\"team_display.php?teamid=$team->id\">$team->name</a>
                 &middot; <a href=\"team_quit_form.php\">".tra("Quit team")."</a>";
             if (is_team_admin($user, $team)) {
@@ -347,7 +403,7 @@ function get_community_links_object($user){
     $cache_object = new StdClass;
     $cache_object->post_count = total_posts($user);
     $cache_object->user = $user;
-    $cache_object->team = lookup_team($user->teamid);
+    $cache_object->team = BoincTeam::lookup_id($user->teamid);
     $cache_object->friends = array();
 
     $friends = BoincFriend::enum("user_src=$user->id and reciprocated=1");
@@ -364,15 +420,17 @@ function community_links($clo, $logged_in_user){
     $friends = $clo->friends;
     $tot = $clo->post_count;
     
-    if (!defined('NO_TEAMS')) {
+    if (!DISABLE_TEAMS) {
         if ($user->teamid && $team) {
             row2(tra("Team"), "<a href=\"".URL_BASE."team_display.php?teamid=$team->id\">$team->name</a>");
         } else {
             row2(tra("Team"), tra("None"));
         }
     }
-    if ($tot) {
-        row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+    if (!DISABLE_FORUMS) {
+        if ($tot) {
+            row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+        }
     }
     if ($logged_in_user && $logged_in_user->id != $user->id) {
         row2(tra("Contact"), "<a href=\"pm.php?action=new&userid=".$user->id."\">".tra("Send private message")."</a>");

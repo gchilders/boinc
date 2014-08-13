@@ -15,6 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
+#include <cmath>
+
 #include "cpp.h"
 
 #ifdef _WIN32
@@ -34,9 +36,9 @@
 #include "work_fetch.h"
 
 #if 0
-#define DEBUG(x) x
+#define WF_DEBUG(x) x
 #else
-#define DEBUG(X)
+#define WF_DEBUG(X)
 #endif
 
 using std::vector;
@@ -65,8 +67,8 @@ void set_no_rsc_config() {
             for (int k=0; k<c.count; k++) {
                 allowed[c.device_nums[k]] = true;
             }
-            for (unsigned int k=0; k<config.exclude_gpus.size(); k++) {
-                EXCLUDE_GPU& e = config.exclude_gpus[k];
+            for (unsigned int k=0; k<cc_config.exclude_gpus.size(); k++) {
+                EXCLUDE_GPU& e = cc_config.exclude_gpus[k];
                 if (strcmp(e.url.c_str(), p.master_url)) continue;
                 if (!e.type.empty() && strcmp(e.type.c_str(), c.type)) continue;
                 if (!e.appname.empty()) continue;
@@ -146,6 +148,12 @@ void RSC_PROJECT_WORK_FETCH::resource_backoff(PROJECT* p, const char* name) {
 
 ///////////////  RSC_WORK_FETCH  ///////////////
 
+void RSC_WORK_FETCH::copy_request(COPROC& c) {
+    c.req_secs = req_secs;
+    c.req_instances = req_instances;
+    c.estimated_delay =  req_secs?busy_time_estimator.get_busy_time():0;
+}
+
 RSC_PROJECT_WORK_FETCH& RSC_WORK_FETCH::project_state(PROJECT* p) {
     return p->rsc_pwf[rsc_type];
 }
@@ -199,7 +207,7 @@ void RSC_WORK_FETCH::set_request(PROJECT* p) {
         req_secs = 1;
         return;
     }
-    if (config.fetch_minimal_work) {
+    if (cc_config.fetch_minimal_work) {
         req_instances = ninstances;
         req_secs = 1;
         return;
@@ -254,9 +262,9 @@ void RSC_WORK_FETCH::set_request_excluded(PROJECT* p) {
             n++;
         }
     }
-    DEBUG(msg_printf(p, MSG_INFO, "set_request_excluded() %d %d %d", sim_excluded_instances, pwf.non_excluded_instances, n));
+    WF_DEBUG(msg_printf(p, MSG_INFO, "set_request_excluded() %d %d %d", sim_excluded_instances, pwf.non_excluded_instances, n));
     req_instances = n;
-    if (p->resource_share == 0 || config.fetch_minimal_work) {
+    if (p->resource_share == 0 || cc_config.fetch_minimal_work) {
         req_secs = 1;
     } else {
         req_secs = n*gstate.work_buf_total();
@@ -270,7 +278,9 @@ void RSC_WORK_FETCH::print_state(const char* name) {
         shortfall, nidle_now, saturated_time,
         busy_time_estimator.get_busy_time()
     );
-    //msg_printf(0, MSG_INFO, "[work_fetch] sim used inst %d sim excl inst %d", sim_used_instances, sim_excluded_instances);
+    msg_printf(0, MSG_INFO, "[work_fetch] sim used inst %d sim excl inst %d",
+        sim_used_instances, sim_excluded_instances
+    );
     for (unsigned int i=0; i<gstate.projects.size(); i++) {
         char buf[256];
         PROJECT* p = gstate.projects[i];
@@ -419,6 +429,27 @@ void WORK_FETCH::set_all_requests(PROJECT* p) {
 }
 #endif
 
+// copy request fields from RSC_WORK_FETCH to COPROCS
+//
+void WORK_FETCH::copy_requests() {
+    for (int i=0; i<coprocs.n_rsc; i++) {
+        switch (coproc_type_name_to_num(coprocs.coprocs[i].type)) {
+        case PROC_TYPE_NVIDIA_GPU:
+            rsc_work_fetch[i].copy_request(coprocs.nvidia);
+            break;
+        case PROC_TYPE_AMD_GPU:
+            rsc_work_fetch[i].copy_request(coprocs.ati);
+            break;
+        case PROC_TYPE_INTEL_GPU:
+            rsc_work_fetch[i].copy_request(coprocs.intel_gpu);
+            break;
+        default:
+            rsc_work_fetch[i].copy_request(coprocs.coprocs[i]);
+            break;
+        }
+    }
+}
+
 void WORK_FETCH::print_state() {
     msg_printf(0, MSG_INFO, "[work_fetch] ------- start work fetch state -------");
     msg_printf(0, MSG_INFO, "[work_fetch] target work buffer: %.2f + %.2f sec",
@@ -467,9 +498,9 @@ bool WORK_FETCH::requested_work() {
 // Decide if we should "piggyback" a work fetch request.
 //
 void WORK_FETCH::piggyback_work_request(PROJECT* p) {
-    DEBUG(msg_printf(p, MSG_INFO, "piggyback_work_request()");)
+    WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback_work_request()");)
     clear_request();
-    if (config.fetch_minimal_work && gstate.had_or_requested_work) return;
+    if (cc_config.fetch_minimal_work && gstate.had_or_requested_work) return;
     if (p->non_cpu_intensive) {
         if (!has_a_job_in_progress(p) && !p->dont_request_more_work) {
             rsc_work_fetch[0].req_secs = 1;
@@ -492,7 +523,7 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
     // able to fetch it
     //
     bool check_higher_priority_projects = true;
-    if (p->sched_rpc_pending && config.fetch_on_update) {
+    if (p->sched_rpc_pending && cc_config.fetch_on_update) {
         check_higher_priority_projects = false;
     }
 
@@ -502,7 +533,7 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
     // If not, and the resource needs topping off, do so
     //
     for (int i=0; i<coprocs.n_rsc; i++) {
-        DEBUG(msg_printf(p, MSG_INFO, "piggyback: resource %s", rsc_name_long(i));)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: resource %s", rsc_name_long(i));)
         RSC_WORK_FETCH& rwf = rsc_work_fetch[i];
         if (i && !gpus_usable) {
             rwf.dont_fetch_reason = DONT_FETCH_GPUS_NOT_USABLE;
@@ -510,7 +541,7 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
         }
         rwf.dont_fetch_reason = rwf.cant_fetch(p);
         if (rwf.dont_fetch_reason) {
-            DEBUG(msg_printf(p, MSG_INFO, "piggyback: can't fetch %s", rsc_name_long(i));)
+            WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: can't fetch %s", rsc_name_long(i));)
             continue;
         }
         bool buffer_low = (rwf.saturated_time < gstate.work_buf_total());
@@ -519,7 +550,7 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
             need_work = true;
         }
         if (!need_work) {
-            DEBUG(msg_printf(p, MSG_INFO, "piggyback: don't need %s", rsc_name_long(i));)
+            WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: don't need %s", rsc_name_long(i));)
             rwf.dont_fetch_reason = DONT_FETCH_BUFFER_FULL;
             continue;
         }
@@ -528,13 +559,13 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
             for (unsigned int j=0; j<gstate.projects.size(); j++) {
                 p2 = gstate.projects[j];
                 if (p2 == p) break;
-				if (p2->sched_priority == p->sched_priority) continue;
+                if (p2->sched_priority == p->sched_priority) continue;
                 if (p2->pwf.cant_fetch_work_reason) {
-                    DEBUG(msg_printf(p, MSG_INFO, "piggyback: %s can't fetch work", p2->project_name);)
+                    WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: %s can't fetch work", p2->project_name);)
                     continue;
                 }
                 if (!rwf.cant_fetch(p2) && !rwf.backed_off(p2)) {
-                    DEBUG(msg_printf(p, MSG_INFO, "piggyback: better proj %s", p2->project_name);)
+                    WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: better proj %s", p2->project_name);)
                     break;
                 }
             }
@@ -543,7 +574,7 @@ void WORK_FETCH::piggyback_work_request(PROJECT* p) {
                 continue;
             }
         }
-        DEBUG(msg_printf(p, MSG_INFO, "piggyback: requesting %s", rsc_name_long(i));)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "piggyback: requesting %s", rsc_name_long(i));)
         if (buffer_low) {
             rwf.set_request(p);
         } else {
@@ -579,7 +610,7 @@ static bool higher_priority(PROJECT *p1, PROJECT *p2) {
 //
 bool RSC_WORK_FETCH::backed_off(PROJECT* p) {
     if (project_state(p).backoff_time > gstate.now) {
-        DEBUG(msg_printf(p, MSG_INFO, "skip: backoff");)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "skip: backoff");)
         return true;
     }
     return false;
@@ -594,7 +625,7 @@ int RSC_WORK_FETCH::cant_fetch(PROJECT *p) {
     //
     int reason = dont_fetch(p, rsc_type);
     if (reason) {
-        DEBUG(msg_printf(p, MSG_INFO, "skip: dont_fetch");)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "skip: dont_fetch");)
         return reason;
     }
 
@@ -603,8 +634,8 @@ int RSC_WORK_FETCH::cant_fetch(PROJECT *p) {
     // if project has zero resource share,
     // only fetch work if a device is idle
     //
-    if (p->resource_share == 0 && nidle_now == 0) {
-        DEBUG(msg_printf(p, MSG_INFO, "skip: zero share");)
+    if (p->resource_share == 0 && nidle_now == 0 && sim_excluded_instances==0) {
+        WF_DEBUG(msg_printf(p, MSG_INFO, "skip: zero share");)
         return DONT_FETCH_ZERO_SHARE;
     }
 
@@ -628,13 +659,13 @@ int RSC_WORK_FETCH::cant_fetch(PROJECT *p) {
         if (rpwf.n_runnable_jobs >= n_not_excluded
             && rpwf.queue_est > (gstate.work_buf_min() * n_not_excluded)/ninstances
         ) {
-            DEBUG(msg_printf(p, MSG_INFO, "skip: too much work");)
+            WF_DEBUG(msg_printf(p, MSG_INFO, "skip: too much work");)
             return DONT_FETCH_BUFFER_FULL;
         }
     }
 
     if (rpwf.anon_skip) {
-        DEBUG(msg_printf(p, MSG_INFO, "skip: anon");)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "skip: anon");)
         return DONT_FETCH_NO_APPS;
     }
     return 0;
@@ -647,7 +678,7 @@ bool RSC_WORK_FETCH::uses_starved_excluded_instances(PROJECT* p) {
     RSC_PROJECT_WORK_FETCH& rpwf = project_state(p);
     if (!sim_excluded_instances) return false;
     if ((sim_excluded_instances & rpwf.non_excluded_instances) == 0) {
-        DEBUG(msg_printf(p, MSG_INFO, "skip: excl");)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "skip: excl");)
         return false;
     }
     return true;
@@ -722,9 +753,9 @@ PROJECT* WORK_FETCH::choose_project() {
     bool found = false;
     for (unsigned int j=0; j<gstate.projects.size(); j++) {
         p = gstate.projects[j];
-        DEBUG(msg_printf(p, MSG_INFO, "scanning");)
+        WF_DEBUG(msg_printf(p, MSG_INFO, "scanning");)
         if (p->pwf.cant_fetch_work_reason) {
-            DEBUG(msg_printf(p, MSG_INFO, "skip: cfwr %d", p->pwf.cant_fetch_work_reason);)
+            WF_DEBUG(msg_printf(p, MSG_INFO, "skip: cfwr %d", p->pwf.cant_fetch_work_reason);)
             continue;
         }
 
@@ -743,18 +774,18 @@ PROJECT* WORK_FETCH::choose_project() {
                 if (!rwf.found_project) {
                     rwf.found_project = p;
                 }
-                DEBUG(msg_printf(p, MSG_INFO, "can fetch %s", rsc_name_long(i));)
+                WF_DEBUG(msg_printf(p, MSG_INFO, "can fetch %s", rsc_name_long(i));)
             } else {
-                DEBUG(msg_printf(p, MSG_INFO, "can't fetch %s", rsc_name_long(i));)
+                WF_DEBUG(msg_printf(p, MSG_INFO, "can't fetch %s", rsc_name_long(i));)
                 continue;
             }
             if (rwf.saturated_time < gstate.work_buf_min()) {
-                DEBUG(msg_printf(p, MSG_INFO, "%s needs work - buffer low", rsc_name_long(i));)
+                WF_DEBUG(msg_printf(p, MSG_INFO, "%s needs work - buffer low", rsc_name_long(i));)
                 rsc_index = i;
                 break;
             }
             if (rwf.has_exclusions && rwf.uses_starved_excluded_instances(p)) {
-                DEBUG(msg_printf(p, MSG_INFO, "%s needs work - excluded instance starved", rsc_name_long(i));)
+                WF_DEBUG(msg_printf(p, MSG_INFO, "%s needs work - excluded instance starved", rsc_name_long(i));)
                 rsc_index = i;
                 break;
             }
@@ -773,12 +804,12 @@ PROJECT* WORK_FETCH::choose_project() {
                 if (i && !gpus_usable) continue;
                 RSC_WORK_FETCH& rwf = rsc_work_fetch[i];
                 bool buffer_low;
-                DEBUG(msg_printf(p, MSG_INFO, "checking %s", rsc_name_long(i));)
+                WF_DEBUG(msg_printf(p, MSG_INFO, "checking %s", rsc_name_long(i));)
                 if (i == rsc_index) {
                     buffer_low = (rwf.saturated_time < gstate.work_buf_min());
                 } else {
                     if (rwf.found_project && rwf.found_project != p) {
-                        DEBUG(msg_printf(p, MSG_INFO, "%s not high prio proj", rsc_name_long(i));)
+                        WF_DEBUG(msg_printf(p, MSG_INFO, "%s not high prio proj", rsc_name_long(i));)
                         continue;
                     }
                     buffer_low = (rwf.saturated_time < gstate.work_buf_total());
@@ -787,21 +818,21 @@ PROJECT* WORK_FETCH::choose_project() {
                         need_work = true;
                     }
                     if (!need_work) {
-                        DEBUG(msg_printf(p, MSG_INFO, "%s don't need", rsc_name_long(i));)
+                        WF_DEBUG(msg_printf(p, MSG_INFO, "%s don't need", rsc_name_long(i));)
                         continue;
                     }
                     int reason = rwf.cant_fetch(p);
                     if (reason) {
-                        DEBUG(msg_printf(p, MSG_INFO, "%s can't fetch", rsc_name_long(i));)
+                        WF_DEBUG(msg_printf(p, MSG_INFO, "%s can't fetch", rsc_name_long(i));)
                         continue;
                     }
                 }
                 if (buffer_low) {
                     rwf.set_request(p);
-                    DEBUG(msg_printf(p, MSG_INFO, "%s set_request: %f", rsc_name_long(i), rwf.req_secs);)
+                    WF_DEBUG(msg_printf(p, MSG_INFO, "%s set_request: %f", rsc_name_long(i), rwf.req_secs);)
                 } else {
                     rwf.set_request_excluded(p);
-                    DEBUG(msg_printf(p, MSG_INFO, "%s set_request_excluded: %f", rsc_name_long(i), rwf.req_secs);)
+                    WF_DEBUG(msg_printf(p, MSG_INFO, "%s set_request_excluded: %f", rsc_name_long(i), rwf.req_secs);)
                 }
                 if (rwf.req_secs > 0) {
                     any_request = true;
@@ -1052,10 +1083,30 @@ void CLIENT_STATE::compute_nuploading_results() {
 double ACTIVE_TASK::est_dur() {
     if (fraction_done >= 1) return elapsed_time;
     double wu_est = result->estimated_runtime();
-    if (fraction_done <= 0) return wu_est;
-    if (wu_est < elapsed_time) wu_est = elapsed_time;
+    if (fraction_done <= 0) {
+        if (elapsed_time > 0) {
+            // if app is running but hasn't reported fraction done,
+            // use the fraction-done guesstimate from ACTIVE_TASK::write_gui()
+            //
+            double fd = 1 - exp(-elapsed_time/wu_est);
+            return elapsed_time/fd;
+        } else {
+            return wu_est;
+        }
+    }
+    bool exceeded_wu_est = (elapsed_time > wu_est);
+    if (exceeded_wu_est) wu_est = elapsed_time;
     double frac_est = fraction_done_elapsed_time / fraction_done;
-    double fd_weight = fraction_done * fraction_done;
+
+    // if app says fraction done is accurate, just use it
+    // also use it if static estimate has already been exceeded
+    //
+    if (result->app->fraction_done_exact || exceeded_wu_est) return frac_est;
+
+    // weighting of dynamic estimate is the fraction done
+    // i.e. when fraction done is 0.5, weighting is 50/50
+    //
+    double fd_weight = fraction_done;
     double wu_weight = 1 - fd_weight;
     double x = fd_weight*frac_est + wu_weight*wu_est;
 #if 0

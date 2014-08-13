@@ -244,6 +244,7 @@ struct APP {
     char name[256];
     char user_friendly_name[256];
     bool non_cpu_intensive;
+    bool fraction_done_exact;
     PROJECT* project;
     int max_concurrent;
         // Limit on # of concurrent jobs of this app; 0 if none
@@ -281,7 +282,7 @@ struct APP_VERSION {
     char api_version[16];
     double avg_ncpus;
     double max_ncpus;
-    GPU_USAGE gpu_usage;    // can only use 1 GPUtype
+    GPU_USAGE gpu_usage;    // can only use 1 GPU type
     double gpu_ram;
     double flops;
     char cmdline[256];
@@ -325,12 +326,15 @@ struct APP_VERSION {
     bool had_download_failure(int& failnum);
     void get_file_errors(std::string&);
     void clear_errors();
-    int api_major_version();
+    bool api_version_at_least(int major, int minor);
     inline bool uses_coproc(int rt) {
         return (gpu_usage.rsc_type == rt);
     }
     inline int rsc_type() {
         return gpu_usage.rsc_type;
+    }
+    inline bool is_opencl() {
+        return (strstr(plan_class, "opencl") != NULL);
     }
 };
 

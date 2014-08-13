@@ -158,6 +158,8 @@ public:
 
     wxArrayString&      GetSupportedLanguages()     { return m_astrLanguages; }
     wxString            GetISOLanguageCode()        { return m_strISOLanguageCode; }
+    void                SetISOLanguageCode(wxString strISOLanguageCode)
+                                                    { m_strISOLanguageCode = strISOLanguageCode; }
     
     void                DisplayEventLog(bool bShowWindow = true);
     void                OnEventLogClose();
@@ -207,10 +209,15 @@ public:
     //
     void                HideThisApp(void);
 
+#if !wxCHECK_VERSION(3,0,1)
+// This should be fixed after wxCocoa 3.0.0:
+// http://trac.wxwidgets.org/ticket/16156
+
     // Override standard wxCocoa wxApp::CallOnInit() to allow Manager
     // to run properly when launched hidden on login via Login Item. 
     bool                CallOnInit();
-    
+#endif
+
     void                CheckPartialActivation();
 #endif
 

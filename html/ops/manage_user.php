@@ -294,14 +294,14 @@ if (!$id) {
     $id = post_int("userid", true);
 }
 if (!$id) error_page("No ID given");
-$user = lookup_user_id($id);
+$user = BoincUser::lookup_id($id);
 if (!$user) error_page("No such user: $id");
 
 BoincForumPrefs::lookup($user);
 
 if (isset($_POST['delete_user'])) {
     delete_user($user);
-    admin_page_head();
+    admin_page_head("User deleted");
     echo "User $user->name ($user->id) deleted";
     admin_page_tail();
 }

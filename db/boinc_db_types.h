@@ -82,6 +82,8 @@ struct APP {
         // type of locality scheduling used by this app (see above)
     int n_size_classes;
         // for multi-size apps, number of size classes
+    bool fraction_done_exact;
+        // fraction done reported by app is accurate
 
     int write(FILE*);
     void clear();
@@ -124,14 +126,19 @@ struct APP_VERSION {
     char plan_class[256];
     AVERAGE pfc;
         // the stats of (claimed PFC)/wu.rsc_fpops_est
-        // If wu.rsc_fpops_est is accurate,
-        // this is the reciprocal of efficiency
+        // What does this mean?
+        // Suppose X is the error in rsc_fpops_est
+        // (i.e. actual FPOPS = X*rsc_fpops_est)
+        // and Y is average efficiency
+        // (actual FLOPS = Y*peak FLOPS)
+        // Then this is X/Y.
     double pfc_scale;
         // PFC scaling factor for this app (or 0 if not enough data)
         // The reciprocal of this version's efficiency, averaged over all jobs,
         // relative to that of the most efficient version
     double expavg_credit;
     double expavg_time;
+    bool beta;
 
     // the following used by scheduler, not in DB
     //
@@ -194,6 +201,9 @@ struct USER {
         // is being verified.
     bool has_profile;
     char cross_project_id[256];
+        // the "internal" cross-project ID;
+        // the "external CPID" that  gets exported to stats sites
+        // is MD5(cpid, email)
     char passwd_hash[256];
     bool email_validated;           // deprecated
     int donated;
@@ -594,6 +604,11 @@ struct RESULT {
     int size_class;
         // -1 means none
 
+    // the following reported by 7.3.16+ clients
+    double peak_working_set_size;
+    double peak_swap_size;
+    double peak_disk_usage;
+
     void clear();
     RESULT() {clear();}
 };
@@ -754,13 +769,13 @@ struct VDA_CHUNK_HOST {
     void print_status(int level);
 };
 
+
 struct WORKUSER {
 	int id;
 	int appid;
 	int wus;
 	double credit;
     void clear();
-
 };
 
 struct WORKTEAM {
@@ -769,7 +784,37 @@ struct WORKTEAM {
 	int wus;
 	double credit;
     void clear();
+};
 
+
+struct BADGE {
+    int id;
+    double create_time;
+    int type;
+    char name[256];
+    char title[256];
+    char description[256];
+    char image_url[256];
+    char level[256];
+    char tags[256];
+    char sql_rule[256];
+    void clear();
+};
+
+struct BADGE_USER {
+    int badge_id;
+    int user_id;
+    double create_time;
+    double reassign_time;
+    void clear();
+};
+
+struct BADGE_TEAM {
+    int badge_id;
+    int team_id;
+    double create_time;
+    double reassign_time;
+    void clear();
 };
 
 #endif

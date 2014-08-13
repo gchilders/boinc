@@ -46,6 +46,7 @@
 #include "sched_locality.h"
 #include "sched_main.h"
 #include "sched_msgs.h"
+#include "sched_nci.h"
 #include "sched_shmem.h"
 #include "sched_score.h"
 #include "sched_timezone.h"
@@ -150,7 +151,7 @@ void WORK_REQ_BASE::get_job_limits() {
     for (i=1; i<g_request->coprocs.n_rsc; i++) {
         COPROC& cp = g_request->coprocs.coprocs[i];
         int proc_type = coproc_type_name_to_num(cp.type);
-        if (!proc_type) continue;
+        if (proc_type < 0) continue;
         n = cp.count;
         if (n > MAX_GPUS) n = MAX_GPUS;
         ninstances[proc_type] = n;
@@ -364,7 +365,7 @@ double max_allowable_disk() {
         // Compute the max allowable additional disk usage based on prefs
         //
         x1 = prefs.disk_max_used_gb*GIGA - host.d_boinc_used_total;
-        x2 = host.d_total*prefs.disk_max_used_pct/100.
+        x2 = host.d_total * prefs.disk_max_used_pct / 100.0
             - host.d_boinc_used_total;
         x3 = host.d_free - prefs.disk_min_free_gb*GIGA;      // may be negative
         x = std::min(x1, std::min(x2, x3));
@@ -394,9 +395,9 @@ double max_allowable_disk() {
         if (config.debug_send) {
             log_messages.printf(MSG_NORMAL,
                 "[send] No disk space available: disk_max_used_gb %.2fGB disk_max_used_pct %.2f disk_min_free_gb %.2fGB\n",
-                prefs.disk_max_used_gb/GIGA,
+                prefs.disk_max_used_gb,
                 prefs.disk_max_used_pct,
-                prefs.disk_min_free_gb/GIGA
+                prefs.disk_min_free_gb
             );
             log_messages.printf(MSG_NORMAL,
                 "[send] No disk space available: host.d_total %.2fGB host.d_free %.2fGB host.d_boinc_used_total %.2fGB\n",
@@ -471,9 +472,9 @@ double available_frac(BEST_APP_VERSION& bav) {
 double estimate_duration(WORKUNIT& wu, BEST_APP_VERSION& bav) {
     double edu = estimate_duration_unscaled(wu, bav);
     double ed = edu/available_frac(bav);
-    if (config.debug_send) {
+    if (config.debug_send_job) {
         log_messages.printf(MSG_NORMAL,
-            "[send] est. duration for WU %d: unscaled %.2f scaled %.2f\n",
+            "[send_job] est. duration for WU %d: unscaled %.2f scaled %.2f\n",
             wu.id, edu, ed
         );
     }
@@ -545,7 +546,7 @@ static inline void update_estimated_delay(BEST_APP_VERSION& bav, double dt) {
     if (pt == PROC_TYPE_CPU) {
         g_request->cpu_estimated_delay += dt*bav.host_usage.avg_ncpus/g_request->host.p_ncpus;
     } else {
-        COPROC* cp = g_request->coprocs.type_to_coproc(pt);
+        COPROC* cp = g_request->coprocs.proc_type_to_coproc(pt);
         cp->estimated_delay += dt*bav.host_usage.gpu_usage/cp->count;
     }
 }
@@ -773,10 +774,34 @@ bool work_needed(bool locality_sched) {
         // if we've failed to send a result because of a transient condition,
         // return false to preserve invariant
         //
-        if (g_wreq->disk.insufficient || g_wreq->speed.insufficient || g_wreq->mem.insufficient || g_wreq->no_allowed_apps_available) {
+        if (g_wreq->disk.insufficient) {
             if (config.debug_send) {
                 log_messages.printf(MSG_NORMAL,
-                    "[send] stopping work search - locality condition\n"
+                    "[send] stopping work search - insufficient disk space\n"
+                );
+            }
+            return false;
+        }
+        if (g_wreq->speed.insufficient) {
+            if (config.debug_send) {
+                log_messages.printf(MSG_NORMAL,
+                    "[send] stopping work search - host too slow\n"
+                );
+            }
+            return false;
+        }
+        if (g_wreq->mem.insufficient) {
+            if (config.debug_send) {
+                log_messages.printf(MSG_NORMAL,
+                    "[send] stopping work search - insufficient memory\n"
+                );
+            }
+            return false;
+        }
+        if (g_wreq->no_allowed_apps_available) {
+            if (config.debug_send) {
+                log_messages.printf(MSG_NORMAL,
+                    "[send] stopping work search - no locality app selected\n"
                 );
             }
             return false;
@@ -966,9 +991,13 @@ int add_result_to_reply(
 
     double est_dur = estimate_duration(wu, *bavp);
     if (config.debug_send) {
+        double max_time = wu.rsc_fpops_bound / bavp->host_usage.projected_flops;
+        char buf1[64],buf2[64];
+        secs_to_hmsf(est_dur, buf1);
+        secs_to_hmsf(max_time, buf2);
         log_messages.printf(MSG_NORMAL,
-            "[send] [HOST#%d] sending [RESULT#%u %s] (est. dur. %.2f seconds)\n",
-            g_reply->host.id, result.id, result.name, est_dur
+            "[send] [HOST#%d] sending [RESULT#%d %s] (est. dur. %.2fs (%s)) (max time %.2fs (%s))\n",
+            g_reply->host.id, result.id, result.name, est_dur, buf1, max_time, buf2
         );
     }
 
@@ -1138,14 +1167,20 @@ void send_gpu_messages() {
     // GPU-only project, client lacks GPU
     //
     bool usable_gpu = false;
+    bool have_gpu_apps = false;
     for (int i=1; i<NPROC_TYPES; i++) {
-        COPROC* cp = g_request->coprocs.type_to_coproc(i);
-        if (ssp->have_apps_for_proc_type[i] && cp->count) {
-            usable_gpu = true;
-            break;
+        COPROC* cp = g_request->coprocs.proc_type_to_coproc(i);
+        if (ssp->have_apps_for_proc_type[i]) {
+            have_gpu_apps = true;
+            if (cp->count) {
+                usable_gpu = true;
+            }
         }
     }
-    if (!ssp->have_apps_for_proc_type[PROC_TYPE_CPU] && !usable_gpu) {
+    if (!ssp->have_apps_for_proc_type[PROC_TYPE_CPU]
+        && have_gpu_apps
+        && !usable_gpu
+    ) {
         char buf[256];
         strcpy(buf, "");
         for (int i=1; i<NPROC_TYPES; i++) {
@@ -1205,7 +1240,7 @@ static void send_user_messages() {
     // If work was sent from apps the user did not select, explain.
     // NOTE: this will have to be done differently with matchmaker scheduling
     //
-    if (!config.locality_scheduling && !config.locality_scheduler_fraction && !config.matchmaker) {
+    if (!config.locality_scheduling && !config.locality_scheduler_fraction && config.sched_old) {
         if (g_wreq->njobs_sent && !g_wreq->user_apps_only) {
             g_reply->insert_message(
                 "No tasks are available for the applications you have selected",
@@ -1394,7 +1429,7 @@ void send_work_setup() {
     // do sanity checking on GPU scheduling parameters
     //
     for (i=1; i<NPROC_TYPES; i++) {
-        COPROC* cp = g_request->coprocs.type_to_coproc(i);
+        COPROC* cp = g_request->coprocs.proc_type_to_coproc(i);
         if (cp->count) {
             g_wreq->req_secs[i] = clamp_req_sec(cp->req_secs);
             g_wreq->req_instances[i] = cp->req_instances;
@@ -1444,8 +1479,8 @@ void send_work_setup() {
     }
     if (config.debug_send) {
         log_messages.printf(MSG_NORMAL,
-            "[send] %s matchmaker scheduling; %s EDF sim\n",
-            config.matchmaker?"Using":"Not using",
+            "[send] %s old scheduling; %s EDF sim\n",
+            config.sched_old?"Using":"Not using",
             config.workload_sim?"Using":"Not using"
         );
         log_messages.printf(MSG_NORMAL,
@@ -1455,7 +1490,7 @@ void send_work_setup() {
             g_request->cpu_estimated_delay
         );
         for (i=1; i<NPROC_TYPES; i++) {
-            COPROC* cp = g_request->coprocs.type_to_coproc(i);
+            COPROC* cp = g_request->coprocs.proc_type_to_coproc(i);
             if (cp->count) {
                 log_messages.printf(MSG_NORMAL,
                     "[send] %s: req %.2f sec, %.2f instances; est delay %.2f\n",
@@ -1575,8 +1610,6 @@ int update_host_app_versions(vector<SCHED_DB_RESULT>& results, int hostid) {
 void send_work() {
     int retval;
 
-    g_wreq->no_jobs_available = true;
-
     if (all_apps_use_hr && hr_unknown_platform(g_request->host)) {
         log_messages.printf(MSG_NORMAL,
             "Not sending work because unknown HR class\n"
@@ -1616,7 +1649,7 @@ void send_work() {
 
     // send non-CPU-intensive jobs if needed
     //
-    if (ssp->have_nci_app && g_request->work_req_seconds > 0) {
+    if (ssp->have_nci_app) {
         send_nci();
     }
 
@@ -1632,18 +1665,51 @@ void send_work() {
                 );
             }
             send_work_locality();
+
+            // save 'insufficient' flags from the first scheduler
+            bool disk_insufficient  = g_wreq->disk.insufficient;
+            bool speed_insufficient = g_wreq->speed.insufficient;
+            bool mem_insufficient   = g_wreq->mem.insufficient;
+            bool no_allowed_apps_available = g_wreq->no_allowed_apps_available;
+
+            // reset 'insufficient' flags for the second scheduler
+            g_wreq->disk.insufficient = false;
+            g_wreq->speed.insufficient = false;
+            g_wreq->mem.insufficient = false;
+            g_wreq->no_allowed_apps_available = false;
+
             if (config.debug_locality) {
                 log_messages.printf(MSG_NORMAL,
                     "[mixed] sending non-locality work second\n"
                 );
             }
             send_work_old();
+
+            // recombine the 'insufficient' flags from the two schedulers
+            g_wreq->disk.insufficient  = g_wreq->disk.insufficient && disk_insufficient;
+            g_wreq->speed.insufficient = g_wreq->speed.insufficient && speed_insufficient;
+            g_wreq->mem.insufficient   = g_wreq->mem.insufficient && mem_insufficient;
+            g_wreq->no_allowed_apps_available = g_wreq->no_allowed_apps_available && no_allowed_apps_available;
+
         } else {
             if (config.debug_locality) {
                 log_messages.printf(MSG_NORMAL,
                     "[mixed] sending non-locality work first\n"
                 );
             }
+
+            // save 'insufficient' flags from the first scheduler
+            bool disk_insufficient  = g_wreq->disk.insufficient;
+            bool speed_insufficient = g_wreq->speed.insufficient;
+            bool mem_insufficient   = g_wreq->mem.insufficient;
+            bool no_allowed_apps_available = g_wreq->no_allowed_apps_available;
+
+            // reset 'insufficient' flags for the second scheduler
+            g_wreq->disk.insufficient = false;
+            g_wreq->speed.insufficient = false;
+            g_wreq->mem.insufficient = false;
+            g_wreq->no_allowed_apps_available = false;
+
             send_work_old();
             if (config.debug_locality) {
                 log_messages.printf(MSG_NORMAL,
@@ -1651,13 +1717,20 @@ void send_work() {
                 );
             }
             send_work_locality();
+
+            // recombine the 'insufficient' flags from the two schedulers
+            g_wreq->disk.insufficient  = g_wreq->disk.insufficient && disk_insufficient;
+            g_wreq->speed.insufficient = g_wreq->speed.insufficient && speed_insufficient;
+            g_wreq->mem.insufficient   = g_wreq->mem.insufficient && mem_insufficient;
+            g_wreq->no_allowed_apps_available = g_wreq->no_allowed_apps_available && no_allowed_apps_available;
+
         }
     } else if (config.locality_scheduling) {
         send_work_locality();
-    } else if (config.matchmaker) {
-        send_work_score();
-    } else {
+    } else if (config.sched_old) {
         send_work_old();
+    } else {
+        send_work_score();
     }
 
 done:

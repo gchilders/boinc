@@ -32,6 +32,7 @@ struct APP_CONFIG {
     int max_concurrent;
     double gpu_gpu_usage;
     double gpu_cpu_usage;
+    bool fraction_done_exact;
 
     int parse(XML_PARSER&, PROJECT*);
 };
@@ -49,10 +50,16 @@ struct APP_VERSION_CONFIG {
 struct APP_CONFIGS {
     std::vector<APP_CONFIG> app_configs;
     std::vector<APP_VERSION_CONFIG> app_version_configs;
+    int project_max_concurrent;
 
     int parse(XML_PARSER&, PROJECT*);
     int parse_file(FILE*, PROJECT*);
     void config_app_versions(PROJECT*, bool show_warnings);
+    void clear() {
+        app_configs.clear();
+        app_version_configs.clear();
+        project_max_concurrent = 0;
+    }
 };
 
 extern bool have_max_concurrent;

@@ -19,6 +19,7 @@
 require_once("../inc/credit.inc");
 require_once("../inc/stats_sites.inc");
 require_once("../inc/boinc_db.inc");
+require_once("../inc/user.inc");
 
 function link_to_results($host) {
     if (!$host) return tra("No host");
@@ -99,7 +100,7 @@ function show_host($host, $user, $ipprivate) {
         if ($x >= 0) $x="+$x";
         row2(tra("Local Standard Time"), tra("UTC %1 hours", $x));
     } else {
-        $owner = lookup_user_id($host->userid);
+        $owner = BoincUser::lookup_id($host->userid);
         if ($owner && $owner->show_hosts) {
             row2(tra("Owner"), user_links($owner));
         } else {
@@ -123,23 +124,23 @@ function show_host($host, $user, $ipprivate) {
     if ($v) {
         row2(tra("BOINC version"), $v);
     }
-    $x = $host->m_nbytes/(1024*1024);
+    $x = $host->m_nbytes/MEGA;
     $y = round($x, 2);
     row2(tra("Memory"), tra("%1 MB", $y));
     if ($host->m_cache > 0) {
-        $x = $host->m_cache/1024;
+        $x = $host->m_cache/KILO;
         $y = round($x, 2);
         row2(tra("Cache"), tra("%1 KB", $y));
     }
 
     if ($user) {
-        $x = $host->m_swap/(1024*1024);
+        $x = $host->m_swap/MEGA;
         $y = round($x, 2);
         row2(tra("Swap space"), tra("%1 MB", $y));
-        $x = $host->d_total/(1024*1024*1024);
+        $x = $host->d_total/GIGA;
         $y = round($x, 2);
         row2(tra("Total disk space"), tra("%1 GB", $y));
-        $x = $host->d_free/(1024*1024*1024);
+        $x = $host->d_free/GIGA;
         $y = round($x, 2);
         row2(tra("Free Disk Space"), tra("%1 GB", $y));
     }
@@ -149,14 +150,14 @@ function show_host($host, $user, $ipprivate) {
     $x = $host->p_iops/(1000*1000);
     $y = round($x, 2);
     row2(tra("Measured integer speed"), tra("%1 million ops/sec", $y));
-    $x = $host->n_bwup/(1024);
+    $x = $host->n_bwup/KILO;
     $y = round($x, 2);
     if ($y > 0) {
         row2(tra("Average upload rate"), tra("%1 KB/sec", $y));
     } else {
         row2(tra("Average upload rate"), tra("Unknown"));
     }
-    $x = $host->n_bwdown/(1024);
+    $x = $host->n_bwdown/KILO;
     $y = round($x, 2);
     if ($y > 0) {
         row2(tra("Average download rate"), tra("%1 KB/sec", $y));
@@ -305,9 +306,14 @@ function gpu_desc($x) {
 function boinc_version($x) {
     $y = strstr($x, 'BOINC');
     if (!$y) return '';
-    $y = substr($y, 6);
     $z = explode("]", $y, 2);
-    return $z[0];
+    $a = explode('|', $z[0]);
+    $v = $a[1];
+    if (array_key_exists(2, $a)) {
+        $brand = $a[2];
+        $v .= " ($brand)";
+    }
+    return $v;
 }
 
 function cpu_desc($host) {

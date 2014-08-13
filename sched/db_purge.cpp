@@ -309,6 +309,7 @@ int archive_result(DB_RESULT& result) {
         "  <opaque>%f</opaque>\n"
         "  <random>%d</random>\n"
         "  <app_version_num>%d</app_version_num>\n"
+        "  <app_version_id>%d</app_version_id>\n"
         "  <appid>%d</appid>\n"
         "  <exit_status>%d</exit_status>\n"
         "  <teamid>%d</teamid>\n"
@@ -337,6 +338,7 @@ int archive_result(DB_RESULT& result) {
         result.opaque,
         result.random,
         result.app_version_num,
+        result.app_version_id,
         result.appid,
         result.exit_status,
         result.teamid,
@@ -493,7 +495,7 @@ bool do_pass() {
     char buf[256];
 
     if (min_age_days) {
-        min_age_seconds = (int) min_age_days*86400;
+        min_age_seconds = (int) (min_age_days*86400);
         if (id_modulus) {
             sprintf(buf,
                 "where file_delete_state=%d and mod_time<current_timestamp() - interval %d second and id %% %d = %d limit %d",

@@ -77,8 +77,12 @@ function est_elapsed_time($r, $template) {
     return batch_flop_count($r, $template) / project_flops();
 }
 
-function read_input_template($app) {
-    $path = "../../templates/$app->name"."_in";
+function read_input_template($app, $r) {
+    if ((isset($r->batch)) && (isset($r->batch->workunit_template_file)) && ($r->batch->workunit_template_file)) {
+        $path = "../../templates/".$r->batch->workunit_template_file;
+    } else {
+        $path = "../../templates/$app->name"."_in";
+    }
     return simplexml_load_file($path);
 }
 
@@ -97,7 +101,7 @@ function estimate_batch($r) {
     $app = get_app((string)($r->batch->app_name));
     list($user, $user_submit) = authenticate_user($r, $app);
 
-    $template = read_input_template($app);
+    $template = read_input_template($app, $r);
     $e = est_elapsed_time($r, $template);
     echo "<estimate>\n<seconds>$e</seconds>\n</estimate>\n";
 }
@@ -120,16 +124,20 @@ $fanout = parse_config(get_config(), "<uldl_dir_fanout>");
 //
 function stage_file($file) {
     global $fanout;
+    $download_dir = parse_config(get_config(), "<download_dir>");
 
     switch ($file->mode) {
     case "semilocal":
     case "local":
+        // read the file (from disk or network) to get MD5.
+        // Copy to download hier, using a physical name based on MD5
+        //
         $md5 = md5_file($file->source);
         if (!$md5) {
             xml_error(-1, "BOINC server: Can't get MD5 of file $file->source");
         }
         $name = "jf_$md5";
-        $path = dir_hier_path($name, "../../download", $fanout);
+        $path = dir_hier_path($name, $download_dir, $fanout);
         if (file_exists($path)) return $name;
         if (!copy($file->source, $path)) {
             xml_error(-1, "BOINC server: can't copy file from $file->source to $path");
@@ -143,7 +151,7 @@ function stage_file($file) {
             xml_error(-1, "BOINC server: Can't get MD5 of inline data");
         }
         $name = "jf_$md5";
-        $path = dir_hier_path($name, "../../download", $fanout);
+        $path = dir_hier_path($name, $download_dir, $fanout);
         if (file_exists($path)) return $name;
         if (!file_put_contents($path, $file->source)) {
             xml_error(-1, "BOINC server: can't write to file $path");
@@ -158,23 +166,55 @@ function stage_file($file) {
 function stage_files(&$jobs, $template) {
     foreach($jobs as $job) {
         foreach ($job->input_files as $file) {
-            $file->name = stage_file($file);
+            if ($file->mode != "remote") {
+                $file->name = stage_file($file);
+            }
         }
     }
 }
 
-function submit_job($job, $template, $app, $batch_id, $i, $priority) {
-    $cmd = "cd ../..; ./bin/create_work --appname $app->name --batch $batch_id --rsc_fpops_est $job->rsc_fpops_est --priority $priority";
-    if ($job->command_line) {
-        $cmd .= " --command_line \"$job->command_line\"";
+function submit_jobs($jobs, $template, $app, $batch_id, $priority, $result_template_file = null, $workunit_template_file = null) {
+    $x = "";
+    foreach($jobs as $job) {
+        if ($job->name) {
+            $x .= " --wu_name $job->name";
+        }
+        if ($job->command_line) {
+            $x .= " --command_line \"$job->command_line\"";
+        }
+        if ($job->target_team) {
+            $x .= " --target_team $job->target_team";
+        } elseif ($job->target_user) {
+            $x .= " --target_user $job->target_user";
+        } elseif ($job->target_host) {
+            $x .= " --target_host $job->target_host";
+        }
+        foreach ($job->input_files as $file) {
+            if ($file->mode == "remote") {
+                $x .= " --remote_file $file->url $file->nbytes $file->md5";
+            } else {
+                $x .= " $file->name";
+            }
+        }
+        $x .= "\n";
     }
-    $cmd .= " --wu_name $job->name";
-    foreach ($job->input_files as $file) {
-        $cmd .= " $file->name";
+
+    $cmd = "cd ../..; ./bin/create_work --appname $app->name --batch $batch_id --rsc_fpops_est $job->rsc_fpops_est --priority $priority --stdin";
+    if ($result_template_file) {
+        $cmd .= " --result_template templates/$result_template_file";
     }
-    $ret = system($cmd);
-    if ($ret === FALSE) {
-        xml_error(-1, "BOINC server: can't create job");
+    if ($workunit_template_file) {
+        $cmd .= " --wu_template templates/$workunit_template_file";
+    }
+    $cmd .= " --stdin";
+    $h = popen($cmd, "w");
+    if ($h === false) {
+        xml_error(-1, "BOINC server: can't run create_work");
+    }
+    fwrite($h, $x);
+    $ret = pclose($h);
+    if ($ret) {
+        xml_error(-1, "BOINC server: create_work failed");
     }
 }
 
@@ -184,12 +224,21 @@ function xml_get_jobs($r) {
         $job = new StdClass;
         $job->input_files = array();
         $job->command_line = (string)$j->command_line;
+        $job->target_team = (int)$j->target_team;
+        $job->target_user = (int)$j->target_user;
+        $job->target_host = (int)$j->target_host;
         $job->name = (string)$j->name;
         $job->rsc_fpops_est = (double)$j->rsc_fpops_est;
         foreach ($j->input_file as $f) {
             $file = new StdClass;
             $file->mode = (string)$f->mode;
-            $file->source = (string)$f->source;
+            if ($file->mode == "remote") {
+                $file->url = (string)$f->url;
+                $file->nbytes = (double)$f->nbytes;
+                $file->md5 = (string)$f->md5;
+            } else {
+                $file->source = (string)$f->source;
+            }
             $job->input_files[] = $file;
         }
         $jobs[] = $job;
@@ -200,7 +249,7 @@ function xml_get_jobs($r) {
 function submit_batch($r) {
     $app = get_app((string)($r->batch->app_name));
     list($user, $user_submit) = authenticate_user($r, $app);
-    $template = read_input_template($app);
+    $template = read_input_template($app, $r);
     $jobs = xml_get_jobs($r);
     validate_batch($jobs, $template);
     stage_files($jobs, $template);
@@ -258,10 +307,20 @@ function submit_batch($r) {
         }
         $batch = BoincBatch::lookup_id($batch_id);
     }
-    $i = 0;
-    foreach($jobs as $job) {
-        submit_job($job, $template, $app, $batch_id, $i++, $let);
+    
+    if ($r->batch->result_template_file) {
+        $result_template_file = $r->batch->result_template_file;
+    } else {
+        $result_template_file = null;
     }
+    
+    if ($r->batch->workunit_template_file) {
+        $workunit_template_file = $r->batch->workunit_template_file;
+    } else {
+        $workunit_template_file = null;
+    }
+
+    submit_jobs($jobs, $template, $app, $batch_id, $let, $result_template_file, $workunit_template_file);
 
     // set state to IN_PROGRESS only after creating jobs;
     // otherwise we might flag batch as COMPLETED
@@ -629,6 +688,10 @@ $r = simplexml_load_string("
 ");
 estimate_batch($r);
 exit;
+}
+
+if (0) {
+    require_once("submit_test.inc");
 }
 
 xml_header();

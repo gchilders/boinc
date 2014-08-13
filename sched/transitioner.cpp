@@ -94,7 +94,7 @@ static int result_timed_out(
         log_messages.printf(MSG_NORMAL,
             "result_timed_out(): hav_lookup failed: %s\n", boincerror(retval)
         );
-        return retval;
+        return 0;
     }
     hav.turnaround.update_var(
         (double)wu_item.delay_bound,
@@ -296,6 +296,14 @@ int handle_wu(
                 }
                 break;
             case RESULT_OUTCOME_CLIENT_ERROR:
+                // is user aborted job, don't count it as an error
+                //
+                if (res_item.res_exit_status == EXIT_ABORTED_VIA_GUI) {
+                    nno_reply++;
+                } else {
+                    nerrors++;
+                }
+                break;
             case RESULT_OUTCOME_VALIDATE_ERROR:
                 nerrors++;
                 break;

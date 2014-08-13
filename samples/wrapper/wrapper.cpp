@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2014 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -15,17 +15,25 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// wrapper.C
-// wrapper program - lets you use non-BOINC apps with BOINC
+// BOINC wrapper - lets you use non-BOINC apps with BOINC
+// See http://boinc.berkeley.edu/trac/wiki/WrapperApp
+//
+// cmdline options:
+// --device N       macro-substitute N for $GPU_DEVICE_NUM
+//                  in worker cmdlines and env values
+// --nthreads X     macro-substitute X for $NTHREADS
+//                  in worker cmdlines and env values
+// --trickle X      send a trickle-up message reporting runtime every X sec
+//                  of runtime (use this for credit granting
+//                  if your app does its own job management)
 //
 // Handles:
 // - suspend/resume/quit/abort
 // - reporting CPU time
-// - loss of heartbeat from core client
+// - loss of heartbeat from client
 // - checkpointing
 //      (at the level of task; or potentially within task)
 //
-// See http://boinc.berkeley.edu/trac/wiki/WrapperApp for details
 // Contributor: Andrew J. Younge (ajy4490@umiacs.umd.edu)
 
 #ifndef _WIN32
@@ -52,6 +60,7 @@
 #include <unistd.h>
 #endif
 
+#include "version.h"
 #include "boinc_api.h"
 #include "boinc_zip.h"
 #include "diagnostics.h"
@@ -65,6 +74,9 @@
 #include "util.h"
 
 #include "regexp.h"
+
+using std::vector;
+using std::string;
 
 //#define DEBUG
 #if 1
@@ -80,15 +92,21 @@ inline void debug_msg(const char* x) {
 
 #define POLL_PERIOD 1.0
 
-using std::vector;
-using std::string;
 int nthreads = 1;
+int gpu_device_num = -1;
+double runtime = 0;
+    // run time this session
+double trickle_period = 0;
+vector<string> unzip_filenames;
+string zip_filename;
+vector<regexp*> zip_patterns;
+APP_INIT_DATA aid;
 
 struct TASK {
     string application;
     string exec_dir;
         // optional execution directory;
-        // macro-substituted for $PROJECT_DIR and $NTHREADS
+        // macro-substituted
     vector<string> vsetenv;
         // vector of strings for environment variables 
         // macro-substituted
@@ -211,10 +229,6 @@ struct TASK {
 
 vector<TASK> tasks;
 vector<TASK> daemons;
-vector<string> unzip_filenames;
-string zip_filename;
-vector<regexp*> zip_patterns;
-APP_INIT_DATA aid;
 
 // replace s1 with s2
 //
@@ -232,6 +246,7 @@ void str_replace_all(char* buf, const char* s1, const char* s2) {
 // macro-substitute strings from job.xml
 // $PROJECT_DIR -> project directory
 // $NTHREADS --> --nthreads arg if present, else 1
+// $GPU_DEVICE_NUM --> gpu_device_num from init_data.xml, or --device arg
 //
 void macro_substitute(char* buf) {
     const char* pd = strlen(aid.project_dir)?aid.project_dir:".";
@@ -239,6 +254,14 @@ void macro_substitute(char* buf) {
     char nt[256];
     sprintf(nt, "%d", nthreads);
     str_replace_all(buf, "$NTHREADS", nt);
+
+    if (aid.gpu_device_num >= 0) {
+        gpu_device_num = aid.gpu_device_num;
+    }
+    if (gpu_device_num >= 0) {
+        sprintf(nt, "%d", gpu_device_num);
+        str_replace_all(buf, "$GPU_DEVICE_NUM", nt);
+    }
 }
 
 // make a list of files in the slot directory,
@@ -801,12 +824,10 @@ bool TASK::poll(int& status) {
         if (exit_code != STILL_ACTIVE) {
             status = exit_code;
             final_cpu_time = current_cpu_time;
-#ifdef DEBUG
-            fprintf(stderr, "%s process exited; current CPU %f final CPU %f\n",
-                boinc_message_prefix(buf, sizeof(buf)),
-                current_cpu_time, final_cpu_time
+            fprintf(stderr, "%s %s exited; CPU time %f\n",
+                boinc_msg_prefix(buf, sizeof(buf)),
+                application.c_str(), final_cpu_time
             );
-#endif
             return true;
         }
     }
@@ -819,12 +840,10 @@ bool TASK::poll(int& status) {
         getrusage(RUSAGE_CHILDREN, &ru);
         final_cpu_time = (float)ru.ru_utime.tv_sec + ((float)ru.ru_utime.tv_usec)/1e+6;
         final_cpu_time -= start_rusage;
-#ifdef DEBUG
-        fprintf(stderr, "%s process exited; current CPU %f final CPU %f\n",
-            boinc_message_prefix(buf, sizeof(buf)),
-            current_cpu_time, final_cpu_time
+        fprintf(stderr, "%s %s exited; CPU time %f\n",
+            boinc_msg_prefix(buf, sizeof(buf)),
+            application.c_str(), final_cpu_time
         );
-#endif
         if (final_cpu_time < current_cpu_time) {
             final_cpu_time = current_cpu_time;
         }
@@ -917,32 +936,51 @@ void poll_boinc_messages(TASK& task) {
     }
 }
 
+// see if it's time to send trickle-up reporting elapsed time
+//
+void check_trickle_period() {
+    char buf[256];
+    static double last_trickle_report_time = 0;
+
+    if ((runtime - last_trickle_report_time) < trickle_period) {
+        return;
+    }
+    last_trickle_report_time = runtime;
+    sprintf(buf,
+        "<cpu_time>%f</cpu_time>", last_trickle_report_time
+    );
+    boinc_send_trickle_up(
+        const_cast<char*>("cpu_time"), buf
+    );
+}
+
 // Support for multiple tasks.
 // We keep a checkpoint file that says how many tasks we've completed
-// and how much CPU time has been used so far
+// and how much CPU time and runtime has been used so far
 //
-void write_checkpoint(int ntasks_completed, double cpu) {
+void write_checkpoint(int ntasks_completed, double cpu, double rt) {
     boinc_begin_critical_section();
     FILE* f = fopen(CHECKPOINT_FILENAME, "w");
     if (!f) return;
-    fprintf(f, "%d %f\n", ntasks_completed, cpu);
+    fprintf(f, "%d %f %f\n", ntasks_completed, cpu, rt);
     fclose(f);
     boinc_checkpoint_completed();
 }
 
-int read_checkpoint(int& ntasks_completed, double& cpu) {
+int read_checkpoint(int& ntasks_completed, double& cpu, double& rt) {
     int nt;
-    double c;
+    double c, r;
 
     ntasks_completed = 0;
     cpu = 0;
     FILE* f = fopen(CHECKPOINT_FILENAME, "r");
     if (!f) return ERR_FOPEN;
-    int n = fscanf(f, "%d %lf", &nt, &c);
+    int n = fscanf(f, "%d %lf %lf", &nt, &c, &r);
     fclose(f);
     if (n != 2) return 0;
     ntasks_completed = nt;
     cpu = c;
+    rt = r;
     return 0;
 }
 
@@ -962,6 +1000,10 @@ int main(int argc, char** argv) {
     for (int j=1; j<argc; j++) {
         if (!strcmp(argv[j], "--nthreads")) {
             nthreads = atoi(argv[++j]);
+        } else if (!strcmp(argv[j], "--device")) {
+            gpu_device_num = atoi(argv[++j]);
+        } else if (!strcmp(argv[j], "--trickle")) {
+            trickle_period = atof(argv[++j]);
         }
     }
 
@@ -976,14 +1018,14 @@ int main(int argc, char** argv) {
 
     do_unzip_inputs();
 
-    retval = read_checkpoint(ntasks_completed, checkpoint_cpu_time);
+    retval = read_checkpoint(ntasks_completed, checkpoint_cpu_time, runtime);
     if (retval && !zip_filename.empty()) {
         // this is the first time we've run.
         // If we're going to zip output files,
         // make a list of files present at this point
         // so we can exclude them.
         //
-        write_checkpoint(0, 0);
+        write_checkpoint(0, 0, 0);
         get_initial_file_list();
     }
 
@@ -997,8 +1039,11 @@ int main(int argc, char** argv) {
 
     boinc_init_options(&options);
     fprintf(stderr,
-        "%s wrapper: starting\n",
-        boinc_msg_prefix(buf, sizeof(buf))
+        "%s wrapper (%d.%d.%d): starting\n",
+        boinc_msg_prefix(buf, sizeof(buf)),
+        BOINC_MAJOR_VERSION,
+        BOINC_MINOR_VERSION,
+        WRAPPER_RELEASE
     );
 
     boinc_get_init_data(aid);
@@ -1090,11 +1135,17 @@ int main(int argc, char** argv) {
             if (task.has_checkpointed()) {
                 cpu_time = task.cpu_time();
                 checkpoint_cpu_time = task.starting_cpu + cpu_time;
-                write_checkpoint(i, checkpoint_cpu_time);
+                write_checkpoint(i, checkpoint_cpu_time, runtime);
             }
+
+            if (trickle_period) {
+                check_trickle_period();
+            }
+
             boinc_sleep(POLL_PERIOD);
             if (!task.suspended) {
                 task.elapsed_time += POLL_PERIOD;
+                runtime += POLL_PERIOD;
             }
             counter++;
         }
@@ -1112,7 +1163,7 @@ int main(int argc, char** argv) {
             checkpoint_cpu_time,
             frac_done + task.weight/total_weight
         );
-        write_checkpoint(i+1, checkpoint_cpu_time);
+        write_checkpoint(i+1, checkpoint_cpu_time, runtime);
         weight_completed += task.weight;
     }
     kill_daemons();

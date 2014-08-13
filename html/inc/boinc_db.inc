@@ -125,6 +125,27 @@ class BoincUser {
         }
         return self::$cache[$id];
     }
+    static function lookup_auth($auth) {
+        $db = BoincDb::get();
+        $auth = BoincDb::escape_string($auth);
+        return self::lookup("authenticator='$auth'");
+    }
+    static function lookup_email_addr($email_addr) {
+        $db = BoincDb::get();
+        $email_addr = BoincDb::escape_string($email_addr);
+        return self::lookup("email_addr='$email_addr'");
+    }
+    static function lookup_name($name) {
+        $name = BoincDb::escape_string($name);
+        $users = BoincUser::enum("name='$name'");
+        switch (sizeof($users)) {
+        case 1:
+            return $users[0];
+        case 0:
+            return null;
+        }
+        return -1;
+    }
     static function count($clause) {
         $db = BoincDb::get();
         return $db->count('user', $clause);
@@ -197,6 +218,11 @@ class BoincTeam {
     static function lookup($clause) {
         $db = BoincDb::get();
         return $db->lookup('team', 'BoincTeam', $clause);
+    }
+    static function lookup_name($name) {
+        $db = BoincDb::get();
+        $name = BoincDb::escape_string($name);
+        return self::lookup("name='$name'");
     }
     function delete() {
         $db = BoincDb::get();
@@ -387,7 +413,7 @@ class BoincProfile {
         $db = BoincDb::get();
         return $db->insert('profile', $clause);
     }
-    static function enum($clause, $clause2=null) {
+    static function enum($clause=null, $clause2=null) {
         $db = BoincDb::get();
         return $db->enum('profile', 'BoincProfile', $clause, $clause2);
     }
@@ -447,7 +473,7 @@ class BoincPrivateMessage {
         $db = BoincDb::get();
         return $db->delete($this, 'private_messages');
     }
-    function delete_aux($clause) {
+    static function delete_aux($clause) {
         $db = BoincDb::get();
         return $db->delete_aux('private_messages', $clause);
     }
@@ -461,6 +487,18 @@ class BoincPlatform {
     static function lookup_id($id) {
         $db = BoincDb::get();
         return $db->lookup_id($id, 'platform', 'BoincPlatform');
+    }
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('platform', 'BoincPlatform', $clause);
+    }
+    function update($clause) {
+        $db = BoincDb::get();
+        return $db->update($this, 'platform', $clause);
+    }
+    static function insert($clause) {
+        $db = BoincDb::get();
+        return $db->insert('platform', $clause);
     }
 }
 
@@ -494,6 +532,8 @@ function latest_avs_app_platform($appid, $platformid) {
         foreach ($avs as $av2) {
             if ($av->id == $av2->id) continue;
             if ($av->plan_class == $av2->plan_class && $av->version_num > $av2->version_num) {
+                $av2->deprecated = 1;
+            } else if ($av2->beta) {
                 $av2->deprecated = 1;
             }
         }
@@ -567,7 +607,7 @@ class BoincBadgeUser {
         $db = BoincDb::get();
         return $db->update_aux('badge_user', $clause);
     }
-    function delete($clause) {
+    static function delete($clause) {
         $db = BoincDb::get();
         $db->delete_aux('badge_user', $clause);
     }
@@ -596,7 +636,7 @@ class BoincBadgeTeam {
         $db = BoincDb::get();
         return $db->update_aux('badge_team', $clause);
     }
-    function delete($clause) {
+    static function delete($clause) {
         $db = BoincDb::get();
         $db->delete_aux('badge_team', $clause);
     }

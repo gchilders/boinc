@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2009 University of California
+// Copyright (C) 2014 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -345,9 +345,12 @@ bool NOTICES::remove_dups(NOTICE& n) {
         ) {
             i = notices.erase(i);
             removed_something = true;
+#if 0
+        // this check prevents news item edits from showing; skip it
         } else if (same_guid(n, n2)) {
             n2.keep = true;
             return false;
+#endif
         } else if (same_text(n, n2)) {
             int min_diff = 0;
 
@@ -502,6 +505,12 @@ void NOTICES::remove_notices(PROJECT* p, int which) {
             break;
         case REMOVE_NO_WORK_MSG:
             remove = !strcmp(n.description.c_str(), NO_WORK_MSG);
+            break;
+        case REMOVE_CONFIG_MSG:
+            remove = (strstr(n.description.c_str(), "cc_config.xml") != NULL);
+            break;
+        case REMOVE_APP_INFO_MSG:
+            remove = (strstr(n.description.c_str(), "app_info.xml") != NULL);
             break;
         }
         if (remove) {
@@ -702,6 +711,14 @@ int RSS_FEED::parse_items(XML_PARSER& xp, int& nitems) {
     }
     notices.unkeep(url);
     return func_ret;
+}
+
+void RSS_FEED::delete_files() {
+    char path[MAXPATHLEN];
+    feed_file_name(path);
+    boinc_delete_file(path);
+    archive_file_name(path);
+    boinc_delete_file(path);
 }
 
 ///////////// RSS_FEED_OP ////////////////
@@ -914,6 +931,7 @@ void RSS_FEEDS::update_feed_list() {
                     rf.url
                 );
             }
+            rf.delete_files();
             iter = feeds.erase(iter);
         }
     }
@@ -927,4 +945,10 @@ void RSS_FEEDS::write_feed_list() {
     fout.init_file(f);
     write_rss_feed_descs(fout, feeds);
     fclose(f);
+}
+
+void delete_project_notice_files(PROJECT* p) {
+    char path[MAXPATHLEN];
+    project_feed_list_file_name(p, path);
+    boinc_delete_file(path);
 }

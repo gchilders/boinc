@@ -168,6 +168,9 @@ struct PROJECT {
         // when the last successful scheduler RPC finished
     std::vector<DAILY_STATS> statistics; // credit data over the last x days
     char venue[256];
+    int njobs_success;
+    int njobs_error;
+    char external_cpid[64];
 
     // NOTE: if you add any data items above,
     // update parse(), and clear() to include them!!
@@ -279,6 +282,8 @@ struct RESULT {
     double working_set_size_smoothed;
     double estimated_cpu_time_remaining;
         // actually, estimated elapsed time remaining
+    double bytes_sent;
+    double bytes_received;
     bool too_large;
     bool needs_shmem;
     bool edf_scheduled;
@@ -421,6 +426,7 @@ struct PROJECTS {
     ~PROJECTS();
 
     void print();
+    void print_urls();
     void clear();
 };
 
@@ -751,8 +757,8 @@ struct RPC_CLIENT {
     int set_global_prefs_override(std::string&);
     int get_global_prefs_override_struct(GLOBAL_PREFS&, GLOBAL_PREFS_MASK&);
     int set_global_prefs_override_struct(GLOBAL_PREFS&, GLOBAL_PREFS_MASK&);
-    int get_cc_config(CONFIG& config, LOG_FLAGS& log_flags);
-    int set_cc_config(CONFIG& config, LOG_FLAGS& log_flags);
+    int get_cc_config(CC_CONFIG& config, LOG_FLAGS& log_flags);
+    int set_cc_config(CC_CONFIG& config, LOG_FLAGS& log_flags);
     int get_daily_xfer_history(DAILY_XFER_HISTORY&);
 	int set_language(const char*);
 };

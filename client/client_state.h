@@ -109,7 +109,10 @@ struct CLIENT_STATE {
     DEVICE_STATUS device_status;
     double device_status_time;
 
-	char language[16];				// ISO language code reported by GUI
+    char language[16];                // ISO language code reported by GUI
+    char client_brand[256];
+        // contents of client_brand.txt, e.g. "HTP Power to Give"
+        // reported to scheduler
     VERSION_INFO core_client_version;
     string statefile_platform_name;
     int file_xfer_giveup_period;
@@ -138,11 +141,11 @@ struct CLIENT_STATE {
         // Determine when it is safe to leave the quit_client() handler
         // and to finish cleaning up.
     char detach_project_url[256];
-        // stores URL for -detach_project option
+        // stores URL for --detach_project option
     char reset_project_url[256];
-        // stores URL for -reset_project option
+        // stores URL for --reset_project option
     char update_prefs_url[256];
-        // stores URL for -update_prefs option
+        // stores URL for --update_prefs option
     char main_host_venue[256];
         // venue from project or AMS that gave us general prefs
     char attach_project_url[256];
@@ -220,10 +223,7 @@ struct CLIENT_STATE {
     int old_minor_version;
     int old_release;
     bool run_cpu_benchmarks;
-        // if set, run benchmarks on client startup
-    bool cpu_benchmarks_pending;
-        // set if a benchmark fails to start because of a job that doesn't exit
-        // Persists so that the next start of BOINC runs the benchmarks.
+        // if set, run benchmarks when possible
 
     int exit_after_app_start_secs;
         // if nonzero, exit this many seconds after starting an app
@@ -371,7 +371,8 @@ struct CLIENT_STATE {
 // --------------- cs_benchmark.cpp:
     bool benchmarks_running;
 
-    bool should_run_cpu_benchmarks();
+    void check_if_need_benchmarks();
+    bool can_run_cpu_benchmarks();
     void start_cpu_benchmarks();
     bool cpu_benchmarks_poll();
     void abort_cpu_benchmarks();

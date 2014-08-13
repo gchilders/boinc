@@ -37,10 +37,6 @@
 // app_plan_uses_gpu():
 //      Which plan classes use GPUs
 //
-// JOB::get_score():
-//      Determine the value of sending a particular job to host;
-//      (used only by "matchmaker" scheduling)
-//
 // WARNING: if you modify this file, you must prevent it from
 // being overwritten the next time you update BOINC source code.
 // You can either:
@@ -126,7 +122,6 @@ bool wu_is_infeasible_custom(WORKUNIT& wu, APP& app, BEST_APP_VERSION& bav) {
     bool infeasible=false;
     static bool send_vlar_to_gpu=false;
     static bool sah_config_checked=false;
-    char buff[256];
 
     // check the projects app config whether to send vlar wus to gpus 
     if (!sah_config_checked) {
@@ -1011,11 +1006,6 @@ bool app_plan(SCHEDULER_REQUEST& sreq, char* plan_class, HOST_USAGE& hu) {
         safe_strcat(buf, "/plan_class_spec.xml");
         int retval = plan_class_specs.parse_file(buf);
         if (retval == ERR_FOPEN) {
-            if (config.debug_version_select) {
-                log_messages.printf(MSG_NORMAL,
-                    "[version] Couldn't open plan class spec file '%s'\n", buf
-                );
-            }
             have_plan_class_spec = false;
         } else if (retval) {
             log_messages.printf(MSG_CRITICAL,

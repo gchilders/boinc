@@ -29,6 +29,7 @@ bool have_max_concurrent = false;
 
 int APP_CONFIG::parse(XML_PARSER& xp, PROJECT* p) {
     memset(this, 0, sizeof(APP_CONFIG));
+    double x;
 
     while (!xp.get_tag()) {
         if (xp.match_tag("/app")) return 0;
@@ -40,9 +41,30 @@ int APP_CONFIG::parse(XML_PARSER& xp, PROJECT* p) {
         if (xp.match_tag("gpu_versions")) {
             while (!xp.get_tag()) {
                 if (xp.match_tag("/gpu_versions")) break;
-                if (xp.parse_double("gpu_usage", gpu_gpu_usage)) continue;
-                if (xp.parse_double("cpu_usage", gpu_cpu_usage)) continue;
+                if (xp.parse_double("gpu_usage", x)) {
+                    if (x <= 0) {
+                        msg_printf(p, MSG_USER_ALERT,
+                            "gpu_usage must be positive in app_config.xml"
+                        );
+                    } else {
+                        gpu_gpu_usage = x;
+                    }
+                    continue;
+                }
+                if (xp.parse_double("cpu_usage", x)) {
+                    if (x < 0) {
+                        msg_printf(p, MSG_USER_ALERT,
+                            "cpu_usage must be non-negative in app_config.xml"
+                        );
+                    } else {
+                        gpu_cpu_usage = x;
+                    }
+                    continue;
+                }
             }
+            continue;
+        }
+        if (xp.parse_bool("fraction_done_exact", fraction_done_exact)) {
             continue;
         }
         if (log_flags.unparsed_xml) {
@@ -78,6 +100,7 @@ int APP_VERSION_CONFIG::parse(XML_PARSER& xp, PROJECT* p) {
 }
 
 int APP_CONFIGS::parse(XML_PARSER& xp, PROJECT* p) {
+    int n;
     app_configs.clear();
     if (!xp.parse_start("app_config")) return ERR_XML_PARSE;
     while (!xp.get_tag()) {
@@ -95,6 +118,13 @@ int APP_CONFIGS::parse(XML_PARSER& xp, PROJECT* p) {
             int retval = avc.parse(xp, p);
             if (!retval) {
                 app_version_configs.push_back(avc);
+            }
+            continue;
+        }
+        if (xp.parse_int("project_max_concurrent", n)) {
+            if (n >= 0) {
+                have_max_concurrent = true;
+                project_max_concurrent = n;
             }
             continue;
         }
@@ -134,6 +164,8 @@ void APP_CONFIGS::config_app_versions(PROJECT* p, bool show_warnings) {
             continue;
         }
         app->max_concurrent = ac.max_concurrent;
+        app->fraction_done_exact = ac.fraction_done_exact;
+
         if (!ac.gpu_gpu_usage || !ac.gpu_cpu_usage) continue;
         for (unsigned int j=0; j<gstate.app_versions.size(); j++) {
             APP_VERSION* avp = gstate.app_versions[j];
@@ -178,6 +210,9 @@ void max_concurrent_init() {
     for (unsigned int i=0; i<gstate.apps.size(); i++) {
         gstate.apps[i]->n_concurrent = 0;
     }
+    for (unsigned int i=0; i<gstate.projects.size(); i++) {
+        gstate.projects[i]->n_concurrent = 0;
+    }
 }
 
 // undo the effects of an app_config.xml that no longer exists
@@ -186,6 +221,7 @@ void max_concurrent_init() {
 // It will be restored on next scheduler RPC.
 //
 static void clear_app_config(PROJECT* p) {
+    p->app_configs.clear();
     for (unsigned int i=0; i<gstate.apps.size(); i++) {
         APP* app = gstate.apps[i];
         if (app->project != p) continue;

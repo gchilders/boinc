@@ -311,7 +311,7 @@ int diagnostics_update_thread_list() {
             // Enumerate the threads
             for(uiSystemIndex = 0; uiSystemIndex < pProcesses->ThreadCount; uiSystemIndex++) {
                 pThread = &pProcesses->Threads[uiSystemIndex];
-                pThreadEntry = diagnostics_find_thread_entry(pThread->ClientId.UniqueThread);
+                pThreadEntry = diagnostics_find_thread_entry((DWORD)pThread->ClientId.UniqueThread);
 
                 if (pThreadEntry) {
                     pThreadEntry->crash_kernel_time = (FLOAT)pThread->KernelTime.QuadPart;
@@ -325,12 +325,12 @@ int diagnostics_update_thread_list() {
                     hThread = OpenThread(
                         THREAD_ALL_ACCESS,
                         FALSE,
-                        pThread->ClientId.UniqueThread
+                        (DWORD)(pThread->ClientId.UniqueThread)
                     );
 
                     pThreadEntry = new BOINC_THREADLISTENTRY;
                     diagnostics_init_thread_entry(pThreadEntry);
-                    pThreadEntry->thread_id = pThread->ClientId.UniqueThread;
+                    pThreadEntry->thread_id = (DWORD)(pThread->ClientId.UniqueThread);
                     pThreadEntry->thread_handle = hThread;
                     pThreadEntry->crash_kernel_time = (FLOAT)pThread->KernelTime.QuadPart;
                     pThreadEntry->crash_user_time = (FLOAT)pThread->UserTime.QuadPart;
@@ -517,13 +517,13 @@ int diagnostics_set_thread_crash_message(char* message) {
 //
 char* diagnostics_format_thread_state(int thread_state) {
     switch(thread_state) {
-        case ThreadStateInitialized: return "Initialized";
-        case ThreadStateReady: return "Ready";
-        case ThreadStateRunning: return "Running";
-        case ThreadStateStandby: return "Standby";
-        case ThreadStateTerminated: return "Terminated";
-        case ThreadStateWaiting: return "Waiting";
-        case ThreadStateTransition: return "Transition";
+        case StateInitialized: return "Initialized";
+        case StateReady: return "Ready";
+        case StateRunning: return "Running";
+        case StateStandby: return "Standby";
+        case StateTerminated: return "Terminated";
+        case StateWait: return "Waiting";
+        case StateTransition: return "Transition";
         default: return "Unknown";
     }
     return "";
@@ -1337,7 +1337,7 @@ int diagnostics_dump_process_information() {
 int diagnostics_dump_thread_information(PBOINC_THREADLISTENTRY pThreadEntry) {
     std::string strStatusExtra;
 
-    if (pThreadEntry->crash_state == ThreadStateWaiting) {
+    if (pThreadEntry->crash_state == StateWait) {
         strStatusExtra += "Wait Reason: ";
         strStatusExtra += diagnostics_format_thread_wait_reason(pThreadEntry->crash_wait_reason);
         strStatusExtra += ", ";
@@ -1392,12 +1392,15 @@ int diagnostics_dump_exception_record(PEXCEPTION_POINTERS pExPtrs) {
     char           message[1024];
     PVOID          exception_address = pExPtrs->ExceptionRecord->ExceptionAddress;
     DWORD          exception_code = pExPtrs->ExceptionRecord->ExceptionCode;
+#ifdef HAVE_DELAYIMP_H
     PDelayLoadInfo delay_load_info = NULL;
+#endif
 
     // Print unhandled exception banner
     fprintf(stderr, "- Unhandled Exception Record -\n");
 
     switch (exception_code) {
+#ifdef HAVE_DELAYIMP_H
         case VcppException(ERROR_SEVERITY_ERROR, ERROR_MOD_NOT_FOUND):
             delay_load_info = (PDelayLoadInfo)pExPtrs->ExceptionRecord->ExceptionInformation[0];
             fprintf(
@@ -1415,6 +1418,7 @@ int diagnostics_dump_exception_record(PEXCEPTION_POINTERS pExPtrs) {
                 delay_load_info->szDll
             );
             break;
+#endif
         case 0xC0000135:                     // STATUS_DLL_NOT_FOUND
         case 0xC0000139:                     // STATUS_ENTRYPOINT_NOT_FOUND
         case 0xC0000142:                     // STATUS_DLL_INIT_FAILED

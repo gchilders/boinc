@@ -14,6 +14,9 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
+#ifdef _WIN32
+#include <boinc_win.h>
+#endif
 
 #include <string.h>
 
@@ -57,6 +60,7 @@ void PROJECT::init() {
     strcpy(team_name, "");
     strcpy(email_hash, "");
     strcpy(cross_project_id, "");
+    strcpy(external_cpid, "");
     cpid_time = 0;
     user_total_credit = 0;
     user_expavg_credit = 0;
@@ -101,6 +105,9 @@ void PROJECT::init() {
     possibly_backed_off = false;
     nuploading_results = 0;
     too_many_uploading_results = false;
+    njobs_success = 0;
+    njobs_error = 0;
+    app_configs.clear();
 
 #ifdef SIM
     idle_time = 0;
@@ -185,6 +192,7 @@ int PROJECT::parse_state(XML_PARSER& xp) {
         if (xp.parse_str("host_venue", host_venue, sizeof(host_venue))) continue;
         if (xp.parse_str("email_hash", email_hash, sizeof(email_hash))) continue;
         if (xp.parse_str("cross_project_id", cross_project_id, sizeof(cross_project_id))) continue;
+        if (xp.parse_str("external_cpid", external_cpid, sizeof(external_cpid))) continue;
         if (xp.parse_double("cpid_time", cpid_time)) continue;
         if (xp.parse_double("user_total_credit", user_total_credit)) continue;
         if (xp.parse_double("user_expavg_credit", user_expavg_credit)) continue;
@@ -307,6 +315,8 @@ int PROJECT::parse_state(XML_PARSER& xp) {
             continue;
         }
         if (xp.parse_double("desired_disk_usage", desired_disk_usage)) continue;
+        if (xp.parse_int("njobs_success", njobs_success)) continue;
+        if (xp.parse_int("njobs_error", njobs_error)) continue;
 #ifdef SIM
         if (xp.match_tag("available")) {
             available.parse(xp, "/available");
@@ -345,6 +355,7 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
         "    <host_venue>%s</host_venue>\n"
         "    <email_hash>%s</email_hash>\n"
         "    <cross_project_id>%s</cross_project_id>\n"
+        "    <external_cpid>%s</external_cpid>\n"
         "    <cpid_time>%f</cpid_time>\n"
         "    <user_total_credit>%f</user_total_credit>\n"
         "    <user_expavg_credit>%f</user_expavg_credit>\n"
@@ -362,13 +373,14 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
         "    <next_rpc_time>%f</next_rpc_time>\n"
         "    <rec>%f</rec>\n"
         "    <rec_time>%f</rec_time>\n"
-
         "    <resource_share>%f</resource_share>\n"
         "    <desired_disk_usage>%f</desired_disk_usage>\n"
         "    <duration_correction_factor>%f</duration_correction_factor>\n"
         "    <sched_rpc_pending>%d</sched_rpc_pending>\n"
         "    <send_time_stats_log>%d</send_time_stats_log>\n"
         "    <send_job_log>%d</send_job_log>\n"
+        "    <njobs_success>%d</njobs_success>\n"
+        "    <njobs_error>%d</njobs_error>\n"
         "%s%s%s%s%s%s%s%s%s%s%s%s%s%s",
         master_url,
         project_name,
@@ -378,6 +390,7 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
         host_venue,
         email_hash,
         cross_project_id,
+        external_cpid,
         cpid_time,
         user_total_credit,
         user_expavg_credit,
@@ -401,6 +414,8 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
         sched_rpc_pending,
         send_time_stats_log,
         send_job_log,
+        njobs_success,
+        njobs_error,
         anonymous_platform?"    <anonymous_platform/>\n":"",
         master_url_fetch_pending?"    <master_url_fetch_pending/>\n":"",
         trickle_up_pending?"    <trickle_up_pending/>\n":"",
@@ -511,6 +526,7 @@ void PROJECT::copy_state_fields(PROJECT& p) {
     safe_strcpy(host_venue, p.host_venue);
     safe_strcpy(email_hash, p.email_hash);
     safe_strcpy(cross_project_id, p.cross_project_id);
+    safe_strcpy(external_cpid, p.external_cpid);
     user_total_credit = p.user_total_credit;
     user_expavg_credit = p.user_expavg_credit;
     user_create_time = p.user_create_time;
@@ -555,6 +571,8 @@ void PROJECT::copy_state_fields(PROJECT& p) {
     }
     desired_disk_usage = p.desired_disk_usage;
     use_symlinks = p.use_symlinks;
+    njobs_success = p.njobs_success;
+    njobs_error = p.njobs_error;
 }
 
 // Write project statistic to GUI RPC reply
@@ -837,7 +855,7 @@ bool PROJECT::waiting_until_min_rpc_time() {
 }
 
 void PROJECT::trim_statistics() {
-    double cutoff = dday() - config.save_stats_days*86400;
+    double cutoff = dday() - cc_config.save_stats_days*86400;
     // delete old stats; fill in the gaps if some days missing
     //
     while (!statistics.empty()) {
@@ -917,7 +935,7 @@ void PROJECT::show_no_work_notice() {
         bool banned_by_user = no_rsc_pref[i] || no_rsc_config[i] || no_rsc_ams[i];
         if (!banned_by_user) {
             // work for this resource is possible; return
-			notices.remove_notices(this, REMOVE_NO_WORK_MSG);
+            notices.remove_notices(this, REMOVE_NO_WORK_MSG);
             return;
         }
         if (no_rsc_pref[i]) show_prefs = true;
@@ -928,14 +946,14 @@ void PROJECT::show_no_work_notice() {
     if (!user_action_possible) {
         // no work is possible because project has no apps for any resource
         //
-		notices.remove_notices(this, REMOVE_NO_WORK_MSG);
+        notices.remove_notices(this, REMOVE_NO_WORK_MSG);
         return;
     }
 
     bool first = true;
     string x;
     x = NO_WORK_MSG;
-	x += "  ";
+    x += "  ";
     x += _("To fix this, you can ");
     if (show_prefs) {
         first = false;

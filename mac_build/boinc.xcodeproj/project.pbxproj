@@ -178,6 +178,7 @@
 		DD52C81408B5D484008D9AA4 /* network.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6D0A8507E9A61B007F882B /* network.cpp */; };
 		DD531BC60C193D3800742E50 /* MacInstaller.icns in Resources */ = {isa = PBXBuildFile; fileRef = DD531BC50C193D3800742E50 /* MacInstaller.icns */; };
 		DD531BC80C193D5200742E50 /* MacUninstaller.icns in Resources */ = {isa = PBXBuildFile; fileRef = DD531BC70C193D5200742E50 /* MacUninstaller.icns */; };
+		DD55AF6D1916248200259439 /* coproc_sched.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD55AF6B1916248200259439 /* coproc_sched.cpp */; };
 		DD5BF77D0D4F3D0C00EDF980 /* mac_icon.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6381450870DB78007A2F8E /* mac_icon.cpp */; };
 		DD5FE1B517828887003339DF /* translate.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DDF9350F176B0D0C00A2793C /* translate.cpp */; };
 		DD6381F90870DD83007A2F8E /* make_app_icon_h.cpp in Sources */ = {isa = PBXBuildFile; fileRef = DD6381F80870DD83007A2F8E /* make_app_icon_h.cpp */; };
@@ -847,6 +848,8 @@
 		DD4E704A0BCDAC360010A522 /* browser.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = browser.h; path = ../clientgui/browser.h; sourceTree = SOURCE_ROOT; };
 		DD531BC50C193D3800742E50 /* MacInstaller.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = MacInstaller.icns; path = ../clientgui/res/MacInstaller.icns; sourceTree = SOURCE_ROOT; };
 		DD531BC70C193D5200742E50 /* MacUninstaller.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = MacUninstaller.icns; path = ../clientgui/res/MacUninstaller.icns; sourceTree = SOURCE_ROOT; };
+		DD55AF6B1916248200259439 /* coproc_sched.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = coproc_sched.cpp; sourceTree = "<group>"; };
+		DD55AF6C1916248200259439 /* coproc_sched.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = coproc_sched.h; sourceTree = "<group>"; };
 		DD58C41808F3343F00C1DF66 /* AccountInfoPage.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = AccountInfoPage.cpp; path = ../clientgui/AccountInfoPage.cpp; sourceTree = SOURCE_ROOT; };
 		DD58C41908F3343F00C1DF66 /* AccountInfoPage.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = AccountInfoPage.h; path = ../clientgui/AccountInfoPage.h; sourceTree = SOURCE_ROOT; };
 		DD58C41C08F3343F00C1DF66 /* AccountManagerInfoPage.cpp */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.cpp.cpp; name = AccountManagerInfoPage.cpp; path = ../clientgui/AccountManagerInfoPage.cpp; sourceTree = SOURCE_ROOT; };
@@ -1875,12 +1878,14 @@
 				DDA1F1EC126D105B005EFFEB /* current_version.cpp */,
 				DDA1F1ED126D105B005EFFEB /* current_version.h */,
 				DD69FEF608416C9A00C01361 /* boinc_cmd.cpp */,
+				DD55AF6B1916248200259439 /* coproc_sched.cpp */,
+				DD55AF6C1916248200259439 /* coproc_sched.h */,
 				DD81C3D507C5CEB50098A04D /* cpp.h */,
-				DD344B7F07C5ADC30043025C /* cs_benchmark.cpp */,
 				DD16BF8F099D6CE5003E4B69 /* cpu_benchmark.h */,
 				DD16BF7B099D6C90003E4B69 /* cpu_sched.cpp */,
 				DD344B7907C5AD970043025C /* cs_account.cpp */,
 				F54B8FC702AC0A0C01FB7237 /* cs_apps.cpp */,
+				DD344B7F07C5ADC30043025C /* cs_benchmark.cpp */,
 				DD344B8507C5ADE70043025C /* cs_cmdline.cpp */,
 				F54B8FC802AC0A0C01FB7237 /* cs_files.cpp */,
 				DDE1372810DC5E5300161D6B /* cs_notice.cpp */,
@@ -3285,6 +3290,7 @@
 				DD76BF9517CB45D20075936D /* opencl_boinc.cpp in Sources */,
 				DD6A829C181103990037172D /* thread.cpp in Sources */,
 				DDDC2055183B560B00CB5845 /* mac_address.cpp in Sources */,
+				DD55AF6D1916248200259439 /* coproc_sched.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -3555,7 +3561,6 @@
 					"-D__WXMAC__",
 					"-DSANDBOX",
 					"-D_DEBUG",
-					"-DHAVE_STRCASECMP_IN_STRING_H",
 					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1050",
 				);
 				OTHER_CPLUSPLUSFLAGS = "$(OTHER_CFLAGS)";
@@ -3613,7 +3618,6 @@
 					"-D__WXMAC__",
 					"-DSANDBOX",
 					"-D_NDEBUG",
-					"-DHAVE_STRCASECMP_IN_STRING_H",
 					"-DBUILDING_MANAGER",
 					"-DMAC_OS_X_VERSION_MAX_ALLOWED=1050",
 				);
@@ -3689,8 +3693,7 @@
 		DD81C79C144D8DA9000BE61A /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "x86_64 i386 ppc";
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				EXECUTABLE_PREFIX = lib;
 				PRODUCT_NAME = jpeg;
 				WARNING_CFLAGS = (
@@ -3882,8 +3885,8 @@
 					"-L.",
 					"../../curl-7.35.0/lib/.libs/libcurl.a",
 					"../../c-ares-1.10.0/.libs/libcares.a",
-					"../../openssl-1.0.1f/libcrypto.a",
-					"../../openssl-1.0.1f/libssl.a",
+					"../../openssl-1.0.1h/libcrypto.a",
+					"../../openssl-1.0.1h/libssl.a",
 					"-lldap",
 					"-lz",
 				);
@@ -3988,8 +3991,7 @@
 		DD9E2352091CBDAE0048316E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "x86_64 i386 ppc";
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				HEADER_SEARCH_PATHS = "";
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = boinc;
@@ -3999,8 +4001,7 @@
 		DD9E235A091CBDAE0048316E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "x86_64 i386 ppc";
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				HEADER_SEARCH_PATHS = ../lib;
 				LIBRARY_SEARCH_PATHS = ../lib;
 				PRODUCT_NAME = boinc_api;
@@ -4036,8 +4037,7 @@
 		DD9E2366091CBDAE0048316E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1 = "ppc i386";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEPLOYMENT_POSTPROCESSING = YES;
@@ -4048,8 +4048,8 @@
 					"-L.",
 					"../../curl-7.35.0/lib/.libs/libcurl.a",
 					"../../c-ares-1.10.0/.libs/libcares.a",
-					"../../openssl-1.0.1f/libcrypto.a",
-					"../../openssl-1.0.1f/libssl.a",
+					"../../openssl-1.0.1h/libcrypto.a",
+					"../../openssl-1.0.1h/libssl.a",
 					"-lldap",
 					"-lz",
 				);
@@ -4118,8 +4118,7 @@
 		DD9E2382091CBDAE0048316E /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_BIT_PRE_XCODE_3_1 = "ppc i386";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEPLOYMENT_POSTPROCESSING = NO;
@@ -4201,8 +4200,7 @@
 		DDB873FD0C850BC800E0DE1F /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
-				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "x86_64 i386 ppc";
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				HEADER_SEARCH_PATHS = ../samples/jpeglib;
 				PRODUCT_NAME = boinc_graphics2;
 			};
@@ -4267,9 +4265,9 @@
 		DDF9EC04144EB14B005D6144 /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ONLY_ACTIVE_ARCH_PRE_XCODE_3_1)";
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				EXECUTABLE_PREFIX = lib;
-				ONLY_ACTIVE_ARCH_PRE_XCODE_3_1 = "$(NATIVE_ARCH_ACTUAL)";
+				ONLY_ACTIVE_ARCH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Development;

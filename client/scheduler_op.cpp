@@ -128,7 +128,7 @@ int SCHEDULER_OP::init_op_project(PROJECT* p, int r) {
         // Now's a good time to check for new BOINC versions
         // and project list
         //
-        if (!config.no_info_fetch) {
+        if (!cc_config.no_info_fetch) {
             gstate.new_version_check();
             gstate.all_projects_list_check();
         }
@@ -823,6 +823,8 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
         } else if (xp.parse_str("email_hash", project->email_hash, sizeof(project->email_hash))) {
             continue;
         } else if (xp.parse_str("cross_project_id", project->cross_project_id, sizeof(project->cross_project_id))) {
+            continue;
+        } else if (xp.parse_str("external_cpid", project->external_cpid, sizeof(project->external_cpid))) {
             continue;
         } else if (xp.match_tag("trickle_down")) {
             retval = gstate.handle_trickle_down(project, in);

@@ -57,6 +57,15 @@
 //  that are incapable of handling them, and it involves no server changes.
 //  Its drawback is that, on systems with multiple and differing GPUs,
 //  it may not use some GPUs that actually could be used.
+//
+//  Modified (as of 23 July 14) to allow coprocessors (OpenCL GPUs and OpenCL
+//  accelerators) from vendors other than original 3: NVIDIA, AMD and Intel.  
+//  For these original 3 GPU vendors, we still use the above approach, and the
+//  COPROC::type field contains a standardized vendor name "NVIDIA", "ATI" or
+//  "intel_gpu".  But for other, "new" vendors, we treat each device as a
+//  separate resource, creating an entry for each instance in the
+//  COPROCS::coprocs[] array and copying the device name COPROC::opencl_prop.name 
+//  into the COPROC::type field (instead of the vendor name.)
 
 #ifndef _COPROC_
 #define _COPROC_
@@ -165,6 +174,7 @@ struct COPROC {
     //
     int device_nums[MAX_COPROC_INSTANCES];
     int device_num;     // temp used in scan process
+    bool instance_has_opencl[MAX_COPROC_INSTANCES];
     cl_device_id opencl_device_ids[MAX_COPROC_INSTANCES];
     int opencl_device_count;
     int opencl_device_indexes[MAX_COPROC_INSTANCES];
@@ -183,7 +193,7 @@ struct COPROC {
     OPENCL_DEVICE_PROP opencl_prop;
 
 #ifndef _USING_FCGI_
-    void write_xml(MIOFILE&);
+    void write_xml(MIOFILE&, bool scheduler_rpc=false);
     void write_request(MIOFILE&);
 #endif
     int parse(XML_PARSER&);
@@ -205,6 +215,7 @@ struct COPROC {
         available_ram = 0;
         for (int i=0; i<MAX_COPROC_INSTANCES; i++) {
             device_nums[i] = 0;
+            instance_has_opencl[i] = false;
             opencl_device_ids[i] = 0;
 			opencl_device_indexes[i] = 0;
             running_graphics_app[i] = true;
@@ -397,6 +408,7 @@ struct COPROCS {
     void set_path_to_client(char *path);
     int write_coproc_info_file(std::vector<std::string> &warnings);
     int read_coproc_info_file(std::vector<std::string> &warnings);
+    int add_other_coproc_types();
     
 #ifdef __APPLE__
     void opencl_get_ati_mem_size_from_opengl(std::vector<std::string> &warnings);
@@ -462,11 +474,19 @@ struct COPROCS {
         coprocs[n_rsc++] = c;
         return 0;
     }
-    COPROC* type_to_coproc(int t) {
+    COPROC* proc_type_to_coproc(int t) {
         switch(t) {
         case PROC_TYPE_NVIDIA_GPU: return &nvidia;
         case PROC_TYPE_AMD_GPU: return &ati;
         case PROC_TYPE_INTEL_GPU: return &intel_gpu;
+        }
+        return NULL;
+    }
+    COPROC* lookup_type(const char* t) {
+        for (int i=1; i<n_rsc; i++) {
+            if (!strcmp(t, coprocs[i].type)) {
+                return &coprocs[i];
+            }
         }
         return NULL;
     }

@@ -57,14 +57,16 @@ private:
     void CreateCheckboxes();
     
     LOG_FLAGS           log_flags;
-    CONFIG              config;
+    CC_CONFIG           m_cc_config;
     
+    wxGridSizer*        m_headingSizer;
     std::vector <wxCheckBox*> m_checkbox_list;
 
 protected:
-    wxString            m_desctext;
-    wxStaticText*       m_desc;
+    wxString            m_headingText;
+    wxStaticText*       m_heading;
     wxScrolledWindow*   m_scrolledWindow;
+    wxGridSizer*        m_checkboxSizer;
 };
 
 #endif // _DLGDIAGNOSTICLOGFLAGS_H_

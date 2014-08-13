@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-require_once('../inc/db.inc');
+require_once('../inc/boinc_db.inc');
 require_once('../inc/email.inc');
 require_once('../inc/profile.inc');
 
-define('UOTD_THRESHOLD', 7);
+if (!defined('UOTD_THRESHOLD')) {
+    define('UOTD_THRESHOLD', 7);
     // email sysadmin if # of UOTD candidates falls below this
+}
 
 function uotd_thumbnail($profile, $user) {
     if ($profile->has_picture) {
@@ -34,7 +36,7 @@ function uotd_thumbnail($profile, $user) {
 // show UOTD in a small box
 //
 function show_uotd($profile) {
-    $user = lookup_user_id($profile->userid);
+    $user = BoincUser::lookup_id($profile->userid);
     echo uotd_thumbnail($profile, $user);
     echo user_links($user, true)."<br>";
     $x = output_transform($profile->response1);
@@ -61,7 +63,7 @@ function select_uotd() {
         $assigned = getdate($current_uotd->uotd_time);
         $now = getdate(time());
         if ($assigned['mday'] == $now['mday']) {
-            $user = lookup_user_id($current_uotd->userid);
+            $user = BoincUser::lookup_id($current_uotd->userid);
             echo "Already have UOTD for today\n";
             generate_uotd_gadget($current_uotd, $user);
             exit();
@@ -81,7 +83,10 @@ function select_uotd() {
     // If the number of approved profiles dips below a threshold,
     // email the sys admin every time we pick a new one.
     //
-    if ($result && mysql_num_rows($result) < UOTD_THRESHOLD) {
+    if (defined('UOTD_ADMIN_EMAIL')
+        && $result
+        && mysql_num_rows($result) < UOTD_THRESHOLD
+    ) {
         $u = new BoincUser;
         $u->email_addr = UOTD_ADMIN_EMAIL;
         $u->name = "UOTD admin";
@@ -107,7 +112,7 @@ function select_uotd() {
         exit();
     }
     $profile = mysql_fetch_object($result);
-    $user = lookup_user_id($profile->userid);
+    $user = BoincUser::lookup_id($profile->userid);
 
     // if profile is "orphaned", delete it and try again
     //
