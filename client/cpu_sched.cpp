@@ -151,14 +151,17 @@ struct PROC_RESOURCES {
             }
         }
         if (rp->schedule_backoff > gstate.now) return false;
-        if (rp->uses_coprocs()) {
+        if (rp->uses_gpu()) {
             if (gpu_suspend_reason) return false;
+        }
+        if (rp->uses_coprocs()) {
             if (sufficient_coprocs(*rp)) {
                 return true;
             } else {
                 return false;
             }
         } else if (rp->avp->avg_ncpus > 1) {
+            if (ncpus_used_mt == 0) return true;
             return (ncpus_used_mt + rp->avp->avg_ncpus <= ncpus);
         } else {
             return (ncpus_used_st < ncpus);
@@ -204,15 +207,16 @@ struct PROC_RESOURCES {
     }
 
     bool sufficient_coprocs(RESULT& r) {
-        double x;
         APP_VERSION& av = *r.avp;
         int rt = av.gpu_usage.rsc_type;
         if (!rt) return true;
-        x = av.gpu_usage.usage;
+        double x = av.gpu_usage.usage;
         COPROC& cp = pr_coprocs.coprocs[rt];
         for (int i=0; i<cp.count; i++) {
             if (gpu_excluded(r.app, cp, i)) continue;
-            if (cp.usage[i]+x <=1) return true;
+            double unused = 1 - cp.usage[i];
+            x -= unused;
+            if (x <= 0) return true;
         }
         if (log_flags.cpu_sched_debug) {
             msg_printf(r.project, MSG_INFO,
@@ -231,13 +235,20 @@ struct PROC_RESOURCES {
         x = av.gpu_usage.usage;
         for (int i=0; i<cp.count; i++) {
             if (gpu_excluded(r.app, cp, i)) continue;
-            if (cp.usage[i]+x >1) continue;
-            cp.usage[i] += x;
+            double unused = 1 - cp.usage[i];
+            if (unused >= x) {
+                cp.usage[i] += x;
+                break;
+            } else {
+                cp.usage[i] = 1;
+                x -= unused;
+            }
             break;
         }
         if (log_flags.cpu_sched_debug) {
             msg_printf(r.project, MSG_INFO,
-                "[cpu_sched_debug] reserving %f of coproc %s", x, cp.type
+                "[cpu_sched_debug] reserving %f of coproc %s",
+                av.gpu_usage.usage, cp.type
             );
         }
     }
@@ -524,13 +535,6 @@ static RESULT* earliest_deadline_result(int rsc_type) {
         }
     }
     if (!best_result) return NULL;
-
-    if (log_flags.cpu_sched_debug) {
-        msg_printf(best_result->project, MSG_INFO,
-            "[cpu_sched_debug] earliest deadline: %.0f %s",
-            best_result->report_deadline, best_result->name
-        );
-    }
 
     return best_result;
 }
@@ -1051,7 +1055,7 @@ void CLIENT_STATE::append_unfinished_time_slice(vector<RESULT*> &run_list) {
         ACTIVE_TASK* atp = active_tasks.active_tasks[i];
         atp->overdue_checkpoint = false;
         if (!atp->result->runnable()) continue;
-        if (atp->result->uses_coprocs() && gpu_suspend_reason) continue;
+        if (atp->result->uses_gpu() && gpu_suspend_reason) continue;
         if (atp->result->non_cpu_intensive()) continue;
         if (atp->scheduler_state != CPU_SCHED_SCHEDULED) continue;
         if (finished_time_slice(atp)) continue;
@@ -1147,12 +1151,6 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
         );
     }
 
-    for (i=0; i<projects.size(); i++) {
-        for (int j=1; j<coprocs.n_rsc; j++) {
-            projects[i]->rsc_defer_sched[j] = false;
-        }
-    }
-
     // schedule non-CPU-intensive tasks,
     // and look for backed-off GPU jobs
     //
@@ -1173,17 +1171,6 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
             //
             //ram_left -= atp->procinfo.working_set_size_smoothed;
             swap_left -= atp->procinfo.swap_size;
-        }
-        if (rp->schedule_backoff) {
-            if (rp->schedule_backoff > gstate.now) {
-                int r = rp->avp->gpu_usage.rsc_type;
-                if (r) {
-                    rp->project->rsc_defer_sched[r] = true;
-                }
-            } else {
-                rp->schedule_backoff = 0;
-                request_schedule_cpus("schedule backoff finished");
-            }
         }
     }
 
@@ -1213,7 +1200,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
 
         // if we're already using all the CPUs,
         // don't allow additional CPU jobs;
-        // allow GPU jobs if the resulting CPU load is at most ncpus+1
+        // allow coproc jobs if the resulting CPU load is at most ncpus+1
         //
         if (ncpus_used >= ncpus) {
             if (rp->uses_coprocs()) {
@@ -1240,7 +1227,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
 
 #if 0
         // Don't overcommit CPUs by > 1 if a MT job is scheduled.
-        // Skip this check for GPU jobs.
+        // Skip this check for coproc jobs.
         //
         if (!rp->uses_coprocs()
             && (scheduled_mt || (rp->avp->avg_ncpus > 1))
@@ -1278,7 +1265,9 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
 
         if (log_flags.cpu_sched_debug) {
             msg_printf(rp->project, MSG_INFO,
-                "[cpu_sched_debug] scheduling %s", rp->name
+                "[cpu_sched_debug] scheduling %s%s",
+                rp->name,
+                rp->edf_scheduled?" (high priority)":""
             );
         }
 
@@ -1323,6 +1312,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
     bool coproc_quit_pending = false;
     for (i=0; i<active_tasks.active_tasks.size(); i++) {
         atp = active_tasks.active_tasks[i];
+#if 0
         if (log_flags.cpu_sched_debug) {
             msg_printf(atp->result->project, MSG_INFO,
                 "[cpu_sched_debug] %s sched state %d next %d task state %d",
@@ -1330,6 +1320,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
                 atp->next_scheduler_state, atp->task_state()
             );
         }
+#endif
         int preempt_type = REMOVE_MAYBE_SCHED;
         switch (atp->next_scheduler_state) {
         case CPU_SCHED_PREEMPTED:
@@ -1358,7 +1349,7 @@ bool CLIENT_STATE::enforce_run_list(vector<RESULT*>& run_list) {
                 // remove from memory GPU jobs that were suspended by CPU throttling
                 // and are now unscheduled.
                 //
-                if (atp->result->uses_coprocs()) {
+                if (atp->result->uses_gpu()) {
                     atp->preempt(REMOVE_ALWAYS);
                     request_schedule_cpus("removed suspended GPU task");
                     break;
@@ -1590,8 +1581,6 @@ void CLIENT_STATE::set_ncpus() {
     if (global_prefs.max_ncpus_pct) {
         ncpus = (int)((ncpus * global_prefs.max_ncpus_pct)/100);
         if (ncpus == 0) ncpus = 1;
-    } else if (global_prefs.max_ncpus && global_prefs.max_ncpus < ncpus) {
-        ncpus = global_prefs.max_ncpus;
     }
 
     if (initialized && ncpus != ncpus_old) {

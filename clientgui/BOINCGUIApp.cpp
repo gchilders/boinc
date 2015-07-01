@@ -54,244 +54,6 @@
 
 bool s_bSkipExitConfirmation = false;
 
-wxChar* Convert28toISOLangCode[] = 
-{
-    wxT(""),
-    wxT(""),
-    wxT("ab"),
-    wxT("aa"),
-    wxT("af_ZA"),
-    wxT("sq_AL"),
-    wxT("am"),
-    wxT("ar"),
-    wxT("ar_DZ"),
-    wxT("ar_BH"),
-    wxT("ar_EG"),
-    wxT("ar_IQ"),
-    wxT("ar_JO"),
-    wxT("ar_KW"),
-    wxT("ar_LB"),
-    wxT("ar_LY"),
-    wxT("ar_MA"),
-    wxT("ar_OM"),
-    wxT("ar_QA"),
-    wxT("ar_SA"),
-    wxT("ar_SD"),
-    wxT("ar_SY"),
-    wxT("ar_TN"),
-    wxT("ar_AE"),
-    wxT("ar_YE"),
-    wxT("hy"),
-    wxT("as"),
-    wxT("ay"),
-    wxT("az"),
-    wxT("az"),
-    wxT("az"),
-    wxT("ba"),
-    wxT("eu_ES"),
-    wxT("be_BY"),
-    wxT("bn"),
-    wxT("dz"),
-    wxT("bh"),
-    wxT("bi"),
-    wxT("br"),
-    wxT("bg_BG"),
-    wxT("my"),
-    wxT("km"),
-    wxT("ca_ES"),
-    wxT("zh_TW"),
-    wxT("zh_CN"),
-    wxT("zh_TW"),
-    wxT("zh_HK"),
-    wxT("zh_MO"),
-    wxT("zh_SG"),
-    wxT("zh_TW"),
-    wxT("co"),
-    wxT("hr_HR"),
-    wxT("cs_CZ"),
-    wxT("da_DK"),
-    wxT("nl_NL"),
-    wxT("nl_BE"),
-    wxT("en_GB"),
-    wxT("en_GB"),
-    wxT("en_US"),
-    wxT("en_AU"),
-    wxT("en_BZ"),
-    wxT("en_BW"),
-    wxT("en_CA"),
-    wxT("en_CB"),
-    wxT("en_DK"),
-    wxT("en_IE"),
-    wxT("en_JM"),
-    wxT("en_NZ"),
-    wxT("en_PH"),
-    wxT("en_ZA"),
-    wxT("en_TT"),
-    wxT("en_ZW"),
-    wxT("eo"),
-    wxT("et_EE"),
-    wxT("fo_FO"),
-    wxT("fa_IR"),
-    wxT("fj"),
-    wxT("fi_FI"),
-    wxT("fr_FR"),
-    wxT("fr_BE"),
-    wxT("fr_CA"),
-    wxT("fr_LU"),
-    wxT("fr_MC"),
-    wxT("fr_CH"),
-    wxT("fy"),
-    wxT("gl_ES"),
-    wxT("ka_GE"),
-    wxT("de_DE"),
-    wxT("de_AT"),
-    wxT("de_BE"),
-    wxT("de_LI"),
-    wxT("de_LU"),
-    wxT("de_CH"),
-    wxT("el_GR"),
-    wxT("kl_GL"),
-    wxT("gn"),
-    wxT("gu"),
-    wxT("ha"),
-    wxT("he_IL"),
-    wxT("hi_IN"),
-    wxT("hu_HU"),
-    wxT("is_IS"),
-    wxT("id_ID"),
-    wxT("ia"),
-    wxT("ie"),
-    wxT("iu"),
-    wxT("ik"),
-    wxT("ga_IE"),
-    wxT("it_IT"),
-    wxT("it_CH"),
-    wxT("ja_JP"),
-    wxT("jw"),
-    wxT("kn"),
-    wxT("ks"),
-    wxT("ks_IN"),
-    wxT("kk"),
-    wxT("kw_GB"),
-    wxT("rw"),
-    wxT("ky"),
-    wxT("rn"),
-    wxT(""),
-    wxT("ko_KR"),
-    wxT("ku_TR"),
-    wxT("lo"),
-    wxT("la"),
-    wxT("lv_LV"),
-    wxT("ln"),
-    wxT("lt_LT"),
-    wxT("mk_MK"),
-    wxT("mg"),
-    wxT("ms_MY"),
-    wxT("ml"),
-    wxT("ms_BN"),
-    wxT("ms_MY"),
-    wxT("mt_MT"),
-    wxT(""),
-    wxT("mi"),
-    wxT("mr_IN"),
-    wxT("mo"),
-    wxT("mn"),
-    wxT("na"),
-    wxT("ne_NP"),
-    wxT("ne_IN"),
-    wxT("nb_NO"),
-    wxT("nn_NO"),
-    wxT("oc"),
-    wxT("or"),
-    wxT("om"),
-    wxT("ps"),
-    wxT("pl_PL"),
-    wxT("pt_PT"),
-    wxT("pt_BR"),
-    wxT("pa"),
-    wxT("qu"),
-    wxT("rm"),
-    wxT("ro_RO"),
-    wxT("ru_RU"),
-    wxT("ru_UA"),
-    wxT("se_NO"),
-    wxT("sm"),
-    wxT("sg"),
-    wxT("sa"),
-    wxT("gd"),
-    wxT("sr_RS"),
-    wxT("sr_RS"),
-    wxT("sr_RS@latin"),
-    wxT("sr_YU"),
-    wxT("sr_YU@latin"),
-    wxT("sh"),
-    wxT("st"),
-    wxT("tn"),
-    wxT("sn"),
-    wxT("sd"),
-    wxT("si"),
-    wxT("ss"),
-    wxT("sk_SK"),
-    wxT("sl_SI"),
-    wxT("so"),
-    wxT("es_ES"),
-    wxT("es_AR"),
-    wxT("es_BO"),
-    wxT("es_CL"),
-    wxT("es_CO"),
-    wxT("es_CR"),
-    wxT("es_DO"),
-    wxT("es_EC"),
-    wxT("es_SV"),
-    wxT("es_GT"),
-    wxT("es_HN"),
-    wxT("es_MX"),
-    wxT("es_ES"),
-    wxT("es_NI"),
-    wxT("es_PA"),
-    wxT("es_PY"),
-    wxT("es_PE"),
-    wxT("es_PR"),
-    wxT("es_UY"),
-    wxT("es_US"),
-    wxT("es_VE"),
-    wxT("su"),
-    wxT("sw_KE"),
-    wxT("sv_SE"),
-    wxT("sv_FI"),
-    wxT("tl_PH"),
-    wxT("tg"),
-    wxT("ta"),
-    wxT("tt"),
-    wxT("te"),
-    wxT("th_TH"),
-    wxT("bo"),
-    wxT("ti"),
-    wxT("to"),
-    wxT("ts"),
-    wxT("tr_TR"),
-    wxT("tk"),
-    wxT("tw"),
-    wxT("ug"),
-    wxT("uk_UA"),
-    wxT("ur"),
-    wxT("ur_IN"),
-    wxT("ur_PK"),
-    wxT("uz"),
-    wxT("uz"),
-    wxT("uz"),
-    wxT("ca_ES@valencia"),
-    wxT("vi_VN"),
-    wxT("vo"),
-    wxT("cy"),
-    wxT("wo"),
-    wxT("xh"),
-    wxT("yi"),
-    wxT("yo"),
-    wxT("za"),
-    wxT("zu")
-};
-
 
 #ifdef __WXMAC__
 
@@ -370,6 +132,8 @@ bool CBOINCGUIApp::OnInit() {
     m_pDocument = NULL;
     m_pTaskBarIcon = NULL;
     m_pEventLog = NULL;
+    m_bEventLogWasActive = false;
+    m_bProcessingActivateAppEvent = false;
 #ifdef __WXMAC__
     m_pMacDockIcon = NULL;
 #endif
@@ -394,7 +158,6 @@ bool CBOINCGUIApp::OnInit() {
     // Initialize local variables
     int      iErrorCode = 0;
     int      iDesiredLanguageCode = 0;
-    int      iOldLanguageCode = 0;
     bool     bOpenEventLog = false;
     wxString strDesiredSkinName = wxEmptyString;
     wxString strDialogMessage = wxEmptyString;
@@ -412,6 +175,8 @@ bool CBOINCGUIApp::OnInit() {
     wxSystemOptions::SetOption(wxT("msw.staticbox.optimized-paint"), 0);
 #endif
 #ifdef __WXMAC__
+    bool launchedFromLogin = false;
+    
     // In wxMac-2.8.7, default wxListCtrl::RefreshItem() does not work
     // so use traditional generic implementation.
     // This has been fixed in wxMac-2.8.8, but the Mac native implementation:
@@ -453,7 +218,6 @@ bool CBOINCGUIApp::OnInit() {
     m_pConfig->Read(wxT("AutomaticallyShutdownClient"), &m_iShutdownCoreClient, 0L);
     m_pConfig->Read(wxT("DisplayShutdownClientDialog"), &m_iDisplayExitDialog, 1L);
     m_pConfig->Read(wxT("DisableAutoStart"), &m_iBOINCMGRDisableAutoStart, 0L);
-    m_pConfig->Read(wxT("Language"), &iOldLanguageCode, 0);
     m_pConfig->Read(wxT("LanguageISO"), &m_strISOLanguageCode, wxT(""));
     m_pConfig->Read(wxT("GUISelection"), &m_iGUISelected, BOINC_SIMPLEGUI);
     m_pConfig->Read(wxT("EventLogOpen"), &bOpenEventLog);
@@ -521,12 +285,6 @@ bool CBOINCGUIApp::OnInit() {
     //
     if (m_strISOLanguageCode.IsEmpty()) {
         iDesiredLanguageCode = wxLANGUAGE_DEFAULT;
-        if (iOldLanguageCode) {
-            strOldLanguageCode = Convert28toISOLangCode[iOldLanguageCode];
-            if (!strOldLanguageCode.IsEmpty()) {
-                iDesiredLanguageCode = wxLocale::FindLanguageInfo(strOldLanguageCode)->Language;
-            }
-        }
         m_pLocale->Init(iDesiredLanguageCode);
         m_strISOLanguageCode = m_pLocale->GetCanonicalName();
     } else {
@@ -645,6 +403,36 @@ bool CBOINCGUIApp::OnInit() {
     }
 #endif
 
+#ifdef __WXMAC__
+    ProcessSerialNumber psn;
+    ProcessInfoRec pInfo;
+    OSStatus err;
+    
+    memset(&pInfo, 0, sizeof(pInfo));
+    pInfo.processInfoLength = sizeof( ProcessInfoRec );
+    err = GetProcessInformation(&m_psnCurrentProcess, &pInfo);
+    if (!err) {
+        psn = pInfo.processLauncher;
+        memset(&pInfo, 0, sizeof(pInfo));
+        pInfo.processInfoLength = sizeof( ProcessInfoRec );
+        err = GetProcessInformation(&psn, &pInfo);
+    }
+    // Don't open main window if we were started automatically at login
+    if (pInfo.processSignature == 'lgnw') {  // Login Window app
+        launchedFromLogin = true;
+        
+        // Prevent a situation where wxSingleInstanceChecker lock file
+        // from last login auto start (with same pid) was not deleted.
+        // This path must match that in DetectDuplicateInstance()
+        wxString lockFilePath = wxString(wxFileName::GetHomeDir() +
+                                            "/Library/Application Support/BOINC/" +
+                                            wxTheApp->GetAppName() +
+                                            '-' + wxGetUserId()
+                                        );
+        boinc_delete_file(lockFilePath.utf8_str());
+    }
+#endif
+
     // Detect if BOINC Manager is already running, if so, bring it into the
     // foreground and then exit.
     if (DetectDuplicateInstance()) {
@@ -693,21 +481,7 @@ bool CBOINCGUIApp::OnInit() {
     IdleTrackerAttach();
     
 #ifdef __WXMAC__
-    ProcessSerialNumber psn;
-    ProcessInfoRec pInfo;
-    OSStatus err;
-    
-    memset(&pInfo, 0, sizeof(pInfo));
-    pInfo.processInfoLength = sizeof( ProcessInfoRec );
-    err = GetProcessInformation(&m_psnCurrentProcess, &pInfo);
-    if (!err) {
-        psn = pInfo.processLauncher;
-        memset(&pInfo, 0, sizeof(pInfo));
-        pInfo.processInfoLength = sizeof( ProcessInfoRec );
-        err = GetProcessInformation(&psn, &pInfo);
-    }
-    // Don't open main window if we were started automatically at login
-    if (pInfo.processSignature == 'lgnw') {  // Login Window app
+    if (launchedFromLogin) {
         m_bGUIVisible = false;
 
         // If the system was just started, we usually get a "Connection
@@ -818,6 +592,16 @@ int CBOINCGUIApp::OnExit() {
 // Ensure we shut down gracefully on Windows logout or shutdown
 void CBOINCGUIApp::OnEndSession(wxCloseEvent& ) {
     s_bSkipExitConfirmation = true;
+
+    // On Windows Vista with UAC turned on, we have to spawn a new process to change the
+    // state of a service.  When Windows is shutting down it'll prevent new processes from
+    // being created.  Sometimes it'll present a crash dialog for the newly spawned application.
+    //
+    // So, we will just let the OS shutdown the service via the service control manager.
+    //
+    if (m_iShutdownCoreClient && m_pDocument->m_pClientManager->IsBOINCConfiguredAsDaemon()) {
+        m_iShutdownCoreClient = false;
+    }
 
     CBOINCBaseFrame* pFrame = wxGetApp().GetFrame();
     wxCommandEvent evt(wxEVT_COMMAND_MENU_SELECTED, wxID_EXIT);
@@ -1163,26 +947,38 @@ int CBOINCGUIApp::IdleTrackerDetach() {
 
 
 void CBOINCGUIApp::OnActivateApp(wxActivateEvent& event) {
-#ifdef __WXMAC__
-    // Make sure any modal dialog (such as Attach Wizard) ends up in front.
-    if (IsModalDialogDisplayed()) {
-        event.Skip();
-        return;
-    }
-#endif
+    m_bProcessingActivateAppEvent = true;
 
     if (event.GetActive()) {
-        if (m_pEventLog && !m_pEventLog->IsIconized()) {
-            m_pEventLog->Raise();
-        }
-        if (m_pFrame) {
-            m_pFrame->Raise();
-        }
 #ifdef __WXMAC__
         ShowInterface();
+#else
+#ifdef __WXGTK__
+        // Linux allows the Event Log to be brought forward and made active
+        // even if we have a modal dialog displayed (associated with our
+        // main frame.) This test is needed to allow bringing the modal
+        // dialog forward again by clicking on its title bar.
+        if (!IsModalDialogDisplayed())
+#endif
+        {
+            bool keepEventLogInFront = m_bEventLogWasActive;
+            
+            if (m_pEventLog && !m_pEventLog->IsIconized() && !keepEventLogInFront) {
+                m_pEventLog->Raise();
+            }
+            if (m_pFrame) {
+                m_pFrame->Raise();
+            }
+            if (m_pEventLog && !m_pEventLog->IsIconized() && keepEventLogInFront) {
+                m_pEventLog->Raise();
+            }
+        }
 #endif
     }
+
     event.Skip();
+    
+    m_bProcessingActivateAppEvent = false;
 }
 
 
@@ -1235,8 +1031,11 @@ int CBOINCGUIApp::StartBOINCDefaultScreensaverTest() {
 }
 
 
-// Display the Event Log, it is a modeless dialog not owned by any
-// other UI element.
+// Display the Event Log, it is a modeless dialog not owned by
+// any other UI element.
+// To work around a Linux bug in wxWidgets 3.0 which prevents
+// bringing the main frame forward on top of a modeless dialog,
+// the Event Log is now a wxFrame on Linux only.
 void CBOINCGUIApp::DisplayEventLog(bool bShowWindow) {
     if (m_pEventLog) {
         if (bShowWindow) {
@@ -1394,26 +1193,28 @@ bool CBOINCGUIApp::SetActiveGUI(int iGUISelection, bool bShowWindow) {
     }
 
     // Show the new frame if needed 
-    if (m_pFrame && bShowWindow) {
-        if (m_pEventLog) {
-            m_pEventLog->Show();
-            m_pEventLog->Raise();
+    if (!m_bProcessingActivateAppEvent) {
+        if (m_pFrame && bShowWindow) {
+            if (m_pEventLog && !m_pEventLog->IsIconized()) {
+                m_pEventLog->Show();
+                m_pEventLog->Raise();
+    #ifdef __WXMSW__
+                ::SetForegroundWindow((HWND)m_pEventLog->GetHWND());
+    #endif
+            }
+
+            if (!m_pFrame->IsShown()) {
+                m_pFrame->Show();
+            }
+            if (m_pFrame->IsIconized()) {
+                m_pFrame->Maximize(false);
+            }
+            m_pFrame->Raise();
+
 #ifdef __WXMSW__
-            ::SetForegroundWindow((HWND)m_pEventLog->GetHWND());
+            ::SetForegroundWindow((HWND)m_pFrame->GetHWND());
 #endif
         }
-
-        if (!m_pFrame->IsShown()) {
-            m_pFrame->Show();
-        }
-        if (m_pFrame->IsIconized()) {
-            m_pFrame->Maximize(false);
-        }
-        m_pFrame->Raise();
-
-#ifdef __WXMSW__
-        ::SetForegroundWindow((HWND)m_pFrame->GetHWND());
-#endif
     }
 
     wxLogTrace(wxT("Function Start/End"), wxT("CBOINCGUIApp::SetActiveGUI - Function End"));

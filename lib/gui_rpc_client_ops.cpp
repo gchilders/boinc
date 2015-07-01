@@ -160,10 +160,6 @@ PROJECT_LIST_ENTRY::PROJECT_LIST_ENTRY() {
     clear();
 }
 
-PROJECT_LIST_ENTRY::~PROJECT_LIST_ENTRY() {
-    clear();
-}
-
 int PROJECT_LIST_ENTRY::parse(XML_PARSER& xp) {
     string platform;
 
@@ -208,10 +204,6 @@ AM_LIST_ENTRY::AM_LIST_ENTRY() {
     clear();
 }
 
-AM_LIST_ENTRY::~AM_LIST_ENTRY() {
-    clear();
-}
-
 int AM_LIST_ENTRY::parse(XML_PARSER& xp) {
     while (!xp.get_tag()) {
         if (xp.match_tag("/account_manager")) return 0;
@@ -231,10 +223,6 @@ void AM_LIST_ENTRY::clear() {
 }
 
 ALL_PROJECTS_LIST::ALL_PROJECTS_LIST() {
-}
-
-ALL_PROJECTS_LIST::~ALL_PROJECTS_LIST() {
-    clear();
 }
 
 bool compare_project_list_entry(
@@ -273,10 +261,6 @@ void ALL_PROJECTS_LIST::clear() {
 }
 
 PROJECT::PROJECT() {
-    clear();
-}
-
-PROJECT::~PROJECT() {
     clear();
 }
 
@@ -459,6 +443,7 @@ int PROJECT::parse(XML_PARSER& xp) {
         if (xp.parse_str("venue", venue, sizeof(venue))) continue;
         if (xp.parse_int("njobs_success", njobs_success)) continue;
         if (xp.parse_int("njobs_error", njobs_error)) continue;
+        if (xp.parse_double("elapsed_time", elapsed_time)) continue;
         if (xp.parse_str("external_cpid", external_cpid, sizeof(external_cpid))) continue;
     }
     return ERR_XML_PARSE;
@@ -513,14 +498,11 @@ void PROJECT::clear() {
     strcpy(venue, "");
     njobs_success = 0;
     njobs_error = 0;
+    elapsed_time = 0;
     strcpy(external_cpid, "");
 }
 
 APP::APP() {
-    clear();
-}
-
-APP::~APP() {
     clear();
 }
 
@@ -540,10 +522,6 @@ void APP::clear() {
 }
 
 APP_VERSION::APP_VERSION() {
-    clear();
-}
-
-APP_VERSION::~APP_VERSION() {
     clear();
 }
 
@@ -585,10 +563,6 @@ WORKUNIT::WORKUNIT() {
     clear();
 }
 
-WORKUNIT::~WORKUNIT() {
-    clear();
-}
-
 int WORKUNIT::parse(XML_PARSER& xp) {
     while (!xp.get_tag()) {
         if (xp.match_tag("/workunit")) return 0;
@@ -616,10 +590,6 @@ void WORKUNIT::clear() {
 }
 
 RESULT::RESULT() {
-    clear();
-}
-
-RESULT::~RESULT() {
     clear();
 }
 
@@ -679,6 +649,7 @@ int RESULT::parse(XML_PARSER& xp) {
         if (xp.parse_double("checkpoint_cpu_time", checkpoint_cpu_time)) continue;
         if (xp.parse_double("current_cpu_time", current_cpu_time)) continue;
         if (xp.parse_double("elapsed_time", elapsed_time)) continue;
+        if (xp.parse_double("progress_rate", progress_rate)) continue;
         if (xp.parse_double("swap_size", swap_size)) continue;
         if (xp.parse_double("working_set_size_smoothed", working_set_size_smoothed)) continue;
         if (xp.parse_double("fraction_done", fraction_done)) continue;
@@ -735,6 +706,7 @@ void RESULT::clear() {
     current_cpu_time = 0;
     fraction_done = 0;
     elapsed_time = 0;
+    progress_rate = 0;
     swap_size = 0;
     working_set_size_smoothed = 0;
     estimated_cpu_time_remaining = 0;
@@ -751,10 +723,6 @@ void RESULT::clear() {
 }
 
 FILE_TRANSFER::FILE_TRANSFER() {
-    clear();
-}
-
-FILE_TRANSFER::~FILE_TRANSFER() {
     clear();
 }
 
@@ -820,10 +788,6 @@ MESSAGE::MESSAGE() {
     clear();
 }
 
-MESSAGE::~MESSAGE() {
-    clear();
-}
-
 int MESSAGE::parse(XML_PARSER& xp) {
     char buf[1024];
     while (!xp.get_tag()) {
@@ -849,10 +813,6 @@ void MESSAGE::clear() {
 }
 
 GR_PROXY_INFO::GR_PROXY_INFO() {
-    clear();
-}
-
-GR_PROXY_INFO::~GR_PROXY_INFO() {
     clear();
 }
 
@@ -895,10 +855,6 @@ void GR_PROXY_INFO::clear() {
 }
 
 CC_STATE::CC_STATE() {
-    clear();
-}
-
-CC_STATE::~CC_STATE() {
     clear();
 }
 
@@ -1126,20 +1082,12 @@ RESULT* CC_STATE::lookup_result(const char* url, const char* name) {
     return 0;
 }
 
-PROJECTS::~PROJECTS() {
-    clear();
-}
-
 void PROJECTS::clear() {
     unsigned int i;
     for (i=0; i<projects.size(); i++) {
         delete projects[i];
     }
     projects.clear();
-}
-
-DISK_USAGE::~DISK_USAGE() {
-    clear();
 }
 
 void DISK_USAGE::clear() {
@@ -1154,10 +1102,6 @@ void DISK_USAGE::clear() {
     d_allowed = 0;
 }
 
-RESULTS::~RESULTS() {
-    clear();
-}
-
 void RESULTS::clear() {
     unsigned int i;
     for (i=0; i<results.size(); i++) {
@@ -1167,10 +1111,6 @@ void RESULTS::clear() {
 }
 
 FILE_TRANSFERS::FILE_TRANSFERS() {
-    clear();
-}
-
-FILE_TRANSFERS::~FILE_TRANSFERS() {
     clear();
 }
 
@@ -1186,10 +1126,6 @@ MESSAGES::MESSAGES() {
     clear();
 }
 
-MESSAGES::~MESSAGES() {
-    clear();
-}
-
 void MESSAGES::clear() {
     unsigned int i;
     for (i=0; i<messages.size(); i++) {
@@ -1199,10 +1135,6 @@ void MESSAGES::clear() {
 }
 
 NOTICES::NOTICES() {
-    clear();
-}
-
-NOTICES::~NOTICES() {
     clear();
 }
 
@@ -1311,10 +1243,6 @@ PROJECT_CONFIG::PROJECT_CONFIG() {
     clear();
 }
 
-PROJECT_CONFIG::~PROJECT_CONFIG() {
-    clear();
-}
-
 int PROJECT_CONFIG::parse(XML_PARSER& xp) {
     std::string msg;
     clear();
@@ -1344,6 +1272,7 @@ int PROJECT_CONFIG::parse(XML_PARSER& xp) {
             platforms.push_back(msg);
             continue;
         }
+        if (xp.parse_bool("ldap_auth", ldap_auth)) continue;
     }
     return ERR_XML_PARSE;
 }
@@ -1364,13 +1293,10 @@ void PROJECT_CONFIG::clear() {
     sched_stopped = false;
     web_stopped = false;
     min_client_version = 0;
+    ldap_auth = false;
 }
 
 ACCOUNT_IN::ACCOUNT_IN() {
-    clear();
-}
-
-ACCOUNT_IN::~ACCOUNT_IN() {
     clear();
 }
 
@@ -1383,10 +1309,6 @@ void ACCOUNT_IN::clear() {
 }
 
 ACCOUNT_OUT::ACCOUNT_OUT() {
-    clear();
-}
-
-ACCOUNT_OUT::~ACCOUNT_OUT() {
     clear();
 }
 
@@ -1407,10 +1329,6 @@ void ACCOUNT_OUT::clear() {
 }
 
 CC_STATUS::CC_STATUS() {
-    clear();
-}
-
-CC_STATUS::~CC_STATUS() {
     clear();
 }
 
@@ -2301,18 +2219,27 @@ int RPC_CLIENT::lookup_account(ACCOUNT_IN& ai) {
     SET_LOCALE sl;
     char buf[1024];
     RPC rpc(this);
+    string passwd_hash;
 
-    downcase_string(ai.email_addr);
-    string passwd_hash = get_passwd_hash(ai.passwd, ai.email_addr);
+    if (ai.ldap_auth && !strchr(ai.email_addr.c_str(), '@')) {
+        // LDAP case
+        //
+        passwd_hash = ai.passwd;
+    } else {
+        downcase_string(ai.email_addr);
+        passwd_hash = get_passwd_hash(ai.passwd, ai.email_addr);
+    }
     snprintf(buf, sizeof(buf),
         "<lookup_account>\n"
         "   <url>%s</url>\n"
         "   <email_addr>%s</email_addr>\n"
         "   <passwd_hash>%s</passwd_hash>\n"
+        "   <ldap_auth>%d</ldap_auth>\n"
         "</lookup_account>\n",
         ai.url.c_str(),
         ai.email_addr.c_str(),
-        passwd_hash.c_str()
+        passwd_hash.c_str(),
+        ai.ldap_auth?1:0
     );
     buf[sizeof(buf)-1] = 0;
 

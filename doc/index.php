@@ -80,7 +80,10 @@ function show_participate() {
     <a href=http://www.facebook.com/pages/BOINC/32672338584><img width=36 src=images/facebook_logo.jpg align=left title='BOINC on Facebook'></a>
     <a href=https://plus.google.com/117150698502685192946/posts><img width=36 src=images/google_plus_logo.jpg align=left title='BOINC on Google+'></a>
         <center>
-        <span class=section_title>".tra("Volunteer")."</span>
+        <span class=section_title>"
+        // "Volunteer" is used as a verb
+        .tra("Volunteer")
+        ."</span>
         <br>
         <a class=heading href=download.php><b>".tra("Download")."</b></a>
         &middot; <a class=heading href=\"/wiki/BOINC_Help\"><b>".tra("Help")."</b></a>
@@ -108,13 +111,16 @@ function show_participate() {
             "</a>"
         )."
         <p>
-        For Android devices, download the BOINC or
-        <a href=http://www.htc.com/www/go/power-to-give-faqs/>HTC Power To Give</a> app from the Google Play Store.
-        <a href=http://www.htc.com/www/go/power-to-give-faqs/>
-        <img align=right valign=top height=50 src=images/htc-power-to-give.jpg>
-        </a>
-        </td></tr>
-    ";
+        For Android devices, download the BOINC
+"
+//        or <a href=http://www.htc.com/www/go/power-to-give-faqs/>HTC Power To Give</a>
+        ."
+        app from the Google Play Store.
+";
+//        <a href=http://www.htc.com/www/go/power-to-give-faqs/>
+//        <img align=right valign=top height=50 src=images/htc-power-to-give.jpg>
+//        </a>
+//        </td></tr>
 }
 
 function show_create() {
@@ -169,6 +175,7 @@ function show_other() {
             </ul>
             </td><td valign=top>
             <ul>
+            <li> <a href=trac/wiki/SourceCodeGit>".tra("Source code")."</a>
             <li> ".tra("Help wanted")."
             <ul>
                 <li> <a href=\"trac/wiki/DevProjects\">".tra("Programming")."</a>

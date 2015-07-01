@@ -200,7 +200,7 @@ public:
     void db_print_values(char*);
     void db_parse(MYSQL_ROW &row);
     void operator=(RESULT& r) {RESULT::operator=(r);}
-    int get_unsent_counts(APP&, int* unsent);
+    int get_unsent_counts(APP&, int* unsent, int count_max);
     int make_unsent(
         APP&, int size_class, int n, const char* order_clause, int& nchanged
     );
@@ -544,6 +544,18 @@ struct DB_BADGE_USER : public DB_BASE, public BADGE_USER {
 struct DB_BADGE_TEAM : public DB_BASE, public BADGE_TEAM {
     DB_BADGE_TEAM(DB_CONN* p=0);
     void db_print(char*){};
+    void db_parse(MYSQL_ROW&);
+};
+
+struct DB_CREDIT_USER : public DB_BASE, public CREDIT_USER {
+    DB_CREDIT_USER(DB_CONN* p=0);
+    void db_print(char*);
+    void db_parse(MYSQL_ROW&);
+};
+
+struct DB_CREDIT_TEAM : public DB_BASE, public CREDIT_TEAM {
+    DB_CREDIT_TEAM(DB_CONN* p=0);
+    void db_print(char*);
     void db_parse(MYSQL_ROW&);
 };
 

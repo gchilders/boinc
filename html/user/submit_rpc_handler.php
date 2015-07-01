@@ -173,7 +173,10 @@ function stage_files(&$jobs, $template) {
     }
 }
 
-function submit_jobs($jobs, $template, $app, $batch_id, $priority, $result_template_file = null, $workunit_template_file = null) {
+function submit_jobs(
+    $jobs, $template, $app, $batch_id, $priority,
+    $result_template_file = null, $workunit_template_file = null
+) {
     $x = "";
     foreach($jobs as $job) {
         if ($job->name) {
@@ -199,7 +202,7 @@ function submit_jobs($jobs, $template, $app, $batch_id, $priority, $result_templ
         $x .= "\n";
     }
 
-    $cmd = "cd ../..; ./bin/create_work --appname $app->name --batch $batch_id --rsc_fpops_est $job->rsc_fpops_est --priority $priority --stdin";
+    $cmd = "cd ../..; ./bin/create_work --appname $app->name --batch $batch_id --rsc_fpops_est $job->rsc_fpops_est --priority $priority";
     if ($result_template_file) {
         $cmd .= " --result_template templates/$result_template_file";
     }
@@ -299,6 +302,7 @@ function submit_batch($r) {
         if (!$ret) xml_error(-1, "BOINC server: batch->update() failed");
     } else {
         $batch_name = (string)($r->batch->batch_name);
+        $batch_name = BoincDb::escape_string($batch_name);
         $batch_id = BoincBatch::insert(
             "(user_id, create_time, njobs, name, app_id, logical_end_time, state) values ($user->id, $now, $njobs, '$batch_name', $app->id, $let, ".BATCH_STATE_INIT.")"
         );
@@ -320,7 +324,10 @@ function submit_batch($r) {
         $workunit_template_file = null;
     }
 
-    submit_jobs($jobs, $template, $app, $batch_id, $let, $result_template_file, $workunit_template_file);
+    submit_jobs(
+        $jobs, $template, $app, $batch_id, $let,
+        $result_template_file, $workunit_template_file
+    );
 
     // set state to IN_PROGRESS only after creating jobs;
     // otherwise we might flag batch as COMPLETED
@@ -336,6 +343,7 @@ function create_batch($r) {
     list($user, $user_submit) = authenticate_user($r, $app);
     $now = time();
     $batch_name = (string)($r->batch->batch_name);
+    $batch_name = BoincDb::escape_string($batch_name);
     $expire_time = (double)($r->expire_time);
     $batch_id = BoincBatch::insert(
         "(user_id, create_time, name, app_id, state, expire_time) values ($user->id, $now, '$batch_name', $app->id, ".BATCH_STATE_INIT.", $expire_time)"
@@ -346,7 +354,7 @@ function create_batch($r) {
     echo "<batch_id>$batch_id</batch_id>\n";
 }
 
-function print_batch_params($batch) {
+function print_batch_params($batch, $get_cpu_time) {
     $app = BoincApp::lookup_id($batch->app_id);
     if (!$app) $app->name = "none";
     echo "
@@ -364,11 +372,15 @@ function print_batch_params($batch) {
         <name>$batch->name</name>
         <app_name>$app->name</app_name>
 ";
+    if ($get_cpu_time) {
+        echo "        <total_cpu_time>".$batch->get_cpu_time()."</total_cpu_time>\n";
+    }
 }
 
 function query_batches($r) {
     list($user, $user_submit) = authenticate_user($r, null);
     $batches = BoincBatch::enum("user_id = $user->id");
+    $get_cpu_time = (int)($r->get_cpu_time);
     echo "<batches>\n";
     foreach ($batches as $batch) {
         if ($batch->state < BATCH_STATE_COMPLETE) {
@@ -376,7 +388,7 @@ function query_batches($r) {
             $batch = get_batch_params($batch, $wus);
         }
         echo "    <batch>\n";
-        print_batch_params($batch);
+        print_batch_params($batch, $get_cpu_time);
         echo "   </batch>\n";
     }
     echo "</batches>\n";
@@ -415,7 +427,8 @@ function query_batch($r) {
     $wus = BoincWorkunit::enum("batch = $batch->id");
     $batch = get_batch_params($batch, $wus);
     echo "<batch>\n";
-    print_batch_params($batch);
+    $get_cpu_time = (int)($r->get_cpu_time);
+    print_batch_params($batch, $get_cpu_time);
     $n_outfiles = n_outfiles($wus[0]);
     foreach ($wus as $wu) {
         echo "    <job>

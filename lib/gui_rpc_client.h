@@ -78,7 +78,6 @@ struct PROJECT_LIST_ENTRY {
         // platforms supported by project, or empty
 
     PROJECT_LIST_ENTRY();
-    ~PROJECT_LIST_ENTRY();
 
     int parse(XML_PARSER&);
     void clear();
@@ -91,7 +90,6 @@ struct AM_LIST_ENTRY {
     std::string image;
 
     AM_LIST_ENTRY();
-    ~AM_LIST_ENTRY();
 
     int parse(XML_PARSER&);
     void clear();
@@ -102,7 +100,6 @@ struct ALL_PROJECTS_LIST {
     std::vector<AM_LIST_ENTRY*> account_managers;
 
     ALL_PROJECTS_LIST();
-    ~ALL_PROJECTS_LIST();
 
     void clear();
     void alpha_sort();
@@ -170,13 +167,13 @@ struct PROJECT {
     char venue[256];
     int njobs_success;
     int njobs_error;
+    double elapsed_time;
     char external_cpid[64];
 
     // NOTE: if you add any data items above,
     // update parse(), and clear() to include them!!
 
     PROJECT();
-    ~PROJECT();
 
     int parse(XML_PARSER&);
     void print();
@@ -194,7 +191,6 @@ struct APP {
     PROJECT* project;
 
     APP();
-    ~APP();
 
     int parse(XML_PARSER&);
     void print();
@@ -217,7 +213,6 @@ struct APP_VERSION {
     PROJECT* project;
 
     APP_VERSION();
-    ~APP_VERSION();
 
     int parse(XML_PARSER&);
     int parse_coproc(XML_PARSER&);
@@ -237,7 +232,6 @@ struct WORKUNIT {
     APP* app;
 
     WORKUNIT();
-    ~WORKUNIT();
 
     int parse(XML_PARSER&);
     void print();
@@ -278,6 +272,8 @@ struct RESULT {
     double current_cpu_time;
     double fraction_done;
     double elapsed_time;
+    double progress_rate;
+        // avg increase in fraction done per second
     double swap_size;
     double working_set_size_smoothed;
     double estimated_cpu_time_remaining;
@@ -300,7 +296,6 @@ struct RESULT {
     APP_VERSION* avp;
 
     RESULT();
-    ~RESULT();
 
     int parse(XML_PARSER&);
     void print();
@@ -331,7 +326,6 @@ struct FILE_TRANSFER {
     PROJECT* project;
 
     FILE_TRANSFER();
-    ~FILE_TRANSFER();
 
     int parse(XML_PARSER&);
     void print();
@@ -346,7 +340,6 @@ struct MESSAGE {
     std::string body;
 
     MESSAGE();
-    ~MESSAGE();
 
     int parse(XML_PARSER&);
     void print();
@@ -372,7 +365,6 @@ struct GR_PROXY_INFO {
 	std::string noproxy_hosts;
 
     GR_PROXY_INFO();
-    ~GR_PROXY_INFO();
 
     int parse(XML_PARSER&);
     void print();
@@ -399,7 +391,6 @@ struct CC_STATE {
     bool have_ati;              // deprecated; include for compat
 
     CC_STATE();
-    ~CC_STATE();
 
     PROJECT* lookup_project(const char* url);
     APP* lookup_app(PROJECT*, const char* name);
@@ -423,7 +414,6 @@ struct PROJECTS {
     std::vector<PROJECT*> projects;
 
     PROJECTS(){}
-    ~PROJECTS();
 
     void print();
     void print_urls();
@@ -438,7 +428,6 @@ struct DISK_USAGE {
     double d_allowed;   // amount BOINC is allowed to use, total
 
     DISK_USAGE(){clear();}
-    ~DISK_USAGE();
 
     void print();
     void clear();
@@ -448,7 +437,6 @@ struct RESULTS {
     std::vector<RESULT*> results;
 
     RESULTS(){}
-    ~RESULTS();
 
     void print();
     void clear();
@@ -458,7 +446,6 @@ struct FILE_TRANSFERS {
     std::vector<FILE_TRANSFER*> file_transfers;
 
     FILE_TRANSFERS();
-    ~FILE_TRANSFERS();
 
     void print();
     void clear();
@@ -468,7 +455,6 @@ struct MESSAGES {
     std::deque<MESSAGE*> messages;
 
     MESSAGES();
-    ~MESSAGES();
 
     void print();
     void clear();
@@ -481,7 +467,6 @@ struct NOTICES {
     std::vector<NOTICE*> notices;
 
     NOTICES();
-    ~NOTICES();
 
     void print();
     void clear();
@@ -495,7 +480,6 @@ struct ACCT_MGR_INFO {
     std::string cookie_failure_url;
     
     ACCT_MGR_INFO();
-    ~ACCT_MGR_INFO(){}
 
     int parse(XML_PARSER&);
     void clear();
@@ -506,7 +490,6 @@ struct PROJECT_ATTACH_REPLY {
     std::vector<std::string>messages;
 
     PROJECT_ATTACH_REPLY();
-    ~PROJECT_ATTACH_REPLY(){}
 
     int parse(XML_PARSER&);
     void clear();
@@ -517,7 +500,6 @@ struct ACCT_MGR_RPC_REPLY {
     std::vector<std::string>messages;
 
     ACCT_MGR_RPC_REPLY();
-    ~ACCT_MGR_RPC_REPLY(){}
 
     int parse(XML_PARSER&);
     void clear();
@@ -530,7 +512,6 @@ struct PROJECT_INIT_STATUS {
     bool has_account_key;
 
     PROJECT_INIT_STATUS();
-    ~PROJECT_INIT_STATUS(){}
 
     int parse(XML_PARSER&);
     void clear();
@@ -558,9 +539,10 @@ struct PROJECT_CONFIG {
         // before allowing attachment to continue.
     std::vector<std::string> platforms;
         // platforms supported by project, or empty
+    bool ldap_auth;
+        // project supports LDAP authentication
 
     PROJECT_CONFIG();
-    ~PROJECT_CONFIG();
 
     int parse(XML_PARSER&);
     void clear();
@@ -571,13 +553,13 @@ struct ACCOUNT_IN {
     std::string url;
         // URL prefix for web RPCs
     std::string email_addr;
-        // the account identifier (email address or user name)
+        // the account identifier (email address, user name, or LDAP uid)
     std::string user_name;
     std::string passwd;
     std::string team_name;
+    bool ldap_auth;
 
     ACCOUNT_IN();
-    ~ACCOUNT_IN();
 
     void clear();
 };
@@ -588,7 +570,6 @@ struct ACCOUNT_OUT {
     std::string authenticator;
 
     ACCOUNT_OUT();
-    ~ACCOUNT_OUT();
 
     int parse(XML_PARSER&);
     void clear();
@@ -616,7 +597,6 @@ struct CC_STATUS {
     int max_event_log_lines;
 
     CC_STATUS();
-    ~CC_STATUS();
 
     int parse(XML_PARSER&);
     void clear();

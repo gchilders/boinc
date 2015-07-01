@@ -413,7 +413,10 @@ int run_program(
     );
     if (!retval) {
         windows_format_error_string(GetLastError(), error_msg, sizeof(error_msg));
-        fprintf(stderr, "CreateProcess failed: '%s'\n", error_msg);
+        fprintf(stderr,
+            "%s: CreateProcess failed: '%s'\n",
+            time_to_string(dtime()), error_msg
+        );
         return -1; // CreateProcess returns 1 if successful, false if it failed.
     }
 
@@ -465,7 +468,9 @@ int kill_program(int pid, int exit_code) {
     int retval;
 
     HANDLE h = OpenProcess(PROCESS_TERMINATE, false, pid);
-    if (h == NULL) return ERR_NOT_FOUND;
+    if (h == NULL) return 0;
+        // process isn't there, so no error
+
     if (TerminateProcess(h, exit_code)) {
         retval = 0;
     } else {
@@ -483,6 +488,7 @@ int kill_program(HANDLE pid) {
 #else
 int kill_program(int pid) {
     if (kill(pid, SIGKILL)) {
+        if (errno == ESRCH) return 0;
         return ERR_KILL;
     }
     return 0;

@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2015 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -68,6 +68,7 @@ CFStringRef     valueNoRestart = CFSTR("NoRestart");
 int main(int argc, char *argv[])
 {
     char                    pkgPath[MAXPATHLEN];
+    char                    postInstallAppPath[MAXPATHLEN];
     char                    temp[MAXPATHLEN];
     char                    brand[64], s[256];
     char                    *p;
@@ -90,6 +91,9 @@ int main(int argc, char *argv[])
     strlcpy(temp, pkgPath, sizeof(temp));
 
     strlcat(pkgPath, "/Contents/Resources/", sizeof(pkgPath));
+    
+    strlcpy(postInstallAppPath, pkgPath, sizeof(postInstallAppPath));
+    strlcat(postInstallAppPath, "PostInstall.app", sizeof(postInstallAppPath));
 
    // To allow for branding, assume name of installer package inside bundle corresponds to name of this application
     p = strrchr(temp, '/');         // Point to name of this application (e.g., "BOINC Installer.app")
@@ -109,19 +113,26 @@ int main(int argc, char *argv[])
     // Expand the installer package
     system("rm -dfR /tmp/BOINC.pkg");
     system("rm -dfR /tmp/expanded_BOINC.pkg");
+    system("rm -dfR /tmp/PostInstall.app");
+    system("rm -f /tmp/BOINC_preferred_languages");
+    system("rm -f /tmp/BOINC_restart_flag");
+
+    sprintf(temp, "cp -fpR \"%s\" /tmp/PostInstall.app", postInstallAppPath);
+    err = system(temp);
+    
     sprintf(temp, "pkgutil --expand \"%s\" /tmp/expanded_BOINC.pkg", pkgPath);
     err = system(temp);
 
     if (err == noErr) {
         GetPreferredLanguages();
     }
-    if (compareOSVersionTo(10, 5) < 0) {
+    if (compareOSVersionTo(10, 6) < 0) {
         LoadPreferredLanguages();
         ::SetFrontProcess(&ourPSN);
         p = strrchr(brand, ' ');         // Strip off last space character and everything following
         if (p)
             *p = '\0'; 
-        ShowMessage((char *)_("Sorry, this version of %s requires system 10.5 or higher."), brand);
+        ShowMessage((char *)_("Sorry, this version of %s requires system 10.6 or higher."), brand);
 
         system("rm -dfR /tmp/BOINC_payload");
         return -1;
@@ -164,6 +175,8 @@ int main(int argc, char *argv[])
         }
     }
 
+    system("rm -fR /tmp/expanded_BOINC.pkg");
+
     sprintf(temp, "open \"%s\" &", pkgPath);
     system(temp);
     
@@ -200,6 +213,10 @@ Boolean IsRestartNeeded()
     gid_t           boinc_master_gid = 0, boinc_project_gid = 0;
     uid_t           boinc_master_uid = 0, boinc_project_uid = 0;
     char            loginName[256];
+    
+    if (compareOSVersionTo(10, 9) >= 0) {
+        return false;
+    }
     
     grp = getgrnam(boinc_master_group_name);
     if (grp == NULL)

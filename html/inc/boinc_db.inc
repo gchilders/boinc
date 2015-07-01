@@ -106,6 +106,12 @@ class BoincDb extends DbConn {
         $db = self::get();
         return $db->base_error();
     }
+
+    // if your DB connection times out, call this, then call get() again
+    //
+    static function reset_connection() {
+        self::$instance = null;
+    }
 }
 
 class BoincUser {
@@ -305,6 +311,7 @@ class BoincResult {
     }
     static function lookup_name($name) {
         $db = BoincDb::get();
+        $name = BoincDb::escape_string($name);
         return $db->lookup('result', 'BoincResult', "name='$name'");
     }
     function delete() {
@@ -340,6 +347,10 @@ class BoincWorkunit {
         $db = BoincDb::get();
         return $db->update_aux('workunit', $clause);
     }
+    static function count($clause) {
+        $db = BoincDb::get();
+        return $db->count('workunit', $clause);
+    }
 }
 
 class BoincApp {
@@ -365,9 +376,9 @@ class BoincApp {
         $db = BoincDb::get();
         return $db->update($this, 'app', $clause);
     }
-    static function sum($field) {
+    static function sum($field, $clause=null) {
         $db = BoincDb::get();
-        return $db->sum('app', $field);
+        return $db->sum('app', $field, $clause);
     }
 }
 
@@ -646,5 +657,60 @@ class BoincBadgeTeam {
     }
 }
 
+class BoincCreditUser {
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('credit_user', 'BoincCreditUser', $clause);
+    }
+    static function enum($where_clause) {
+        $db = BoincDb::get();
+        return $db->enum('credit_user', 'BoincCreditUser', $where_clause);
+    }
+    static function sum($field, $clause) {
+        $db = BoincDb::get();
+        return $db->sum('credit_user', $field, $clause);
+    }
+    static function update($clause) {
+        $db = BoincDb::get();
+        return $db->update_aux('credit_user', $clause);
+    }
+    static function delete_user($user) {
+        $db = BoincDb::get();
+        $db->delete_aux('credit_user', "userid=$user->id");
+    }
+}
+
+class BoincCreditTeam {
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('credit_team', 'BoincCreditTeam', $clause);
+    }
+    static function enum($where_clause) {
+        $db = BoincDb::get();
+        return $db->enum('credit_team', 'BoincCreditTeam', $where_clause);
+    }
+    static function sum($field, $clause) {
+        $db = BoincDb::get();
+        return $db->sum('credit_team', $field, $clause);
+    }
+    static function update($clause) {
+        $db = BoincDb::get();
+        return $db->update_aux('credit_team', $clause);
+    }
+}
+
+// DEPRECATED: use BoincDb::escape_string where possible
+// 
+// apply this to any user-supplied strings used in queries
+// 
+function boinc_real_escape_string($x) {
+    if (version_compare(phpversion(),"4.3.0")>=0) {
+        return BoincDb::escape_string($x);
+    } else {
+        $x = str_replace("'", "\'", $x);
+        $x = str_replace("\"", "\\\"", $x);
+        return $x;
+    }
+}
 
 ?>

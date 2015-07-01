@@ -71,12 +71,6 @@ struct PROJECT : PROJ_AM {
     //
     bool no_rsc_ams[MAX_RSC];
 
-    // the following set dynamically
-    //
-    bool rsc_defer_sched[MAX_RSC];
-        // This project has a GPU job for which there's insuff. video RAM.
-        // Don't fetch more jobs of this type; they might have same problem
-
     char host_venue[256];
         // logically, this belongs in the client state file
         // rather than the account file.
@@ -111,6 +105,8 @@ struct PROJECT : PROJ_AM {
     double ams_resource_share;
         // resource share according to AMS; overrides project
         // -1 means not specified by AMS, or not using an AMS
+    double last_rpc_time;
+        // when last RPC finished; used by Manager
 
     // stuff related to scheduler RPCs and master fetch
     //
@@ -140,10 +136,6 @@ struct PROJECT : PROJ_AM {
         // may still need to be done for given project
     bool trickle_up_pending;
         // have trickle up to send
-    double last_rpc_time;
-        // when last RPC finished
-        // not maintained across client sessions
-        // used by Manager (simple view)
 
     // Other stuff
 
@@ -303,6 +295,10 @@ struct PROJECT : PROJ_AM {
     //
     int njobs_success;
     int njobs_error;
+
+    // total elapsed time of this project's jobs (for export to GUI)
+    //
+    double elapsed_time;
 
     PROJECT();
     ~PROJECT(){}
