@@ -207,7 +207,7 @@ function show_status_html($x) {
         //      $formattedvalue</td>";
        // }
        // echo "</table>\n";
-       // echo "<h4><a href=\"http://boincstats.com/en/stats/88/project/detail/credit\">60-day credit graph</a> courtesy of <a href=\"http://boincstats.com/\">BOINCstats</a></h4></center>";
+       echo "<h4><a href=\"http://boincstats.com/en/stats/88/project/detail/credit\">60-day credit graph</a> courtesy of <a href=\"http://boincstats.com/\">BOINCstats</a></h4></center>";
 
     echo "<p>Task data as of ".time_str($j->cached_time);
     echo "</td></tr>\n";
