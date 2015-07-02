@@ -289,11 +289,15 @@ class BoincResult {
         $db = BoincDb::get();
         return $db->count('result', $clause);
     }
+    static function sum($field, $clause) {     
+        $db = BoincDb::get();
+        return $db->sum('result', $field, $clause);      
+    }
     static function enum($clause) {
         $db = BoincDb::get();
         return $db->enum('result', 'BoincResult', $clause);
     }
-	static function enum_fields($fields, $where_clause, $order_clause) {
+    static function enum_fields($fields, $where_clause, $order_clause) {
         $db = BoincDb::get();
 		return $db->enum_fields('result', 'BoincResult', $fields, $where_clause, $order_clause);
 	}

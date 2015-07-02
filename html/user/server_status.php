@@ -186,47 +186,28 @@ function show_status_html($x) {
         $i = 1-$i;
     }
     end_table();
+    // echo "<tr><td>\n";
+    start_table();
+    table_header(tra("Last 24 hours"), "#");
+    item_html("14e results completed", $j->a14e_past_24_hours);
+    item_html("15e results completed", $j->a15e_past_24_hours);
+    item_html("16e results completed", $j->a16e_past_24_hours);
+    item_html("16e v5 results completed", $j->a16ev5_past_24_hours);
+    item_html("Total credit granted", $j->credit_past_24_hours);
+    end_table();
 
-    // Custom changes - will need fixing!
-        echo "<center>
-            <h2>Last 24 Hours</h2>
-            <table border=0 cellpadding=4>
-            <tr><th>State</th><th>#</th></tr>
-        ";
-        $query_received_time = time() - 86400;
-        show_counts(
-            "14e results completed",
-            "14e results completed",
-            get_mysql_count("result", "appid=6 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
-        );
-        show_counts(
-            "15e results completed",
-            "15e results completed",
-            get_mysql_count("result", "appid=7 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
-        );
-        show_counts(
-            "16e results completed",
-            "16e results completed",
-            get_mysql_count("result", "appid=8 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
-        );
-        show_counts(
-            "16e v5 results completed",
-            "16e v5 results completed",
-            get_mysql_count("result", "appid=9 and outcome=1 and granted_credit>0 and received_time>$query_received_time")
-        );
 
-        $query = "SELECT SUM(granted_credit) AS credits FROM result where outcome=1 and received_time>$query_received_time";
-        $gresult = mysql_query($query);
-        if ($gresult) { 
-            $value = mysql_fetch_object($gresult);
-            $formattedvalue = number_format($value->credits);
-           echo "
-              <tr><td>Total credit granted</td><td> 
-              $formattedvalue</td>";
-        }
-        echo "</table>\n";
-        echo "<h4><a href=\"http://boincstats.com/en/stats/88/project/detail/credit\">60-day credit graph</a> courtesy of <a href=\"http://boincstats.com/\">BOINCstats</a></h4></center>";
-    // end custom changes
+        // $query = "SELECT SUM(granted_credit) AS credits FROM result where outcome=1 and received_time>$query_received_time";
+        // $gresult = mysql_query($query);
+        // if ($gresult) { 
+        //    $value = mysql_fetch_object($gresult);
+        //    $formattedvalue = number_format($value->credits);
+        //   echo "
+        //      <tr><td>Total credit granted</td><td> 
+        //      $formattedvalue</td>";
+       // }
+       // echo "</table>\n";
+       // echo "<h4><a href=\"http://boincstats.com/en/stats/88/project/detail/credit\">60-day credit graph</a> courtesy of <a href=\"http://boincstats.com/\">BOINCstats</a></h4></center>";
 
     echo "<p>Task data as of ".time_str($j->cached_time);
     echo "</td></tr>\n";
@@ -438,6 +419,12 @@ function get_job_status() {
     $s->hosts_with_credit = BoincHost::count("total_credit>1");
     $s->hosts_past_24_hours = BoincHost::count("create_time > (unix_timestamp() - 86400)");
     $s->flops = BoincUser::sum("expavg_credit")/200;
+
+    $s->a14e_past_24_hours = BoincResult::count("appid=6 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->a15e_past_24_hours = BoincResult::count("appid=7 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->a16e_past_24_hours = BoincResult::count("appid=8 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->a16ev5_past_24_hours = BoincResult::count("appid=9 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->credit_past_24_hours = BoincResult::sum("granted_credit","where outcome=1 and received_time > (unix_timestamp() - 86400)")/1;
 
     $s->db_revision = null;
     if (file_exists("../../db_revision")) {
