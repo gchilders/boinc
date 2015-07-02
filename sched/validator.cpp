@@ -534,7 +534,6 @@ int handle_wu(
                     if (!no_credit) {
                         result.granted_credit = credit;
                         grant_credit(host, result.sent_time, credit);
-			grant_credit_by_app(result, credit);
                         log_messages.printf(MSG_NORMAL,
                             "[RESULT#%u %s] Valid; granted %f credit [HOST#%d]\n",
                             result.id, result.name, result.granted_credit,

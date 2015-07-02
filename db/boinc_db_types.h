@@ -770,23 +770,6 @@ struct VDA_CHUNK_HOST {
 };
 
 
-struct WORKUSER {
-	int id;
-	int appid;
-	int wus;
-	double credit;
-    void clear();
-};
-
-struct WORKTEAM {
-	int id;
-	int appid;
-	int wus;
-	double credit;
-    void clear();
-};
-
-
 struct BADGE {
     int id;
     double create_time;

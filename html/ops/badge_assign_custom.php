@@ -2,7 +2,7 @@
 <?php
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2014 University of California
+// Copyright (C) 2013 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -17,129 +17,136 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// Assign badges based on project total and per subproject credit.
-// This code is mostly generic.
-// You'll need to:
-// - define your subproject in project/project.inc
-// - use the <credit_by_app/> option in config.xml
-// - supply your own project themed badge images
-//  that have to follow a naming scheme (see below)
-// See: http://boinc.berkeley.edu/trac/wiki/PerAppCredit
+// Assign badges based on RAC percentile.
+// Customize this to grant other types of badges
 
 require_once("../inc/util_ops.inc");
 
-// use $sub_projects defined in project/project.inc
-// (this speeds up the assignment of badges)
-// "total" is a special sub project and should only be defined here
-//
-global $sub_projects;
-$badges_sub_projects = $sub_projects;
-$badges_sub_projects[] = array("name" => "project total", "short_name" => "total");
-
 // thresholds for the various badges
-// currently we use the same threshold for all badges (total and subproject)
-// minimum total credits for each level and corresponding names
+// (i.e. gold badge is for top 1% of active users/teams)
 //
-$badge_levels = array(
-    50000000, 100000000, 250000000, 500000000, 1000000000, 10000000000,
-    250000000000, 500000000000
-);
-$badge_level_names = array(
-    "50M", "100M", "250M", "500M", "1B", "10B", "25B", "50B"
-);
+$badge_pctiles = array(1, 5, 25);
+$badge_images = array("pct_1.png", "pct_5.png", "pct_25.png");
+$badge_levels = array(10000, 100000, 500000, 1000000, 5000000, 10000000, 50000000, 100000000, 500000000);
+$badge_level_names = array("10k", "100k", "500k", "1m", "5m", "10m", "50m", "100m", "500m");
+$badge_images_14e = array("bronze_14e.png", "silver_14e.png", "gold_14e.png", "amethyst_14e.png", "turquoise_14e.png", "sapphire_14e.png", "ruby_14e.png", "emerald_14e.png", "diamond_14e.png");
+$badge_images_15e = array("bronze_15e.png", "silver_15e.png", "gold_15e.png", "amethyst_15e.png", "turquoise_15e.png", "sapphire_15e.png", "ruby_15e.png", "emerald_15e.png", "diamond_15e.png");
+$badge_images_16e = array("bronze_16e.png", "silver_16e.png", "gold_16e.png", "amethyst_16e.png", "turquoise_16e.png", "sapphire_16e.png", "ruby_16e.png", "emerald_16e.png", "diamond_16e.png");
+$badge_images_nfs = array("bronze_nfs.png", "silver_nfs.png", "gold_nfs.png", "amethyst_nfs.png", "turquoise_nfs.png", "sapphire_nfs.png", "ruby_nfs.png", "emerald_nfs.png", "diamond_nfs.png");
 
-// images located in html/user/img/ for each badge level
-// the actual filename must have the subproject short name or "total" as prefix
-// e.g.: A_bronze.png is the first level of subproject A,
-// total_bronze.png is the first level of total credit (across all subprojects)
+// get the records for percentile badges; create them if needed
 //
-$badge_images = array(
-    "_bronze.png", "_silver.png", "_gold.png", "_amethyst.png",
-    "_turquoise.png", "_sapphire.png", "_ruby.png", "_emerald.png"
-);
-
-// consistency checks
-//
-$num_levels = count($badge_levels);
-if ($num_levels <> count($badge_level_names)) {
-    die("number of badge_levels is not equal to number of badge_level_names");
-}
-if ($num_levels <> count($badge_images)) {
-    die("number of badge_levels is not equal to number of badge_images");
-}
-
-// get the record for a badge (either total or subproject)
-// badge_name_prefix should be user or team
-// sub_project is an array with name and short_name as in $sub_projects
-//
-function get_badges(
-    $badge_name_prefix, $badge_level_names, $badge_images, $sub_project
-) {
+function get_pct_badges($badge_name_prefix, $badge_pctiles, $badge_images) {
     $badges = array();
-    for ($i=0; $i<count($badge_level_names); $i++) {
-        $badges[$i] = get_badge($badge_name_prefix."_".$sub_project["short_name"]."_".$i, "$badge_level_names[$i] in ".$sub_project["name"]." credit", $sub_project["short_name"].$badge_images[$i]);
+    for ($i=0; $i<3; $i++) {
+        $badges[$i] = get_badge($badge_name_prefix."_".$i, "Top ".$badge_pctiles[$i]."% in average credit", $badge_images[$i]);
     }
     return $badges;
 }
 
-// decide which project total badge to assign, if any.
+// badge_name_prefix should be user
+// app_name should be 14e, 15e, 16e, or nfs
+
+function get_nfs_badges($badge_name_prefix, $badge_level_names, $badge_images, $app_name) {
+    $badges = array();
+    for ($i=0; $i<9; $i++) {
+        $badges[$i] = get_badge($badge_name_prefix."_".$app_name."_".$i, "$badge_level_names[$i] in ".$app_name." credit", $badge_images[$i]);
+	// echo "badge level $badge_level_names[$i]\n";
+    }
+    return $badges;
+}
+
+// get the RAC percentiles from the database
+//
+function get_percentiles($is_user, $badge_pctiles) {
+    $percentiles = array();
+    for ($i=0; $i<3; $i++) {
+        if ($is_user) {
+            $percentiles[$i] = BoincUser::percentile("expavg_credit", "expavg_credit>1", 100-$badge_pctiles[$i]);
+        } else {
+            $percentiles[$i] = BoincTeam::percentile("expavg_credit", "expavg_credit>1", 100-$badge_pctiles[$i]);
+        }
+        if ($percentiles[$i] === false) {
+            die("Can't get percentiles\n");
+        }
+    }
+    return $percentiles;
+}
+
+// decide which badge to assign, if any.
 // Unassign other badges.
 //
-function assign_tot_badge($is_user, $item, $levels, $badges) {
-    // count from highest to lowest level, so the user get's assigned the
-    // highest possible level and the lower levels get removed
-    //
-    for ($i=count($levels)-1; $i>=0; $i--) {
+function assign_pct_badge($is_user, $item, $percentiles, $badges) {
+    for ($i=0; $i<3; $i++) {
+        if ($item->expavg_credit >= $percentiles[$i]) {
+            assign_badge($is_user, $item, $badges[$i]);
+            unassign_badges($is_user, $item, $badges, $i);
+            return;
+        }
+    }
+    unassign_badges($is_user, $item, $badges, -1);
+}
+
+function assign_nfs_badge($is_user, $item, $levels, $badges) {
+    for ($i=8; $i>=0; $i--) {
         if ($item->total_credit >= $levels[$i]) {
             assign_badge($is_user, $item, $badges[$i]);
             unassign_badges($is_user, $item, $badges, $i);
             return;
         }
     }
-    // no level could be assigned so remove them all
-    //
     unassign_badges($is_user, $item, $badges, -1);
 }
 
-// decide which subproject badge to assign, if any.
-// Unassign other badges.
-//
-function assign_sub_badge($is_user, $item, $levels, $badges, $where_clause) {
+function assign_nfs_app_badge($is_user, $item, $levels, $badges, $where_clause) {
     if ($is_user) {
-        $sub_total = BoincCreditUser::sum('total', "where userid=".$item->id." and ($where_clause)");
+	$query = mysql_query("select sum(credit) from work_user where id=".$item->id." and ($where_clause)");
     } else {
-        $sub_total = BoincCreditTeam::sum('total', "where teamid=".$item->id." and ($where_clause)");
+	$query = mysql_query("select sum(credit) from work_team where id=".$item->id." and ($where_clause)");
     }
-    // count from highest to lowest level, so the user get's assigned the
-    // highest possible level and the lower levels get removed
-    //
-    for ($i=count($levels)-1; $i>=0; $i--) {
-        if ($sub_total >= $levels[$i]) {
+    $x = mysql_fetch_array($query);
+    // mysql_free_result($query);
+
+    for ($i=8; $i>=0; $i--) {
+        if ($x[0] >= $levels[$i]) {
             assign_badge($is_user, $item, $badges[$i]);
             unassign_badges($is_user, $item, $badges, $i);
             return;
         }
     }
-    // no level could be assigned so remove them all
-    //
     unassign_badges($is_user, $item, $badges, -1);
 }
 
 
 // Scan through all the users/teams, 1000 at a time,
-// and assign/unassign the badges (total and subproject)
+// and assign/unassign RAC badges
 //
-function assign_all_badges(
-    $is_user, $badge_levels, $badge_level_names, $badge_images,
-    $subprojects_list
-) {
+function assign_badges($is_user, $badge_pctiles, $badge_images) {
     $kind = $is_user?"user":"team";
+    $badges = get_pct_badges($kind."_pct", $badge_pctiles, $badge_images);
+    $pctiles = get_percentiles($is_user, $badge_pctiles);
+    echo "thresholds for $kind badges: $pctiles[0] $pctiles[1] $pctiles[2]\n";
 
-    // get badges for all subprojects including total
-    //
-    foreach ($subprojects_list as $sp) {
-        $badges[$sp["short_name"]] = get_badges($kind, $badge_level_names, $badge_images, $sp);
+    $n = 0;
+    $maxid = $is_user?BoincUser::max("id"):BoincTeam::max("id");
+    while ($n <= $maxid) {
+        $m = $n + 1000;
+        if ($is_user) {
+            $items = BoincUser::enum_fields("id, expavg_credit", "id>=$n and id<$m and total_credit>0");
+        } else {
+            $items = BoincTeam::enum_fields("id, expavg_credit", "id>=$n and id<$m and total_credit>0");
+        }
+        foreach ($items as $item) {
+            assign_pct_badge($is_user, $item, $pctiles, $badges);
+            // ... assign other types of badges
+        }
+        $n = $m;
     }
+}
+
+function assign_nfs_badges($is_user, $badge_levels, $badge_level_names, $badge_images) {
+    $kind = $is_user?"user":"team";
+    $badges = get_nfs_badges($kind, $badge_level_names, $badge_images, "nfs");
 
     $n = 0;
     $maxid = $is_user?BoincUser::max("id"):BoincTeam::max("id");
@@ -150,40 +157,45 @@ function assign_all_badges(
         } else {
             $items = BoincTeam::enum_fields("id, total_credit", "id>=$n and id<$m and total_credit>0");
         }
-        // for every user/team
-        //
         foreach ($items as $item) {
-            // for every subproject (incl. total)
-            //
-            foreach ($subprojects_list as $sp) {
-                if ($sp["short_name"] == "total") {
-                    assign_tot_badge($is_user, $item, $badge_levels, $badges["total"]);
-                } else {
-                    // appids come from project/project.inc
-                    $where_clause = "appid in (". implode(',', $sp["appids"]) .")";
-                    assign_sub_badge(
-                        $is_user, $item, $badge_levels, $badges[$sp["short_name"]],
-                        $where_clause
-                    );
-                }
-            }
+            assign_nfs_badge($is_user, $item, $badge_levels, $badges);
+            // ... assign other types of badges
         }
         $n = $m;
     }
 }
 
-// one pass through DB for users
-//
-assign_all_badges(
-    true, $badge_levels, $badge_level_names, $badge_images,
-    $badges_sub_projects
-);
+function assign_nfs_app_badges($is_user, $badge_levels, $badge_level_names, $badge_images, $app_name, $where_clause) {
+    $kind = $is_user?"user":"team";
+    $badges = get_nfs_badges($kind, $badge_level_names, $badge_images, $app_name);
 
-// one pass through DB for teams
-//
-assign_all_badges(
-    false, $badge_levels, $badge_level_names, $badge_images,
-    $badges_sub_projects
-);
+    $n = 0;
+    $maxid = $is_user?BoincUser::max("id"):BoincTeam::max("id");
+    while ($n <= $maxid) {
+        $m = $n + 1000;
+        if ($is_user) {
+            $items = BoincUser::enum_fields("id, total_credit", "id>=$n and id<$m and total_credit>0");
+        } else {
+            $items = BoincTeam::enum_fields("id, total_credit", "id>=$n and id<$m and total_credit>0");
+        }
+        foreach ($items as $item) {
+            assign_nfs_app_badge($is_user, $item, $badge_levels, $badges, $where_clause);
+            // ... assign other types of badges
+        }
+        $n = $m;
+    }
+}
+
+db_init();
+assign_badges(true, $badge_pctiles, $badge_images);
+assign_badges(false, $badge_pctiles, $badge_images);
+assign_nfs_badges(true, $badge_levels, $badge_level_names, $badge_images_nfs);
+assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_14e, "14e", "appid=6");
+assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_15e, "15e", "appid=7");
+assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_16e, "16e", "appid=8 or appid=9");
+assign_nfs_badges(false, $badge_levels, $badge_level_names, $badge_images_nfs);
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_14e, "14e", "appid=6");
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_15e, "15e", "appid=7");
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_16e, "16e", "appid=8 or appid=9");
 
 ?>

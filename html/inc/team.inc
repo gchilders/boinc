@@ -112,25 +112,9 @@ function display_team_page($team, $user) {
 
         // display app credits
 
-        // Convert to project_team_credit soon
-        // if (function_exists('project_team_credit')) {
-        //     project_team_credit($team);
-        //}
-
-	db_init();
-    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=6)");
-    	$x = mysql_fetch_array($query);
-    	mysql_free_result($query);
-    	row2(tra("14e credit"), format_credit_large($x[0]));
-    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=7)");
-    	$x = mysql_fetch_array($query);
-    	mysql_free_result($query);
-    	row2(tra("15e credit"), format_credit_large($x[0]));
-    	$query = mysql_query("select sum(credit) from work_team where id=".$team->id." and (appid=8 or appid=9)");
-    	$x = mysql_fetch_array($query);
-    	mysql_free_result($query);
-    	row2(tra("16e credit"), format_credit_large($x[0]));
-
+        if (function_exists('project_team_credit')) {
+             project_team_credit($team);
+        }
         show_badges_row(false, $team);
 
 
