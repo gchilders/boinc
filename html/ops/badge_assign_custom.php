@@ -100,12 +100,12 @@ function assign_nfs_badge($is_user, $item, $levels, $badges) {
 
 function assign_nfs_app_badge($is_user, $item, $levels, $badges, $where_clause) {
     if ($is_user) {
-	$query = mysql_query("select sum(credit) from work_user where id=".$item->id." and ($where_clause)");
+	$query = _mysql_query("select sum(credit) from work_user where id=".$item->id." and ($where_clause)");
     } else {
-	$query = mysql_query("select sum(credit) from work_team where id=".$item->id." and ($where_clause)");
+	$query = _mysql_query("select sum(credit) from work_team where id=".$item->id." and ($where_clause)");
     }
-    $x = mysql_fetch_array($query);
-    // mysql_free_result($query);
+    $x = mysqli_fetch_array($query);
+    _mysql_free_result($query);
 
     for ($i=8; $i>=0; $i--) {
         if ($x[0] >= $levels[$i]) {
