@@ -124,6 +124,7 @@ input[type="submit"],
 	-webkit-border-radius: 5px;
 	-khtml-border-radius: 5px;
 	border-radius: 5px;
+	display: inline-block;
 }
 
 	/* IE6 doesn't understand [type=XXXX] so we use class "button" */
