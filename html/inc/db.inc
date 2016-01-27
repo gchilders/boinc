@@ -105,6 +105,9 @@ if (MYSQLI) {
         global $mysqli;
         return mysqli_error($mysqli);
     }
+    function _mysql_fetch_array($r) {
+        return mysqli_fetch_array($r);
+    }
 } else {
     function _mysql_connect($host, $user, $pass, $db_name) {
         $link = mysql_pconnect($host, $user, $pass);
@@ -154,6 +157,9 @@ if (MYSQLI) {
     function _mysql_error() {
         return mysql_error();
     }
+    function _mysql_fetch_array($r) {
+        return mysql_fetch_array($r);
+    }
 }
 
 function db_init_aux($try_replica=false) {
@@ -185,14 +191,14 @@ function db_init_aux($try_replica=false) {
             return 1;
         }
     } else {
-    $link = mysql_pconnect($host, $user, $pass);
-    if (!$link) {
-        return 1;
-    }
-    if (!mysql_select_db($db_name, $link)) {
-        echo "selecting $db_name\n";
-        return 2;
-    }
+        $link = mysql_pconnect($host, $user, $pass);
+        if (!$link) {
+            return 1;
+        }
+        if (!mysql_select_db($db_name, $link)) {
+            echo "selecting $db_name\n";
+            return 2;
+        }
     }
 
     return 0;

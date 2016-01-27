@@ -40,6 +40,12 @@
 // and also to/from HTML form elements
 
 include_once("../inc/prefs_util.inc");
+include_once("../inc/translation.inc");
+
+global $cpu_prefs;
+global $disk_prefs;
+global $mem_prefs;
+global $net_prefs;
 
 $cpu_prefs = array(
     tra("Usage limits"),
@@ -116,14 +122,14 @@ $cpu_prefs = array(
         new NUM_SPEC(tra("days of work"), 0, 10, .5)
     ),
     new PREF_NUM(
-        tra("Switch between tasks about every"),
+        tra("Switch between tasks every"),
         tra("If you run several projects, BOINC may switch between them this often."),
         "cpu_scheduling_period_minutes",
         new NUM_SPEC(tra("minutes"), 1, 9999, 60)
     ),
     new PREF_NUM(
         tra("Request tasks to checkpoint at most every"),
-        tra("This controls how often tasks save their state to disk, so that they can be restarted later."),
+        tra("This controls how often tasks save their state to disk, so that later they can be continued from that point."),
         "disk_interval",
         new NUM_SPEC(tra("seconds"), 0, 9999999, 60)
     ),
@@ -469,7 +475,7 @@ function prefs_show_global($prefs) {
 }
 
 function subset_name($subset) {
-    if ($subset == "global") return tra("computing");
+    if ($subset == "global") return tra("Computing");
     return PROJECT;
 }
 

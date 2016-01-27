@@ -93,9 +93,14 @@ CLIENT_STATE::CLIENT_STATE()
 #ifndef SIM
     scheduler_op = new SCHEDULER_OP(http_ops);
 #endif
+    time_stats.init();
     client_state_dirty = false;
+    old_major_version = 0;
+    old_minor_version = 0;
+    old_release = 0;
     clock_change = false;
     check_all_logins = false;
+    user_active = false;
     cmdline_gui_rpc_port = 0;
     run_cpu_benchmarks = false;
     file_xfer_giveup_period = PERS_GIVEUP;
@@ -103,6 +108,7 @@ CLIENT_STATE::CLIENT_STATE()
     tasks_suspended = false;
     tasks_throttled = false;
     network_suspended = false;
+    file_xfers_suspended = false;
     suspend_reason = 0;
     network_suspend_reason = 0;
     core_client_version.major = BOINC_MAJOR_VERSION;
@@ -119,8 +125,13 @@ CLIENT_STATE::CLIENT_STATE()
     app_started = 0;
     exit_before_upload = false;
     run_test_app = false;
+#ifndef _WIN32
+    boinc_project_gid = 0;
+#endif
     show_projects = false;
     strcpy(detach_project_url, "");
+    strcpy(reset_project_url, "");
+    strcpy(update_prefs_url, "");
     strcpy(main_host_venue, "");
     strcpy(attach_project_url, "");
     strcpy(attach_project_auth, "");
@@ -146,12 +157,18 @@ CLIENT_STATE::CLIENT_STATE()
     redirect_io = false;
     disable_graphics = false;
     cant_write_state_file = false;
+    ncpus = 1;
     benchmarks_running = false;
+    client_disk_usage = 0.0;
+    total_disk_usage = 0.0;
     device_status_time = 0;
 
     rec_interval_start = 0;
-    retry_shmem_time = 0;
+    total_cpu_time_this_rec_interval = 0.0;
+    must_enforce_cpu_schedule = false;
     must_schedule_cpus = true;
+    must_check_work_fetch = true;
+    retry_shmem_time = 0;
     no_gui_rpc = false;
     gui_rpc_unix_domain = false;
     new_version_check_time = 0;
@@ -161,6 +178,8 @@ CLIENT_STATE::CLIENT_STATE()
     g_use_sandbox = true; // User can override with -insecure command-line arg
 #endif
     launched_by_manager = false;
+    run_by_updater = false;
+    now = 0.0;
     initialized = false;
     last_wakeup_time = dtime();
     device_status_time = 0;
@@ -279,6 +298,7 @@ const char* rsc_name_long(int i) {
     return coprocs.coprocs[i].type;             // Some other type
 }
 
+#ifndef SIM
 // alert user if any jobs need more RAM than available
 //
 static void check_too_large_jobs() {
@@ -301,6 +321,7 @@ static void check_too_large_jobs() {
         }
     }
 }
+#endif
 
 // Something has failed N times.
 // Calculate an exponential backoff between MIN and MAX
@@ -347,6 +368,55 @@ void CLIENT_STATE::set_now() {
     now = x;
 }
 
+// Check if version or platform has changed;
+// if so we're running a different client than before.
+//
+bool CLIENT_STATE::is_new_client() {
+    bool new_client = false;
+    if ((core_client_version.major != old_major_version)
+        || (core_client_version.minor != old_minor_version)
+        || (core_client_version.release != old_release)
+    ) {
+        msg_printf(NULL, MSG_INFO,
+            "Version change (%d.%d.%d -> %d.%d.%d)",
+            old_major_version, old_minor_version, old_release,
+            core_client_version.major,
+            core_client_version.minor,
+            core_client_version.release
+        );
+        new_client = true;
+    }
+    if (statefile_platform_name.size() && strcmp(get_primary_platform(), statefile_platform_name.c_str())) {
+        msg_printf(NULL, MSG_INFO,
+            "Platform changed from %s to %s",
+            statefile_platform_name.c_str(), get_primary_platform()
+        );
+        new_client = true;
+    }
+    return new_client;
+}
+
+#ifdef _WIN32
+typedef DWORD (WINAPI *STP)(HANDLE, DWORD);
+#endif
+
+static void set_client_priority() {
+#ifdef _WIN32
+    STP stp = (STP) GetProcAddress(GetModuleHandle(_T("kernel32.dll")), "SetThreadPriority");
+    if (!stp) return;
+    if (stp(GetCurrentThread(), THREAD_MODE_BACKGROUND_BEGIN)) {
+        msg_printf(NULL, MSG_INFO, "Running at background priority");
+    } else {
+        msg_printf(NULL, MSG_INFO, "Failed to set background priority");
+    }
+#endif
+#ifdef __linux__
+    char buf[1024];
+    sprintf(buf, "ionice -c 3 -p %d", getpid());
+    system(buf);
+#endif
+}
+
 int CLIENT_STATE::init() {
     int retval;
     unsigned int i;
@@ -389,6 +459,10 @@ int CLIENT_STATE::init() {
     log_flags.show();
 
     msg_printf(NULL, MSG_INFO, "Libraries: %s", curl_version());
+
+    if (cc_config.lower_client_priority) {
+        set_client_priority();
+    }
 
     if (executing_as_daemon) {
 #ifdef _WIN32
@@ -438,7 +512,7 @@ int CLIENT_STATE::init() {
         }
         if (log_flags.coproc_debug) {
             for (i=0; i<warnings.size(); i++) {
-                msg_printf(NULL, MSG_INFO, "%s", warnings[i].c_str());
+                msg_printf(NULL, MSG_INFO, "[coproc] %s", warnings[i].c_str());
             }
         }
 #if 0
@@ -503,6 +577,8 @@ int CLIENT_STATE::init() {
     // for projects with no account file
     //
     parse_state_file();
+
+    bool new_client = is_new_client();
 
     // this follows parse_state_file() since we need to have read
     // domain_name for Android
@@ -588,31 +664,6 @@ int CLIENT_STATE::init() {
     }
     do_cmdline_actions();
 
-    // check if version or platform has changed.
-    // Either of these is evidence that we're running a different
-    // client than previously.
-    //
-    bool new_client = false;
-    if ((core_client_version.major != old_major_version)
-        || (core_client_version.minor != old_minor_version)
-        || (core_client_version.release != old_release)
-    ) {
-        msg_printf(NULL, MSG_INFO,
-            "Version change (%d.%d.%d -> %d.%d.%d)",
-            old_major_version, old_minor_version, old_release,
-            core_client_version.major,
-            core_client_version.minor,
-            core_client_version.release
-        );
-        new_client = true;
-    }
-    if (statefile_platform_name.size() && strcmp(get_primary_platform(), statefile_platform_name.c_str())) {
-        msg_printf(NULL, MSG_INFO,
-            "Platform changed from %s to %s",
-            statefile_platform_name.c_str(), get_primary_platform()
-        );
-        new_client = true;
-    }
     // if new version of client,
     // - run CPU benchmarks
     // - get new project list
@@ -1664,7 +1715,6 @@ bool CLIENT_STATE::update_results() {
     vector<RESULT*>::iterator result_iter;
     bool action = false;
     static double last_time=0;
-    int retval;
 
     if (!clock_change && now - last_time < UPDATE_RESULTS_PERIOD) return false;
     last_time = now;
@@ -1680,8 +1730,7 @@ bool CLIENT_STATE::update_results() {
             break;
 #ifndef SIM
         case RESULT_FILES_DOWNLOADING:
-            retval = input_files_available(rp, false);
-            if (!retval) {
+            if (input_files_available(rp, false) == 0) {
                 if (rp->avp->app_files.size()==0) {
                     // if this is a file-transfer app, start the upload phase
                     //
@@ -1960,15 +2009,17 @@ int CLIENT_STATE::reset_project(PROJECT* project, bool detaching) {
         }
         garbage_collect_always();
     }
-#ifdef ANDROID
-    // space is likely to be an issue on Android, so clean out project dir
-    // If we did this on other platforms we'd need to avoid deleting
-    // app_config.xml, but this isn't likely to exist on Android.
+
+    // if not anonymous platform, clean out the project dir
+    // except for app_config.xml
     //
     if (!project->anonymous_platform) {
-        client_clean_out_dir(project->project_dir(), "reset project");
+        client_clean_out_dir(
+            project->project_dir(),
+            "reset project",
+            "app_config.xml"
+        );
     }
-#endif
 
     // force refresh of scheduler URLs
     //
@@ -2092,16 +2143,23 @@ int CLIENT_STATE::quit_activities() {
     //
     adjust_rec();
 
+    daily_xfer_history.write_file();
+    write_state_file();
+    gui_rpcs.close();
+    abort_cpu_benchmarks();
+    time_stats.quit();
+
+    // stop jobs.
+    // Do this last because it could take a long time,
+    // and the OS might kill us in the middle
+    //
     int retval = active_tasks.exit_tasks();
     if (retval) {
         msg_printf(NULL, MSG_INTERNAL_ERROR,
             "Couldn't exit tasks: %s", boincerror(retval)
         );
     }
-    write_state_file();
-    gui_rpcs.close();
-    abort_cpu_benchmarks();
-    time_stats.quit();
+
     return 0;
 }
 

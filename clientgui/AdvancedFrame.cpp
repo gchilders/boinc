@@ -142,7 +142,7 @@ void CStatusBar::OnSize(wxSizeEvent& event) {
         }
 
         if (m_pbmpDisconnect) {
-            size = m_pbmpConnected->GetSize();
+            size = m_pbmpDisconnect->GetSize();
             m_pbmpDisconnect->Move(rect.x + 1,
                                    rect.y + (rect.height - size.y) / 2);
         }
@@ -161,7 +161,9 @@ void CStatusBar::OnSize(wxSizeEvent& event) {
 IMPLEMENT_DYNAMIC_CLASS(CAdvancedFrame, CBOINCBaseFrame)
 
 BEGIN_EVENT_TABLE (CAdvancedFrame, CBOINCBaseFrame)
+#ifndef __WXMSW__
     EVT_MENU_OPEN(CAdvancedFrame::OnMenuOpening)
+#endif
     // View
     EVT_MENU_RANGE(ID_ADVNOTICESVIEW, ID_ADVRESOURCEUSAGEVIEW, CAdvancedFrame::OnChangeView)
     EVT_MENU(ID_CHANGEGUI, CAdvancedFrame::OnChangeGUI)

@@ -370,6 +370,11 @@ wxString CViewWork::GetKeyValue1(int iRowIndex) {
         return wxEmptyString;
     }
 
+    if (m_iColumnIDToColumnIndex[COLUMN_NAME] < 0) {
+        // Column is hidden, so SynchronizeCacheItem() did not set its value
+        GetDocName(m_iSortedIndexes[iRowIndex], work->m_strName);
+    }
+
     return work->m_strName;
 }
 
@@ -381,6 +386,11 @@ wxString CViewWork::GetKeyValue2(int iRowIndex) {
         return wxEmptyString;
     }
 
+    if (m_iColumnIDToColumnIndex[COLUMN_PROJECT] < 0) {
+        // Column is hidden, so SynchronizeCacheItem() did not set its value
+        GetDocProjectURL(m_iSortedIndexes[iRowIndex], work->m_strProjectURL);
+    }
+    
     return work->m_strProjectURL;
 }
 
@@ -977,7 +987,7 @@ void CViewWork::UpdateSelection() {
 bool CViewWork::SynchronizeCacheItem(wxInt32 iRowIndex, wxInt32 iColumnIndex) {
     wxString    strDocumentText  = wxEmptyString;
     wxString    strDocumentText2 = wxEmptyString;
-    float       fDocumentFloat = 0.0;
+    double       x = 0.0;
     time_t      tDocumentTime = (time_t)0;
     CWork*      work;
 
@@ -1014,26 +1024,26 @@ bool CViewWork::SynchronizeCacheItem(wxInt32 iRowIndex, wxInt32 iColumnIndex) {
             }
             break;
         case COLUMN_CPUTIME:
-            GetDocCPUTime(m_iSortedIndexes[iRowIndex], fDocumentFloat);
-            if (fDocumentFloat != work->m_fCPUTime) {
-                work->m_fCPUTime = fDocumentFloat;
-                FormatCPUTime(fDocumentFloat, work->m_strCPUTime);
+            GetDocCPUTime(m_iSortedIndexes[iRowIndex], x);
+            if (x != work->m_fCPUTime) {
+                work->m_fCPUTime = x;
+                work->m_strCPUTime = FormatTime(x);
                 return true;
             }
             break;
         case COLUMN_PROGRESS:
-            GetDocProgress(m_iSortedIndexes[iRowIndex], fDocumentFloat);
-            if (fDocumentFloat != work->m_fProgress) {
-                work->m_fProgress = fDocumentFloat;
-                FormatProgress(fDocumentFloat, work->m_strProgress);
+            GetDocProgress(m_iSortedIndexes[iRowIndex], x);
+            if (x != work->m_fProgress) {
+                work->m_fProgress = x;
+                FormatProgress(x, work->m_strProgress);
                 return true;
             }
             break;
         case COLUMN_TOCOMPLETION:
-            GetDocTimeToCompletion(m_iSortedIndexes[iRowIndex], fDocumentFloat);
-            if (fDocumentFloat != work->m_fTimeToCompletion) {
-                work->m_fTimeToCompletion = fDocumentFloat;
-                FormatTimeToCompletion(fDocumentFloat, work->m_strTimeToCompletion);
+            GetDocTimeToCompletion(m_iSortedIndexes[iRowIndex], x);
+            if (x != work->m_fTimeToCompletion) {
+                work->m_fTimeToCompletion = x;
+                work->m_strTimeToCompletion = FormatTime(x);
                 return true;
             }
             break;
@@ -1141,7 +1151,7 @@ void CViewWork::GetDocName(wxInt32 item, wxString& strBuffer) const {
 }
 
 
-void CViewWork::GetDocCPUTime(wxInt32 item, float& fBuffer) const {
+void CViewWork::GetDocCPUTime(wxInt32 item, double& fBuffer) const {
     RESULT*        result = wxGetApp().GetDocument()->result(item);
 
     fBuffer = 0;
@@ -1160,30 +1170,7 @@ void CViewWork::GetDocCPUTime(wxInt32 item, float& fBuffer) const {
     }
 }
 
-
-wxInt32 CViewWork::FormatCPUTime(float fBuffer, wxString& strBuffer) const {
-    wxInt32        iHour = 0;
-    wxInt32        iMin = 0;
-    wxInt32        iSec = 0;
-    wxTimeSpan     ts;
-    
-    if (0 == fBuffer) {
-        strBuffer = wxT("---");
-    } else {
-        iHour = (wxInt32)(fBuffer / (60 * 60));
-        iMin  = (wxInt32)(fBuffer / 60) % 60;
-        iSec  = (wxInt32)(fBuffer) % 60;
-
-        ts = wxTimeSpan(iHour, iMin, iSec);
-
-        strBuffer = ts.Format();
-    }
-
-    return 0;
-}
-
-
-void CViewWork::GetDocProgress(wxInt32 item, float& fBuffer) const {
+void CViewWork::GetDocProgress(wxInt32 item, double& fBuffer) const {
     RESULT*        result = wxGetApp().GetDocument()->result(item);
 
     fBuffer = 0;
@@ -1201,14 +1188,14 @@ void CViewWork::GetDocProgress(wxInt32 item, float& fBuffer) const {
 }
 
 
-wxInt32 CViewWork::FormatProgress(float fBuffer, wxString& strBuffer) const {
+wxInt32 CViewWork::FormatProgress(double fBuffer, wxString& strBuffer) const {
     strBuffer.Printf(wxT("%.3f%%"), fBuffer);
 
     return 0;
 }
 
 
-void CViewWork::GetDocTimeToCompletion(wxInt32 item, float& fBuffer) const {
+void CViewWork::GetDocTimeToCompletion(wxInt32 item, double& fBuffer) const {
     RESULT*        result = wxGetApp().GetDocument()->result(item);
 
     fBuffer = 0;
@@ -1216,33 +1203,6 @@ void CViewWork::GetDocTimeToCompletion(wxInt32 item, float& fBuffer) const {
         fBuffer = result->estimated_cpu_time_remaining;
     }
 }
-
-
-wxInt32 CViewWork::FormatTimeToCompletion(float fBuffer, wxString& strBuffer) const {
-    double         est = fBuffer;
-    wxInt32        iHour = 0;
-    wxInt32        iMin = 0;
-    wxInt32        iSec = 0;
-    wxTimeSpan     ts;
-
-    if (est > 86400*365*10) {
-        est = 86400*365*10;
-    }
-    if (est <= 0) {
-        strBuffer = wxT("---");
-    } else {
-        iHour = (wxInt32)(est / (60 * 60));
-        iMin  = (wxInt32)(est / 60) % 60;
-        iSec  = (wxInt32)(est) % 60;
-
-        ts = wxTimeSpan(iHour, iMin, iSec);
-
-        strBuffer = ts.Format();
-    }
-
-    return 0;
-}
-
 
 void CViewWork::GetDocReportDeadline(wxInt32 item, time_t& time) const {
     RESULT*        result = wxGetApp().GetDocument()->result(item);
@@ -1303,7 +1263,7 @@ void CViewWork::GetDocProjectURL(wxInt32 item, wxString& strBuffer) const {
 
 
 double CViewWork::GetProgressValue(long item) {
-    float          fBuffer = 0;
+    double          fBuffer = 0;
     RESULT*        result = wxGetApp().GetDocument()->result(m_iSortedIndexes[item]);
 
     if (result) {

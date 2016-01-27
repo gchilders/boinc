@@ -39,7 +39,7 @@
 #endif
 #endif
 
-#ifdef _MSC_VER
+#if !defined(HAVE_STRDUP) && defined(HAVE__STRDUP)
 #define strdup _strdup
 #endif
 
@@ -97,6 +97,7 @@ bool parse_str(const char* buf, const char* tag, char* dest, int destlen) {
     p = strstr(buf, tag);
     if (!p) return false;
     p = strchr(p, '>');
+    if (!p) return false;
     p++;
     const char* q = strchr(p, '<');
     if (!q) return false;
@@ -212,6 +213,7 @@ int dup_element(FILE* in, const char* tag_name, char** pp) {
         retval = strcatdup(p, buf);
         if (retval) return retval;
     }
+    free(p);
     return ERR_XML_PARSE;
 }
 
@@ -499,6 +501,8 @@ int skip_unrecognized(char* buf, MIOFILE& fin) {
 }
 
 XML_PARSER::XML_PARSER(MIOFILE* _f) {
+    strcpy(parsed_tag, "");
+    is_tag = false;
     f = _f;
 }
 
@@ -661,6 +665,41 @@ bool XML_PARSER::parse_int(const char* start_tag, int& i) {
     return true;
 }
 
+// Same, for long
+//
+bool XML_PARSER::parse_long(const char* start_tag, long& i) {
+    char buf[256], *end;
+    bool eof;
+    char end_tag[TAG_BUF_LEN], tag[TAG_BUF_LEN];
+
+    if (strcmp(parsed_tag, start_tag)) return false;
+
+    end_tag[0] = '/';
+    strcpy(end_tag+1, start_tag);
+
+    eof = get(buf, sizeof(buf), is_tag);
+    if (eof) return false;
+    if (is_tag) {
+        if (!strcmp(buf, end_tag)) {
+            i = 0;      // treat <foo></foo> as <foo>0</foo>
+            return true;
+        } else {
+            return false;
+        }
+    }
+    errno = 0;
+    long val = strtol(buf, &end, 0);
+    if (errno) return false;
+    if (end != buf+strlen(buf)) return false;
+
+    eof = get(tag, sizeof(tag), is_tag);
+    if (eof) return false;
+    if (!is_tag) return false;
+    if (strcmp(tag, end_tag)) return false;
+    i = val;
+    return true;
+}
+
 // Same, for doubles
 //
 bool XML_PARSER::parse_double(const char* start_tag, double& x) {
@@ -775,7 +814,7 @@ bool XML_PARSER::parse_bool(const char* start_tag, bool& b) {
 
     // handle the archaic form <tag/>, which means true
     //
-    strcpy(tag, start_tag);
+    safe_strcpy(tag, start_tag);
     strcat(tag, "/");
     if (!strcmp(parsed_tag, tag)) {
         b = true;

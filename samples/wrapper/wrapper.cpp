@@ -36,12 +36,19 @@
 //
 // Contributor: Andrew J. Younge (ajy4490@umiacs.umd.edu)
 
+// comment out the following to disable checking that
+// executables are signed.
+// Doing so introduces a security vulnerability.
+//
+#define CHECK_EXECUTABLES
+
 #ifndef _WIN32
 #include "config.h"
 #endif
 #include <stdio.h>
 #include <vector>
 #include <string>
+#include <algorithm>
 #ifdef _WIN32
 #include "boinc_win.h"
 #include "win_util.h"
@@ -62,6 +69,7 @@
 
 #include "version.h"
 #include "boinc_api.h"
+#include "app_ipc.h"
 #include "graphics2.h"
 #include "boinc_zip.h"
 #include "diagnostics.h"
@@ -347,6 +355,7 @@ void get_zip_inputs(ZipFileList &files) {
             }
         }
     }
+    dir_close(d);
 }
 
 // if the zipped output file is not present,
@@ -807,7 +816,8 @@ int TASK::run(int argct, char** argvt) {
     return 0;
 }
 
-// return true if task exited
+// return true if task exited; in that case also return its exit status
+// (zero means it completed successfully)
 //
 bool TASK::poll(int& status) {
     char buf[256];
@@ -847,6 +857,10 @@ bool TASK::poll(int& status) {
             boinc_msg_prefix(buf, sizeof(buf)),
             application.c_str(), final_cpu_time
         );
+
+        if (WIFEXITED(status)) {
+            status = WEXITSTATUS(status);
+        }
         if (final_cpu_time < current_cpu_time) {
             final_cpu_time = current_cpu_time;
         }
@@ -992,6 +1006,40 @@ int read_checkpoint(int& ntasks_completed, double& cpu, double& rt) {
     return 0;
 }
 
+// Check whether executable files (tasks and daemons) are code-signed.
+// The client supplies a list of app version files, which are code-signed.
+// For each executable file:
+// - check that it's a soft link
+// - check that it's of the form ../../project_url/x
+// - check that "x" is in the list of app version files
+//
+void check_execs(vector<TASK> &t) {
+    for (unsigned int i=0; i<t.size(); i++) {
+        TASK &task = t[i];
+        string phys_name = resolve_soft_link(
+            aid.project_dir, task.application.c_str()
+        );
+        if (phys_name.empty()) {
+            fprintf(stderr, "task executable %s is not a link\n",
+                phys_name.c_str()
+            );
+            boinc_finish(1);
+        }
+        if (std::find(aid.app_files.begin(), aid.app_files.end(), phys_name) == aid.app_files.end()) {
+            fprintf(stderr, "task executable %s is not in app version\n",
+                task.application.c_str()
+            );
+            boinc_finish(1);
+        }
+    }
+}
+
+void check_executables() {
+    if (aid.app_files.size() == 0) return;
+    check_execs(tasks);
+    check_execs(daemons);
+}
+
 int main(int argc, char** argv) {
     BOINC_OPTIONS options;
     int retval, ntasks_completed;
@@ -1000,6 +1048,13 @@ int main(int argc, char** argv) {
     double checkpoint_cpu_time;
         // total CPU time at last checkpoint
     char buf[256];
+
+    // Log banner
+    //
+    fprintf(stderr, "%s wrapper (%d.%d.%d): starting\n",
+        boinc_msg_prefix(buf, sizeof(buf)),
+        BOINC_MAJOR_VERSION, BOINC_MINOR_VERSION, WRAPPER_RELEASE
+    );
 
 #ifdef _WIN32
     SetPriorityClass(GetCurrentProcess(), NORMAL_PRIORITY_CLASS);
@@ -1054,6 +1109,10 @@ int main(int argc, char** argv) {
     );
 
     boinc_get_init_data(aid);
+
+#ifdef CHECK_EXECUTABLES
+    check_executables();
+#endif
 
     if (ntasks_completed > (int)tasks.size()) {
         fprintf(stderr,
@@ -1186,16 +1245,3 @@ int main(int argc, char** argv) {
     boinc_finish(0);
 }
 
-#ifdef _WIN32
-
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR Args, int WinMode) {
-    LPSTR command_line;
-    char* argv[100];
-    int argc;
-
-    command_line = GetCommandLine();
-    argc = parse_command_line(command_line, argv);
-    return main(argc, argv);
-}
-
-#endif

@@ -15,8 +15,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// The BOINC scheduling server.
+// The BOINC scheduler.
+// Normally runs as a CGI or fast CGI program.
+// You can also run it:
+// - manually for debugging, with a single request
+// - for simulation or performance testing, with a stream of requests
+//   (using --batch)
 
+// TODO: what does the following mean?
 // Also, You can call debug_sched() for whatever situation is of
 // interest to you.  It won't do anything unless you create
 // (touch) the file 'debug_sched' in the project root directory.
@@ -109,7 +115,7 @@ void debug_sched(const char *trigger) {
     }
 
     sprintf(tmpfilename,
-        "sched_reply_%06d_%06d", g_request->hostid, g_request->rpc_seqno
+        "sched_reply_%06ld_%06d", g_request->hostid, g_request->rpc_seqno
     );
     // use _XXXXXX if you want random filenames rather than
     // deterministic mkstemp(tmpfilename);
@@ -135,7 +141,7 @@ void debug_sched(const char *trigger) {
     fclose(fp);
 
     sprintf(tmpfilename,
-        "sched_request_%06d_%06d", g_request->hostid, g_request->rpc_seqno
+        "sched_request_%06ld_%06d", g_request->hostid, g_request->rpc_seqno
     );
 #ifndef _USING_FCGI_
     fp=fopen(tmpfilename, "w");
@@ -423,7 +429,9 @@ int main(int argc, char** argv) {
         }
     } else {
         char *stderr_buffer;
-        get_log_path(path, "scheduler.log");
+        if (get_log_path(path, "scheduler.log") == ERR_MKDIR) {
+            fprintf(stderr, "Can't create log directory '%s'  (errno: %d)\n", path, errno);
+        }
 #ifndef _USING_FCGI_
         char buf[256];
         if (!freopen(path, "a", stderr)) {

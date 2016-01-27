@@ -11,10 +11,10 @@ AC_CONFIG_MACRO_DIR([m4])
 LIBBOINC_VERSION=`echo ${PACKAGE_VERSION} | sed 's/\./:/g'`
 AC_SUBST([LIBBOINC_VERSION])
 
-WRAPPER_RELEASE=26014
+WRAPPER_RELEASE=26016
 AC_SUBST([WRAPPER_RELEASE])
 
-VBOXWRAPPER_RELEASE=26167
+VBOXWRAPPER_RELEASE=26179
 AC_SUBST([VBOXWRAPPER_RELEASE])
 
 AC_CANONICAL_TARGET
@@ -200,6 +200,7 @@ configured_to_build=
 
 if test x$enable_client = xyes ; then
   configured_to_build="client"
+  enable_xss="yes"
 fi
 if test x$enable_manager = xyes ; then
   configured_to_build="${configured_to_build} manager"
@@ -627,6 +628,15 @@ HINT: on MacOSX/Darwin these libs/includes are sometimes found in '/sw/' (if usi
 fi
 
 AM_CONDITIONAL(BUILD_GRAPHICS_API, [ test "$have_glut" = yes -a "$have_jpeg" = 1])
+
+dnl check for X screen saver lib (X-based idle detection on Linux)
+if test "$enable_xss" == yes; then
+    AC_CHECK_LIB([Xss], [XScreenSaverAllocInfo], [have_Xss="yes"], [have_Xss="no"])
+    AC_CHECK_HEADER([X11/extensions/scrnsaver.h], [have_Xss="yes"], [have_Xss="no"])
+    if test "$have_Xss" == no; then
+        AC_MSG_WARN([libxss missing, disabling X ScreenSaver user idle detection])
+    fi
+fi
 
 dnl --------------------------------------------------------------------------------
 dnl put double-inclusion protection into config.h
@@ -1194,6 +1204,16 @@ if test "${ac_cv_func_res_init}" != "yes" ; then
 fi
 LIBS=$svlibs
 
+if (test "$enable_xss" == yes) && (test "$have_Xss" == yes); then
+    SAH_CHECK_LIB([Xss],[XScreenSaverAllocInfo],[
+        AC_DEFINE([HAVE_XSS],[1],[Define to 1 if you have xss library])
+        CLIENTLIBS="${sah_lib_last} ${CLIENTLIBS}"])
+    SAH_CHECK_LIB([X11],[XOpenDisplay],[
+        AC_DEFINE([HAVE_X11],[1],[Define to 1 if you have X11 library])
+        CLIENTLIBS="${sah_lib_last} ${CLIENTLIBS}"])
+    echo DEBUG: CLIENTLIBS=${CLIENTLIBS} >&5
+fi
+
 SAH_CHECK_LIB([resolv],[res_query],[
     AC_DEFINE([HAVE_RESOLV],[1],[Define to 1 if you have the resolv library])
     CLIENTLIBS="${sah_lib_last} ${CLIENTLIBS}"])
@@ -1223,17 +1243,12 @@ AC_SUBST(CLIENTLIBS)
 ## --------------------
 ## some more tweaking to turn non-standard libs into statically linked ones
 
-if test "${enable_debug}" = yes; then
+if test "${enable_debug}" = "yes" ; then
     CLIENTGUIFLAGS="${CLIENTGUIFLAGS} -D_DEBUG -DDEBUG"
+else
+    # disable wxWidgets debug support which is by default enabled since 2.9.1
+    CLIENTGUIFLAGS="${CLIENTGUIFLAGS} -DNDEBUG"
 fi
-
-AC_ARG_ENABLE(wx-debug,
-  AS_HELP_STRING([--enable-wx-debug],
-                 [ use wxWidgets debug libraries ]),
-  [enable_wx_debug="yes"
-   AC_DEFINE(USE_WX_DEBUG,[1],[Define to 1 to use the wxWidgets debug libraries])
-   ],
-  [enable_wx_debug="no"])
 
 CLIENTGUILIBS="${WX_LIBS} ${SQLITE3_LIBS}"
 

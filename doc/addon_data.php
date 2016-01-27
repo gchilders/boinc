@@ -275,6 +275,17 @@ array('http://mion.faireal.net/BES/',
 
 $linux = array(
 array(
+    'http://www.pkcarlisle.com/dietboinc',
+    'Diet BOINC',
+    '1.0',
+    'A no-graphics, lightweight XScreenSaver compatible alternative for BOINC screen saver',
+    'http://www.pkcarlisle.com/dietboinc',
+    'Linux',
+    'Explicitly avoids libraries not included with default Linux or Python. No graphics requirements beyond what XScreenSaver uses. Looks only for BOINC data, not the client which creates it. Attempts to find BOINC data without anticipating a default location. Works with shared resources/multiple @Home projects.',
+    1438068943
+),
+
+array(
     'http://kde-look.org/content/show.php?content=154630',
     'BOINC Monitor',
     '2.3',
@@ -370,14 +381,14 @@ array('boincprog-1.1.5.tar.gz',
 //    '',
 //    1110378627
 //),
-array('boinc-2.7.tar.bz2',
+array('http://phil.eimer.perso.sfr.fr/boinc-2.16.tar.xz',
     'Boinc bash script',
-    '2.7',
+    '2.16',
     'Boinc state displayer',
-    'http://phileimer.9online.fr',
+    'http://www.jpmr.org/',
     'Linux or any OS with bash shell',
-    'Can be used as a console tool to display information about BOINC projects and working units. It can also be used to start or stop BOINC.',
-    1163903033
+    'A console tool to display information about BOINC projects and tasks. It can also be used to start or stop BOINC.',
+    1442346490
 ),
 //array('CPDNSpy.rar',
 //    'CPDNSpy Linux/Mac',

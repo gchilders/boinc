@@ -29,6 +29,7 @@
 #include "BOINCBaseWizard.h"
 #include "WizardAttach.h"
 #include "sg_ProjectPanel.h"
+#include "str_replace.h"
 #if TESTBIGICONPOPUP
 #include "test/sah_40.xpm"
 #include "test/einstein_icon.xpm"
@@ -250,7 +251,7 @@ void CSimpleProjectPanel::UpdateInterface() {
         char* ctrl_url = ((ProjectSelectionData*)m_ProjectSelectionCtrl->GetClientData(n))->project_url;
         if (strcmp(m_CurrentSelectedProjectURL, ctrl_url)) {
             b_needMenuRebuild = true;
-            strncpy(m_CurrentSelectedProjectURL, ctrl_url, sizeof(m_CurrentSelectedProjectURL));
+            strlcpy(m_CurrentSelectedProjectURL, ctrl_url, sizeof(m_CurrentSelectedProjectURL));
         }
         
         PROJECT* project = pDoc->state.lookup_project(ctrl_url);
@@ -267,8 +268,10 @@ void CSimpleProjectPanel::UpdateInterface() {
         m_ProjectCommandsButton->Enable();
         
         if (m_fDisplayedCredit != project->user_total_credit) {
-            m_fDisplayedCredit = project->user_total_credit;
-            str.Printf(wxT("%s: %.0f"), m_sTotalWorkDoneString.c_str(), m_fDisplayedCredit);
+            str.Printf(wxT("%s: %s"),
+                m_sTotalWorkDoneString.c_str(),
+                format_number(project->user_total_credit, 0)
+            );
             UpdateStaticText(&m_TotalCreditValue, str);
             m_TotalCreditValue->SetName(str);   // For accessibility on Windows
         }
@@ -456,7 +459,7 @@ void CSimpleProjectPanel::UpdateProjectList() {
                 }
 #endif
                 selData = new ProjectSelectionData;
-                strncpy(selData->project_url, project->master_url, sizeof(selData->project_url));
+                strlcpy(selData->project_url, project->master_url, sizeof(selData->project_url));
                 selData->project_files_downloaded_time = project->project_files_downloaded_time;
                 wxBitmap* projectBM = GetProjectSpecificBitmap(selData->project_url);
 #if SORTPROJECTLIST
@@ -512,7 +515,7 @@ void CSimpleProjectPanel::UpdateProjectList() {
             selData = (ProjectSelectionData*)m_ProjectSelectionCtrl->GetClientData(j);
             ctrl_url = selData->project_url;
             project = pDoc->state.lookup_project(ctrl_url);
-            if ( project->project_files_downloaded_time > selData->project_files_downloaded_time ) {
+            if ( (project != NULL) && (project->project_files_downloaded_time > selData->project_files_downloaded_time) ) {
                 wxBitmap* projectBM = GetProjectSpecificBitmap(ctrl_url);
                 selData->project_files_downloaded_time = project->project_files_downloaded_time;
                 m_ProjectSelectionCtrl->SetItemBitmap(j, *projectBM);

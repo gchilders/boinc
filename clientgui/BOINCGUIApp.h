@@ -52,8 +52,6 @@ protected:
     int                 OnExit();
 #ifndef __WXMAC__
     void                OnEndSession(wxCloseEvent& event);
-
-    void                OnFatalException(); 
 #endif
     
     void                OnInitCmdLine(wxCmdLineParser &parser);
@@ -104,6 +102,8 @@ protected:
     bool                m_bMultipleInstancesOK;
     bool                m_bFilterEvents;
     bool                m_bAboutDialogIsOpen;
+    bool                m_bRunDaemon;  
+    bool                m_bNeedRunDaemon;  
 
 #ifdef __WXMAC__
     ProcessSerialNumber m_psnCurrentProcess;
@@ -157,6 +157,13 @@ public:
     void                SetBOINCMGRDisplayExitMessage(int iDisplayExitMessage)
                                                     { m_iDisplayExitDialog = iDisplayExitMessage; }
 
+    bool                GetRunDaemon()
+                                                    { return m_bRunDaemon; }  
+    void                SetRunDaemon(bool bRunDaemon)  
+                                                    { m_bRunDaemon = bRunDaemon; }  
+  
+    bool                GetNeedRunDaemon()  
+                                                    { return m_bNeedRunDaemon; }  
 
     wxArrayString&      GetSupportedLanguages()     { return m_astrLanguages; }
     wxString            GetISOLanguageCode()        { return m_strISOLanguageCode; }

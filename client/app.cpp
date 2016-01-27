@@ -89,6 +89,11 @@ ACTIVE_TASK::~ACTIVE_TASK() {
 }
 
 ACTIVE_TASK::ACTIVE_TASK() {
+#ifdef _WIN32
+    strcpy(shmem_seg_name, "");
+#else
+    shmem_seg_name = 0;
+#endif
     result = NULL;
     wup = NULL;
     app_version = NULL;
@@ -111,6 +116,7 @@ ACTIVE_TASK::ACTIVE_TASK() {
     first_fraction_done = 0;
     first_fraction_done_elapsed_time = 0;
     scheduler_state = CPU_SCHED_UNINITIALIZED;
+    next_scheduler_state = CPU_SCHED_UNINITIALIZED;
     signal = 0;
     run_interval_start_wall_time = gstate.now;
     checkpoint_wall_time = 0;
@@ -120,11 +126,16 @@ ACTIVE_TASK::ACTIVE_TASK() {
     bytes_sent = 0;
     bytes_received = 0;
     strcpy(slot_dir, "");
+    strcpy(slot_path, "");
+    max_elapsed_time = 0;
+    max_disk_usage = 0;
+    max_mem_usage = 0;
     have_trickle_down = false;
     send_upload_file_status = false;
     too_large = false;
     needs_shmem = false;
     want_network = 0;
+    abort_time = 0;
     premature_exit_count = 0;
     quit_time = 0;
     procinfo.clear();
@@ -310,7 +321,7 @@ void procinfo_show(PROC_MAP& pm) {
     PROCINFO pi;
     pi.clear();
     PROC_MAP::iterator i;
-    for (i=pm.begin(); i!=pm.end(); i++) {
+    for (i=pm.begin(); i!=pm.end(); ++i) {
         PROCINFO& p = i->second;
 
         msg_printf(NULL, MSG_INFO, "%d %s: boinc? %d low_pri %d (u%f k%f)",
@@ -668,11 +679,12 @@ int ACTIVE_TASK::write(MIOFILE& fout) {
 #ifndef SIM
 
 int ACTIVE_TASK::write_gui(MIOFILE& fout) {
-    // if the app hasn't reported fraction done, and time has elapsed,
-    // estimate fraction done
+    // if the app hasn't reported fraction done or reported > 1,
+    // and a minute has elapsed, estimate fraction done in a
+    // way that constantly increases and approaches 1.
     //
     double fd = fraction_done;
-    if (fd == 0 && elapsed_time > 0) {
+    if (((fd<=0)||(fd>1)) && elapsed_time > 60) {
         double est_time = wup->rsc_fpops_est/app_version->flops;
         double x = elapsed_time/est_time;
         fd = 1 - exp(-x);
@@ -877,9 +889,6 @@ int ACTIVE_TASK_SET::write(MIOFILE& fout) {
 }
 
 int ACTIVE_TASK_SET::parse(XML_PARSER& xp) {
-    ACTIVE_TASK* atp;
-    int retval;
-
     while (!xp.get_tag()) {
         if (xp.match_tag("/active_task_set")) return 0;
         else if (xp.match_tag("active_task")) {
@@ -887,8 +896,8 @@ int ACTIVE_TASK_SET::parse(XML_PARSER& xp) {
             ACTIVE_TASK at;
             at.parse(xp);
 #else
-            atp = new ACTIVE_TASK;
-            retval = atp->parse(xp);
+            ACTIVE_TASK* atp = new ACTIVE_TASK;
+            int retval = atp->parse(xp);
             if (!retval) {
                 if (slot_taken(atp->slot)) {
                     msg_printf(atp->result->project, MSG_INTERNAL_ERROR,

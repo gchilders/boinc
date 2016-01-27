@@ -116,7 +116,7 @@ int RSC_PROJECT_WORK_FETCH::compute_rsc_project_reason(
     // if project has zero resource share,
     // only fetch work if a device is idle
     //
-    if (p->resource_share == 0 && rwf.nidle_now == 0 && rwf.sim_excluded_instances==0) {
+    if (p->resource_share == 0 && rwf.nidle_now == 0) {
         return DONT_FETCH_ZERO_SHARE;
     }
 
@@ -910,12 +910,15 @@ void WORK_FETCH::handle_reply(
 // since we don't have good runtime estimates yet
 //
 void WORK_FETCH::set_initial_work_request(PROJECT* p) {
+    clear_request();
     for (int i=0; i<coprocs.n_rsc; i++) {
-        rsc_work_fetch[i].req_secs = 1;
-        if (i) {
-            RSC_WORK_FETCH& rwf = rsc_work_fetch[i];
-            if (rwf.ninstances ==  p->rsc_pwf[i].ncoprocs_excluded) {
-                rsc_work_fetch[i].req_secs = 0;
+        if (p->resource_share > 0 && !p->dont_request_more_work) {
+            rsc_work_fetch[i].req_secs = 1;
+            if (i) {
+                RSC_WORK_FETCH& rwf = rsc_work_fetch[i];
+                if (rwf.ninstances ==  p->rsc_pwf[i].ncoprocs_excluded) {
+                    rsc_work_fetch[i].req_secs = 0;
+                }
             }
         }
         rsc_work_fetch[i].busy_time_estimator.reset();

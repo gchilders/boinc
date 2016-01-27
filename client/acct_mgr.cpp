@@ -642,6 +642,9 @@ void ACCT_MGR_OP::handle_reply(int http_op_retval) {
                         if (acct.dont_request_more_work.present) {
                             pp->dont_request_more_work = acct.dont_request_more_work.value;
                         }
+                        if (acct.suspend.present && acct.suspend.value) {
+                            pp->suspend();
+                        }
                     } else {
                         msg_printf(NULL, MSG_INTERNAL_ERROR,
                             "Failed to add project: %s",
@@ -759,11 +762,13 @@ void ACCT_MGR_INFO::clear() {
     strcpy(signing_key, "");
     strcpy(previous_host_cpid, "");
     strcpy(opaque, "");
+    strcpy(cookie_failure_url, "");
     next_rpc_time = 0;
     nfailures = 0;
     send_gui_rpc_info = false;
     password_error = false;
     no_project_notices = false;
+    cookie_required = false;
 }
 
 ACCT_MGR_INFO::ACCT_MGR_INFO() {

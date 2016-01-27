@@ -83,6 +83,8 @@ struct LOG_FLAGS {
     bool heartbeat_debug;
     bool http_debug;
     bool http_xfer_debug;
+    bool idle_detection_debug;
+        // show details leading to idle/not-idle determinations.
     bool mem_usage_debug;
         // memory usage
     bool network_status_debug;
@@ -164,6 +166,7 @@ struct CC_CONFIG {
     int http_transfer_timeout_bps;
     int http_transfer_timeout;
     std::vector<int> ignore_gpu_instance[NPROC_TYPES];
+    bool lower_client_priority;
     int max_event_log_lines;
     int max_file_xfers;
     int max_file_xfers_per_project;
@@ -177,6 +180,8 @@ struct CC_CONFIG {
     bool no_info_fetch;
     bool no_priority_change;
     bool os_random_only;
+    int process_priority;
+    int process_priority_special;
     PROXY_INFO proxy_info;
     double rec_half_life;
     bool report_results_immediately;

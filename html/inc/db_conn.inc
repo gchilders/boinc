@@ -24,8 +24,9 @@ require_once("../inc/db.inc");
 class DbConn {
     var $db_conn;
     var $db_name;
+    var $readonly;
 
-    function init_conn($user, $passwd, $host, $name) {
+    function init_conn($user, $passwd, $host, $name, $readonly) {
         if (MYSQLI) {
             $x = explode(":", $host);
             if (sizeof($x)>1) {
@@ -36,19 +37,24 @@ class DbConn {
             }
             //if (version_compare(PHP_VERSION, '5.3.0') < 0) {
             if (1) {        // don't use persistent connections for now
-                $this->db_conn = new mysqli($host, $user, $passwd, $name, $port);
+                $this->db_conn = @new mysqli($host, $user, $passwd, $name, $port);
             } else {
-                $this->db_conn = new mysqli("p:".$host, $user, $passwd, $name, $port);
+                $this->db_conn = @new mysqli("p:".$host, $user, $passwd, $name, $port);
+            }
+            // mysqli returns an object even if the connection is not established
+            if (mysqli_connect_error()) {
+                return false;
             }
             global $mysqli;
             $mysqli = $this->db_conn;
         } else {
-            $this->db_conn = mysql_pconnect($host, $user, $passwd);
+            $this->db_conn = @mysql_pconnect($host, $user, $passwd);
         }
         if (!$this->db_conn) {
             return false;
         }
         $this->db_name = $name;
+        $this->readonly = $readonly;
         return true;
     }
 
@@ -236,16 +242,18 @@ class DbConn {
             return mysql_error($this->db_conn);
         }
     }
+    function base_errno() {
+        if (MYSQLI) {
+            return $this->db_conn->errno;
+        } else {
+            return mysql_errno($this->db_conn);
+        }
+    }
     function table_exists($table_name) {
         $result = $this->do_query("show tables from DBNAME like '$table_name'");
         if (!$result) error_page("database error on query $query");
-        if (MYSQLI) {
-            $t = $result->fetch_array();
-            $result->free();
-        } else {
-            $t = mysql_fetch_array($result);
-            mysql_free_result($result);
-        }
+        $t = _mysql_fetch_array($result);
+        _mysql_free_result($result);
         if ($t[0] == "$table_name") return true;
         return false;
     }

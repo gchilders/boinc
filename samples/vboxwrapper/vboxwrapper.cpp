@@ -89,14 +89,14 @@ using std::vector;
 using std::string;
 
 
-void read_fraction_done(double& frac_done, VBOX_VM& vm) {
+bool read_fraction_done(double& frac_done, VBOX_VM& vm) {
     char path[MAXPATHLEN];
     char buf[256];
     double temp, frac = 0;
 
     sprintf(path, "shared/%s", vm.fraction_done_filename.c_str());
     FILE* f = fopen(path, "r");
-    if (!f) return;
+    if (!f) return false;
 
     // read the last line of the file
     //
@@ -117,6 +117,7 @@ void read_fraction_done(double& frac_done, VBOX_VM& vm) {
     }
 
     frac_done = frac;
+	return true;
 }
 
 bool completion_file_exists(VBOX_VM& vm) {
@@ -442,31 +443,62 @@ int main(int argc, char** argv) {
     //       on the machine because it will attempt to launch the 'vboxsvc' process
     //       without out environment variable changes and muck everything up.
     //
-    string vbox_version;
+    string vbox_version_raw;
+    string vbox_version_display;
     int vbox_major = 0, vbox_minor = 0;
 
-    if (BOINC_SUCCESS != vbox42::VBOX_VM::get_version_information(vbox_version)) {
-        if (BOINC_SUCCESS != vbox43::VBOX_VM::get_version_information(vbox_version)) {
-            vbox50::VBOX_VM::get_version_information(vbox_version);
+    if (BOINC_SUCCESS != vbox42::VBOX_VM::get_version_information(vbox_version_raw, vbox_version_display)) {
+        if (BOINC_SUCCESS != vbox43::VBOX_VM::get_version_information(vbox_version_raw, vbox_version_display)) {
+            vbox50::VBOX_VM::get_version_information(vbox_version_raw, vbox_version_display);
         }
     }
-    if (!vbox_version.empty()) {
-        sscanf(vbox_version.c_str(), "%d.%d", &vbox_major, &vbox_minor);
+    if (!vbox_version_raw.empty()) {
+        sscanf(vbox_version_raw.c_str(), "%d.%d", &vbox_major, &vbox_minor);
         if ((4 == vbox_major) && (2 == vbox_minor)) {
             pVM = (VBOX_VM*) new vbox42::VBOX_VM();
+            retval = pVM->initialize();
+            if (retval) {
+                delete pVM;
+                pVM = NULL;
+            }
         }
         if ((4 == vbox_major) && (3 == vbox_minor)) {
             pVM = (VBOX_VM*) new vbox43::VBOX_VM();
+            retval = pVM->initialize();
+            if (retval) {
+                delete pVM;
+                pVM = NULL;
+            }
         }
-        if ((5 == vbox_major) && (0 == vbox_minor)) {
+        if ((5 == vbox_major) && (0 <= vbox_minor)) {
             pVM = (VBOX_VM*) new vbox50::VBOX_VM();
+            retval = pVM->initialize();
+            if (retval) {
+                delete pVM;
+                pVM = NULL;
+            }
         }
     }
     if (!pVM) {
         pVM = (VBOX_VM*) new vboxmanage::VBOX_VM();
+        retval = pVM->initialize();
+        if (retval) {
+            vboxlog_msg("Could not detect VM Hypervisor. Rescheduling execution for a later date.");
+            pVM->dump_hypervisor_logs(true);
+            boinc_temporary_exit(86400, "Detection of VM Hypervisor failed.");
+        }
     }
 #else
     pVM = (VBOX_VM*) new vboxmanage::VBOX_VM();
+
+    // Initialize VM Hypervisor
+    //
+    retval = pVM->initialize();
+    if (retval) {
+        vboxlog_msg("Could not detect VM Hypervisor. Rescheduling execution for a later date.");
+        pVM->dump_hypervisor_logs(true);
+        boinc_temporary_exit(86400, "Detection of VM Hypervisor failed.");
+    }
 #endif
 
     // Parse command line parameters
@@ -475,7 +507,7 @@ int main(int argc, char** argv) {
         if (!strcmp(argv[i], "--trickle")) {
             trickle_period = atof(argv[++i]);
         }
-        if (!strcmp(argv[i], "--ncpus")) {
+        if (!strcmp(argv[i], "--nthreads")) {
             ncpus = atof(argv[++i]);
         }
         if (!strcmp(argv[i], "--memory_size_mb")) {
@@ -516,18 +548,10 @@ int main(int argc, char** argv) {
     }
 #endif
 
-    // Initialize VM Hypervisor
-    //
-    retval = pVM->initialize();
-    if (retval) {
-        vboxlog_msg("Could not detect VM Hypervisor. Rescheduling execution for a later date.");
-        boinc_temporary_exit(86400, "Detection of VM Hypervisor failed.");
-    }
-
     // Record what version of VirtualBox was used.
     // 
-    if (!pVM->virtualbox_version.empty()) {
-        vboxlog_msg("Detected: %s", pVM->virtualbox_version.c_str());
+    if (!pVM->virtualbox_version_display.empty()) {
+        vboxlog_msg("Detected: %s", pVM->virtualbox_version_display.c_str());
     }
 
     // Record if anonymous platform was used.
@@ -561,9 +585,9 @@ int main(int argc, char** argv) {
     // VirtualBox 4.2.6 crashes during snapshot operations
     // and 4.2.18 fails to restore from snapshots properly.
     //
-    if ((pVM->virtualbox_version.find("4.2.6") != std::string::npos) || 
-        (pVM->virtualbox_version.find("4.2.18") != std::string::npos) || 
-        (pVM->virtualbox_version.find("4.3.0") != std::string::npos) ) {
+    if ((pVM->virtualbox_version_raw.find("4.2.6") != std::string::npos) || 
+        (pVM->virtualbox_version_raw.find("4.2.18") != std::string::npos) || 
+        (pVM->virtualbox_version_raw.find("4.3.0") != std::string::npos) ) {
         vboxlog_msg("Incompatible version of VirtualBox detected. Please upgrade to a later version.");
         boinc_temporary_exit(86400,
             "Incompatible version of VirtualBox detected; please upgrade.",
@@ -747,35 +771,6 @@ int main(int argc, char** argv) {
                 "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
             unrecoverable_error = false;
             temp_reason = "VM environment needed to be cleaned up.";
-        } else if (pVM->is_logged_failure_vm_extensions_disabled()) {
-            error_reason =
-                "   NOTE: BOINC has detected that your computer's processor supports hardware acceleration for\n"
-                "    virtual machines but the hypervisor failed to successfully launch with this feature enabled.\n"
-                "    This means that the hardware acceleration feature has been disabled in the computer's BIOS.\n"
-                "    Please enable this feature in your computer's BIOS.\n"
-                "    Intel calls it 'VT-x'\n"
-                "    AMD calls it 'AMD-V'\n"
-                "    More information can be found here: http://en.wikipedia.org/wiki/X86_virtualization\n"
-                "    Error Code: ERR_CPU_VM_EXTENSIONS_DISABLED\n";
-            retval = ERR_EXEC;
-        } else if (pVM->is_logged_failure_vm_extensions_not_supported()) {
-            error_reason =
-                "   NOTE: VirtualBox has reported an improperly configured virtual machine. It was configured to require\n"
-                "    hardware acceleration for virtual machines, but your processor does not support the required feature.\n"
-                "    Please report this issue to the project so that it can be addresssed.\n";
-        } else if (pVM->is_logged_failure_vm_extensions_in_use()) {
-            error_reason =
-                "   NOTE: VirtualBox hypervisor reports that another hypervisor has locked the hardware acceleration\n"
-                "    for virtual machines feature in exclusive mode.\n";
-            unrecoverable_error = false;
-            temp_reason = "Forign VM Hypervisor locked hardware acceleration features.";
-            temp_delay = 86400;
-        } else if (pVM->is_logged_failure_host_out_of_memory()) {
-            error_reason =
-                "   NOTE: VirtualBox has failed to allocate enough memory to start the configured virtual machine.\n"
-                "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
-            unrecoverable_error = false;
-            temp_reason = "VM Hypervisor was unable to allocate enough memory to start VM.";
         } else {
             do_dump_hypervisor_logs = true;
         }
@@ -858,16 +853,99 @@ int main(int argc, char** argv) {
     // Log our current state 
     pVM->poll(true);
 
-    // Did we timeout?
-    if (!pVM->online && (timeout <= dtime())) {
-        vboxlog_msg("NOTE: VM failed to enter an online state within the timeout period.");
-        vboxlog_msg("  This might be a temporary problem and so this job will be rescheduled for another time.");
-        pVM->reset_vm_process_priority();
-        pVM->poweroff();
-        pVM->dump_hypervisor_logs(true);
-        boinc_temporary_exit(86400,
-            "VM Hypervisor failed to enter an online state in a timely fashion."
-        );
+    // Is the VM still running? If not, why not?
+    //
+    if (!pVM->online) {
+        // All 'failure to start' errors are unrecoverable by default
+        bool   unrecoverable_error = true;
+        bool   skip_cleanup = false;
+        bool   do_dump_hypervisor_logs = false;
+        string error_reason;
+        const char*  temp_reason = "";
+
+        if (pVM->is_logged_failure_vm_extensions_disabled()) {
+            error_reason =
+                "   NOTE: BOINC has detected that your computer's processor supports hardware acceleration for\n"
+                "    virtual machines but the hypervisor failed to successfully launch with this feature enabled.\n"
+                "    This means that the hardware acceleration feature has been disabled in the computer's BIOS.\n"
+                "    Please enable this feature in your computer's BIOS.\n"
+                "    Intel calls it 'VT-x'\n"
+                "    AMD calls it 'AMD-V'\n"
+                "    More information can be found here: http://en.wikipedia.org/wiki/X86_virtualization\n"
+                "    Error Code: ERR_CPU_VM_EXTENSIONS_DISABLED\n";
+            retval = ERR_EXEC;
+        } else if (pVM->is_logged_failure_vm_extensions_not_supported()) {
+            error_reason =
+                "   NOTE: VirtualBox has reported an improperly configured virtual machine. It was configured to require\n"
+                "    hardware acceleration for virtual machines, but your processor does not support the required feature.\n"
+                "    Please report this issue to the project so that it can be addresssed.\n";
+        } else if (pVM->is_logged_failure_vm_extensions_in_use()) {
+            error_reason =
+                "   NOTE: VirtualBox hypervisor reports that another hypervisor has locked the hardware acceleration\n"
+                "    for virtual machines feature in exclusive mode.\n";
+            unrecoverable_error = false;
+            temp_reason = "Forign VM Hypervisor locked hardware acceleration features.";
+            temp_delay = 86400;
+        } else if (pVM->is_logged_failure_host_out_of_memory()) {
+            error_reason =
+                "   NOTE: VirtualBox has failed to allocate enough memory to start the configured virtual machine.\n"
+                "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
+            unrecoverable_error = false;
+            temp_reason = "VM Hypervisor was unable to allocate enough memory to start VM.";
+        } else if (timeout <= dtime()) {
+            error_reason =
+                "   NOTE: VM failed to enter an online state within the timeout period.\n"
+                "    This might be a temporary problem and so this job will be rescheduled for another time.\n";
+            unrecoverable_error = false;
+            do_dump_hypervisor_logs = true;
+            temp_reason = "VM Hypervisor failed to enter an online state in a timely fashion.";
+            temp_delay = 86400;
+        }
+
+        if (unrecoverable_error) {
+            // Attempt to cleanup the VM and exit.
+            if (!skip_cleanup) {
+                pVM->cleanup();
+            }
+
+            checkpoint.update(elapsed_time, current_cpu_time);
+
+            if (error_reason.size()) {
+                vboxlog_msg("\n%s", error_reason.c_str());
+            }
+
+            if (do_dump_hypervisor_logs) {
+                pVM->dump_hypervisor_logs(true);
+            }
+
+            boinc_finish(retval);
+        } else {
+            // if the VM is already running notify BOINC about the process ID so it can
+            // clean up the environment.  We should be safe to run after that.
+            //
+            if (pVM->vm_pid) {
+                retval = boinc_report_app_status_aux(
+                    current_cpu_time,
+                    last_checkpoint_cpu_time,
+                    fraction_done,
+                    pVM->vm_pid,
+                    bytes_sent,
+                    bytes_received
+                );
+            }
+ 
+            // Give the BOINC API time to report the pid to BOINC.
+            //
+            boinc_sleep(5.0);
+
+            if (error_reason.size()) {
+                vboxlog_msg("\n%s", error_reason.c_str());
+            }
+
+            // Exit and let BOINC clean up the rest.
+            //
+            boinc_temporary_exit(temp_delay, temp_reason);
+        }
     }
 
     set_floppy_image(aid, *pVM);
@@ -1019,7 +1097,13 @@ int main(int argc, char** argv) {
             if (pVM->job_duration) {
                 fraction_done = elapsed_time / pVM->job_duration;
             } else if (pVM->fraction_done_filename.size() > 0) {
-                read_fraction_done(fraction_done, *pVM);
+                if (!read_fraction_done(fraction_done, *pVM)) {
+					// Report a non-zero fraction done so that BOINC will not attempt to use CPU Time and
+					// deadline as a means to calculate fraction done when a fraction done file is
+					// specified.
+					//
+					fraction_done = 0.001;
+				}
             }
             if (fraction_done > 1.0) {
                 fraction_done = 1.0;
@@ -1224,17 +1308,3 @@ int main(int argc, char** argv) {
 
     return 0;
 }
-
-#ifdef _WIN32
-
-int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrevInst, LPSTR Args, int WinMode) {
-    LPSTR command_line;
-    char* argv[100];
-    int argc;
-
-    command_line = GetCommandLine();
-    argc = parse_command_line(command_line, argv);
-    return main(argc, argv);
-}
-
-#endif

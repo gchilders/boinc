@@ -145,6 +145,7 @@ int COPROC::parse(XML_PARSER& xp) {
         if (!xp.is_tag) continue;
         if (xp.match_tag("/coproc")) {
             if (!strlen(type)) return ERR_XML_PARSE;
+            clear_usage();
             return 0;
         }
         if (xp.parse_str("type", type, sizeof(type))) continue;
@@ -402,6 +403,7 @@ void COPROC_NVIDIA::clear() {
     prop.textureAlignment = 0;
     prop.deviceOverlap = 0;
     prop.multiProcessorCount = 0;
+    is_used = COPROC_USED;
 }
 
 int COPROC_NVIDIA::parse(XML_PARSER& xp) {
@@ -492,16 +494,23 @@ int COPROC_NVIDIA::parse(XML_PARSER& xp) {
 
 void COPROC_NVIDIA::set_peak_flops() {
     double x=0;
-    if (prop.clockRate) {
-        int flops_per_clock=0, cores_per_proc=0;
-        switch (prop.major) {
+    int flops_per_clock=0, cores_per_proc=0;
+
+    if (prop.major || opencl_prop.nv_compute_capability_major) {
+        int major = prop.major;
+        int minor = prop.minor;
+
+        if (opencl_prop.nv_compute_capability_major) major = opencl_prop.nv_compute_capability_major;
+        if (opencl_prop.nv_compute_capability_minor) minor = opencl_prop.nv_compute_capability_minor;
+
+        switch (major) {
         case 1:
             flops_per_clock = 3;
             cores_per_proc = 8;
             break;
         case 2:
             flops_per_clock = 2;
-            switch (prop.minor) {
+            switch (minor) {
             case 0:
                 cores_per_proc = 32;
                 break;
@@ -520,14 +529,31 @@ void COPROC_NVIDIA::set_peak_flops() {
             cores_per_proc = 128;
             break;
         }
+
+    }
+
+    if (prop.clockRate) {
         // clock rate is scaled down by 1000
         //
         x = (1000.*prop.clockRate) * prop.multiProcessorCount * cores_per_proc * flops_per_clock;
+    } else if (opencl_prop.nv_compute_capability_major) {
+
+        // OpenCL w/ cl_nv_device_attribute_query extension
+        // Per: https://www.khronos.org/registry/cl/extensions/nv/cl_nv_device_attribute_query.txt
+        //
+        // The theoretical single-precision processing power of a Maxwell GPU in GFLOPS is computed as 2 (operations per FMA instruction per CUDA core per cycle) × number of CUDA cores × core clock speed (in GHz).
+        // Per: https://en.wikipedia.org/wiki/Maxwell_(microarchitecture)#Performance
+        // Per: https://en.wikipedia.org/wiki/List_of_Nvidia_graphics_processing_units
+        //
+        // clock is in MHz
+        //
+        x = opencl_prop.max_compute_units * cores_per_proc * flops_per_clock * (opencl_prop.max_clock_frequency * 1e6);
+
     } else if (opencl_prop.max_compute_units) {
         // OpenCL doesn't give us compute capability.
-        // assume cores_per_proc is 8 and flops_per_clock is 2
+        // assume CC 2: cores_per_proc is 48 and flops_per_clock is 2
         //
-        x = opencl_prop.max_compute_units * 8 * 2 * opencl_prop.max_clock_frequency * 1e6;
+        x = opencl_prop.max_compute_units * 48 * 2 * opencl_prop.max_clock_frequency * 1e6;
     }
     peak_flops =  (x>0)?x:5e10;
 }
@@ -654,6 +680,7 @@ void COPROC_ATI::clear() {
     memset(&attribs, 0, sizeof(attribs));
     memset(&info, 0, sizeof(info));
     version_num = 0;
+    is_used = COPROC_USED;
 }
 
 int COPROC_ATI::parse(XML_PARSER& xp) {
@@ -770,6 +797,22 @@ void COPROC_ATI::set_peak_flops() {
     if (attribs.numberOfSIMD) {
         x = attribs.numberOfSIMD * attribs.wavefrontSize * 5 * attribs.engineClock * 1.e6;
         // clock is in MHz
+    } else if (opencl_prop.amd_simd_per_compute_unit) {
+
+        // OpenCL w/ cl_amd_device_attribute_query extension
+        // Per: https://www.khronos.org/registry/cl/extensions/amd/cl_amd_device_attribute_query.txt
+        //
+        // Single precision performance is calculated as two times the number of shaders multiplied by the base core clock speed.
+        // Per: https://en.wikipedia.org/wiki/List_of_AMD_graphics_processing_units
+        //
+        // clock is in MHz
+        x = opencl_prop.max_compute_units * 
+            opencl_prop.amd_simd_per_compute_unit * 
+            opencl_prop.amd_simd_width *
+            opencl_prop.amd_simd_instruction_width *
+            2 *
+            (opencl_prop.max_clock_frequency * 1.e6);
+
     } else if (opencl_prop.max_compute_units) {
         // OpenCL gives us only:
         // - max_compute_units
@@ -841,6 +884,8 @@ void COPROC_INTEL::clear() {
     estimated_delay = -1;
     strcpy(name, "");
     strcpy(version, "");
+    global_mem_size = 0;
+    is_used = COPROC_USED;
 }
 
 int COPROC_INTEL::parse(XML_PARSER& xp) {

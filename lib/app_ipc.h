@@ -24,6 +24,7 @@
 #include <string>
 #include <cstdio>
 
+#include "filesys.h"
 #include "hostinfo.h"
 #include "proxy_info.h"
 #include "prefs.h"
@@ -154,7 +155,7 @@ struct APP_INIT_DATA {
     char user_name[256];
     char team_name[256];
     char project_dir[256];      // where project files are stored on host
-    char boinc_dir[256];        // BOINC data directory
+    char boinc_dir[MAXPATHLEN];        // BOINC data directory
     char wu_name[256];          // workunit name
     char result_name[256];
     char authenticator[256];    // user's authenticator
@@ -202,6 +203,10 @@ struct APP_INIT_DATA {
     //
     bool vbox_window;       // whether to open a console window for VM apps
 
+    // list of files in the app version (for wrappers)
+    //
+    std::vector<std::string> app_files;
+
     // Items used by the BOINC runtime system
     //
     double checkpoint_period;     // recommended checkpoint period
@@ -246,6 +251,7 @@ int parse_graphics_file(FILE* f, GRAPHICS_INFO* gi);
 
 extern int boinc_link(const char* phys_name, const char* logical_name);
 extern int boinc_resolve_filename_s(const char*, std::string&);
+extern std::string resolve_soft_link(const char* project_dir, const char* file);
 extern void url_to_project_dir(char* url, char* dir);
 
 extern "C" {

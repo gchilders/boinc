@@ -78,7 +78,7 @@ void CHUNK::print_status(int level) {
 }
 
 void VDA_CHUNK_HOST::print_status(int level) {
-    printf("%shost %d\n", indent(level), host_id);
+    printf("%shost %lu\n", indent(level), host_id);
     level++;
     printf("%spresent on host: %s\n",
         indent(level), present_on_host?"yes":"no"
@@ -150,14 +150,14 @@ int handle_add(const char* path) {
 int handle_remove(const char* name) {
     DB_VDA_FILE vf;
     char buf[1024];
-    sprintf(buf, "where file_name='%s'", name);
+    snprintf(buf, sizeof(buf), "where file_name='%s'", name);
     int retval = vf.lookup(buf);
     if (retval) return retval;
 
     // delete DB records
     //
     DB_VDA_CHUNK_HOST ch;
-    sprintf(buf, "vda_file_id=%d", vf.id);
+    sprintf(buf, "vda_file_id=%lu", vf.id);
     ch.delete_from_db_multi(buf);
     vf.delete_from_db();
 
@@ -178,7 +178,7 @@ int handle_remove(const char* name) {
 int handle_retrieve(const char* name) {
     DB_VDA_FILE vf;
     char buf[1024];
-    sprintf(buf, "where file_name='%s'", name);
+    snprintf(buf, sizeof(buf), "where file_name='%s'", name);
     int retval = vf.lookup(buf);
     if (retval) return retval;
     retval = vf.update_field("retrieving=1, need_update=1");
@@ -188,7 +188,7 @@ int handle_retrieve(const char* name) {
 int handle_status(const char* name) {
     DB_VDA_FILE dvf;
     char buf[1024];
-    sprintf(buf, "where file_name='%s'", name);
+    snprintf(buf, sizeof(buf), "where file_name='%s'", name);
     int retval = dvf.lookup(buf);
     if (retval) return retval;
 
@@ -223,7 +223,7 @@ int handle_status(const char* name) {
 int handle_update(const char* name) {
     DB_VDA_FILE dvf;
     char buf[1024];
-    sprintf(buf, "where file_name='%s'", name);
+    snprintf(buf, sizeof(buf), "where file_name='%s'", name);
     int retval = dvf.lookup(buf);
     if (retval) return retval;
     return dvf.update_field("need_update=1");

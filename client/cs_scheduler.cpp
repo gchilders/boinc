@@ -565,7 +565,7 @@ int CLIENT_STATE::handle_scheduler_reply(
 
     get_sched_reply_filename(*project, filename, sizeof(filename));
 
-    f = fopen(filename, "r");
+    f = fopen(filename, "rb");
     if (!f) return ERR_FOPEN;
     retval = sr.parse(f, project);
     fclose(f);
@@ -605,8 +605,8 @@ int CLIENT_STATE::handle_scheduler_reply(
                     sr.master_url
                 );
             } else {
-                msg_printf(project, MSG_INFO,
-                    _("You used the wrong URL for this project.  When convenient, remove this project, then add %s"),
+                msg_printf(project, MSG_USER_ALERT,
+                    _("This project is using an old URL.  When convenient, remove the project, then add %s"),
                     sr.master_url
                 );
             }
@@ -1210,6 +1210,8 @@ PROJECT* CLIENT_STATE::next_project_sched_rpc_pending() {
             honor_suspend = false;
             break;
         case RPC_REASON_INIT:
+            // always do the initial RPC so we can get project name etc.
+            honor_suspend = false;
             break;
         case RPC_REASON_PROJECT_REQ:
             break;

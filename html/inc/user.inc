@@ -25,70 +25,68 @@ require_once("../inc/forum_db.inc");
 require_once("../inc/notify.inc");
 require_once("../inc/ldap.inc");
 
-function parse_project($f) {
-    $p = new StdClass;
-    $p->total_credit = 0.0;
-    $p->expavg_credit = 0.0;
-    while (!feof($f)) {
-        $buf = fgets($f);
-        if (strstr($buf, "</project>")) break;
-        if ($x = parse_element($buf, "<name>")) {
-            $p->name = $x;
-        }
-        if ($x = parse_element($buf, "<url>")) {
-            $p->url = $x;
-        }
-        if ($x = parse_element($buf, "<total_credit>")) {
-            $p->total_credit = $x;
-        }
-        if ($x = parse_element($buf, "<expavg_credit>")) {
-            $p->expavg_credit = $x;
-        }
-        if ($x = parse_element($buf, "<id>")) {
-            $p->id = $x;
-        }
-        if ($x = parse_element($buf, "<country>")) {
-            $p->country = $x;
-        }
-        if ($x = parse_element($buf, "<team_id>")) {
-            $p->team_id = $x;
-        }
-        if ($x = parse_element($buf, "<team_name>")) {
-            $p->team_name = $x;
-        }
-        if ($x = parse_element($buf, "<create_time>")) {
-            $p->create_time = $x;
-        }
-    }
-    return $p;
-}
-
-function parse_user($f, $user) {
-    $user->projects = array();
-    while (!feof($f)) {
-        $buf = fgets($f);
-        if (strstr($buf, "</user>")) break;
-        if (strstr($buf, "<project>")) {
-            $user->projects[] = parse_project($f);
-        }
-    }
-    return $user;
+if (!defined('REMOTE_PROJECTS_TTL')) {
+    define('REMOTE_PROJECTS_TTL', 86400);
 }
 
 function get_other_projects($user) {
     $cpid = md5($user->cross_project_id . $user->email_addr);
-    
-    $timeout = 3;
-    $old_timeout = ini_set('default_socket_timeout', $timeout);
-    $url = "http://boinc.netsoft-online.com/get_user.php?cpid=$cpid";
-    $f = @fopen($url, "r");
-    ini_set('default_socket_timeout', $old_timeout);
-    if (!$f) {
-        return $user;
+    $url = "http://boinc.netsoft-online.com/get_user.php?cpid=".$cpid;
+
+    // Check the cache for that URL
+    //
+    $cacheddata = get_cached_data(REMOTE_PROJECTS_TTL, $url);
+    if ($cacheddata){
+        $remote = unserialize($cacheddata);
+    } else {
+        $xml_object = null;
+        $remote = false;
+        // Fetch the XML, use curl if fopen() is disallowed
+        //
+        if (ini_get('allow_url_fopen')) {
+            $timeout = 3;
+            $old_timeout = ini_set('default_socket_timeout', $timeout);
+            $xml_object = null;
+            $f = @file_get_contents($url);
+            if ($f) {
+                $xml_object = @simplexml_load_string($f);
+            }
+            ini_set('default_socket_timeout', $old_timeout);
+            if (!$xml_object) {
+                return $user;
+            }
+        } else {
+            $ch = curl_init($url);
+            curl_setopt($ch, CURLOPT_HEADER, false);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+            curl_setopt($ch, CURLOPT_MAXREDIRS, 3);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 3);
+            $rawxml = @curl_exec($ch);
+            $xml_object = null;
+            if ($rawxml) {
+                $xml_object = @simplexml_load_string($rawxml);
+            }
+            curl_close($ch);
+            if (!xml_object) {
+                return $user;
+            }
+        }
+
+        // auto-cast the project list to an array of stdClass projects
+        //
+        $remote = @json_decode(json_encode((array)$xml_object))->project;
+        
+        if (!$remote) {
+            return $user;
+        } else {
+            // Cache the results
+            set_cached_data(REMOTE_PROJECTS_TTL, serialize($remote), $url);
+        }
     }
-    $u = parse_user($f, $user);
-    fclose($f);
-    return $u;
+    
+    $user->projects = $remote;
+    return $user;
 }
 
 function show_project($project) {
@@ -169,7 +167,7 @@ function show_user_stats_private($user) {
     }
     $x .= ' &middot; <a href="cert_all.php">'.tra("Cross-project").'</a>';
     row2(tra("Certificate"), $x);
-    row2(tra("Stats on your cell phone"), URL_BASE."userw.php?id=$user->id");
+    row2(tra("Stats on your cell phone"), url_base()."userw.php?id=$user->id");
 }
 
 function notify_description($notify) {
@@ -261,13 +259,13 @@ function friend_links($user) {
         if ($profile && $profile->has_picture) {
             $img_url = profile_thumb_url($user->id);
         } else {
-            $img_url = URL_BASE."img/head_20.png";
+            $img_url = url_base()."img/head_20.png";
         }
         $title = tra("View the profile of %1", $user->name);
         $alt = tra("Profile");
-        $x .= ' <a href="'.URL_BASE.'view_profile.php?userid='.$user->id.'"><img title="'.$title.'" src="'.$img_url.'" alt="'.$alt.'"></a><br>';
+        $x .= ' <a href="'.url_base().'view_profile.php?userid='.$user->id.'"><img title="'.$title.'" src="'.$img_url.'" alt="'.$alt.'"></a><br>';
     }
-    $x .= " <a href=\"".URL_BASE."show_user.php?userid=".$user->id."\">".$user->name."</a>";
+    $x .= " <a href=\"".url_base()."show_user.php?userid=".$user->id."\">".$user->name."</a>";
     if ($user->donated == 1) {
         require_once("../project/donations.inc");
         $x .= DONATION_LINK;
@@ -286,10 +284,10 @@ function user_links($user, $badge_height=0) {
     }
     $x = "";
     if ($user->has_profile) {
-        $img_url = URL_BASE."img/head_20.png";
-        $x .= ' <a href="'.URL_BASE.'view_profile.php?userid='.$user->id.'"><img title="View the profile of '.$user->name.'" src="'.$img_url.'" alt="Profile"></a>';
+        $img_url = url_base()."img/head_20.png";
+        $x .= ' <a href="'.url_base().'view_profile.php?userid='.$user->id.'"><img title="View the profile of '.$user->name.'" src="'.$img_url.'" alt="Profile"></a>';
     }
-    $x .= " <a href=\"".URL_BASE."show_user.php?userid=".$user->id."\">".$user->name."</a>";
+    $x .= " <a href=\"".url_base()."show_user.php?userid=".$user->id."\">".$user->name."</a>";
     if ($user->donated == 1) {
         require_once("../project/donations.inc");
         $x .= DONATION_LINK;
@@ -318,7 +316,7 @@ function show_community_private($user) {
     if (!DISABLE_FORUMS) {
         $tot = total_posts($user);
         if ($tot) {
-            row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+            row2(tra("Message boards"), "<a href=\"".url_base()."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
         }
     }
     
@@ -340,8 +338,7 @@ function show_community_private($user) {
     }
 
     if (!DISABLE_TEAMS) {
-        if ($user->teamid) {
-            $team = BoincTeam::lookup_id($user->teamid);
+        if ($user->teamid && ($team = BoincTeam::lookup_id($user->teamid))) {
             $x = "<a href=\"team_display.php?teamid=$team->id\">$team->name</a>
                 &middot; <a href=\"team_quit_form.php\">".tra("Quit team")."</a>";
             if (is_team_admin($user, $team)) {
@@ -404,7 +401,7 @@ function show_user_summary_public($user) {
         show_credit($user);
 
         if ($user->show_hosts) {
-            row2(tra("Computers"), "<a href=\"".URL_BASE."hosts_user.php?userid=$user->id\">".tra("View")."</a>");
+            row2(tra("Computers"), "<a href=\"".url_base()."hosts_user.php?userid=$user->id\">".tra("View")."</a>");
         } else {
             row2(tra("Computers"), tra("hidden"));
         }
@@ -444,14 +441,14 @@ function community_links($clo, $logged_in_user){
     
     if (!DISABLE_TEAMS) {
         if ($user->teamid && $team) {
-            row2(tra("Team"), "<a href=\"".URL_BASE."team_display.php?teamid=$team->id\">$team->name</a>");
+            row2(tra("Team"), "<a href=\"".url_base()."team_display.php?teamid=$team->id\">$team->name</a>");
         } else {
             row2(tra("Team"), tra("None"));
         }
     }
     if (!DISABLE_FORUMS) {
         if ($tot) {
-            row2(tra("Message boards"), "<a href=\"".URL_BASE."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
+            row2(tra("Message boards"), "<a href=\"".url_base()."forum_user_posts.php?userid=$user->id\">".tra("%1 posts", $tot)."</a>");
         }
     }
     if ($logged_in_user && $logged_in_user->id != $user->id) {

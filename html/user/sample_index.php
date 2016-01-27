@@ -121,6 +121,7 @@ function show_nav() {
     }
     echo "
         <li><a href=\"user_search.php\">User search</a>
+        <li><a href=ffmail_form.php>Share</a>
     ";
     if (!DISABLE_FORUMS) {
         echo "
@@ -138,7 +139,7 @@ function show_nav() {
 
 $stopped = web_stopped();
 $rssname = PROJECT . " RSS 2.0" ;
-$rsslink = URL_BASE . "rss_main.php";
+$rsslink = url_base() . "rss_main.php";
 
 header("Content-type: text/html; charset=utf-8");
 

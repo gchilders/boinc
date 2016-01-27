@@ -87,6 +87,7 @@ void LOG_FLAGS::show() {
     show_flag(buf, heartbeat_debug, "heartbeat_debug");
     show_flag(buf, http_debug, "http_debug");
     show_flag(buf, http_xfer_debug, "http_xfer_debug");
+    show_flag(buf, idle_detection_debug, "idle_detection_debug");
     show_flag(buf, mem_usage_debug, "mem_usage_debug");
     show_flag(buf, network_status_debug, "network_status_debug");
     show_flag(buf, notice_debug, "notice_debug");
@@ -149,10 +150,18 @@ static void show_exclude_gpu(EXCLUDE_GPU& e) {
 // This is called during startup (after client_state.xml has been read)
 // and also from the handle_read_cc_config GUI RPC.
 //
-// TODO: show other config options
+// Keep these in alpha order
+//
+// TODO: show all config options
 //
 void CC_CONFIG::show() {
     unsigned int i;
+    if (abort_jobs_on_exit) {
+        msg_printf(NULL, MSG_INFO, "Config: abort jobs on exit");
+    }
+    if (allow_multiple_clients) {
+        msg_printf(NULL, MSG_INFO, "Config: allow multiple clients");
+    }
     if (allow_remote_gui_rpc) {
         msg_printf(NULL, MSG_INFO,
             "Config: GUI RPC allowed from any host"
@@ -201,6 +210,15 @@ void CC_CONFIG::show() {
             exclusive_gpu_apps[i].c_str()
         );
     }
+    if (exit_after_finish) {
+        msg_printf(NULL, MSG_INFO, "Config: exit after finish");
+    }
+    if (exit_before_start) {
+        msg_printf(NULL, MSG_INFO, "Config: exit before start task");
+    }
+    if (exit_when_idle) {
+        msg_printf(NULL, MSG_INFO, "Config: exit when idle");
+    }
     if (fetch_minimal_work) {
         msg_printf(NULL, MSG_INFO, "Config: fetch minimal work");
     }
@@ -212,6 +230,9 @@ void CC_CONFIG::show() {
     }
     for (int j=1; j<NPROC_TYPES; j++) {
         show_gpu_ignore(ignore_gpu_instance[j], j);
+    }
+    if (lower_client_priority) {
+        msg_printf(NULL, MSG_INFO, "Config: lower client priority");
     }
     if (max_event_log_lines != DEFAULT_MAX_EVENT_LOG_LINES) {
         if (max_event_log_lines) {
@@ -236,6 +257,9 @@ void CC_CONFIG::show() {
     }
     if (report_results_immediately) {
         msg_printf(NULL, MSG_INFO, "Config: report completed tasks immediately");
+    }
+    if (unsigned_apps_ok) {
+        msg_printf(NULL, MSG_INFO, "Config: unsigned apps OK");
     }
     if (use_all_gpus) {
         msg_printf(NULL, MSG_INFO, "Config: use all coprocessors");
@@ -326,6 +350,7 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
         if (xp.parse_bool("disallow_attach", disallow_attach)) continue;
         if (xp.parse_bool("dont_check_file_sizes", dont_check_file_sizes)) continue;
         if (xp.parse_bool("dont_contact_ref_site", dont_contact_ref_site)) continue;
+        if (xp.parse_bool("lower_client_priority", lower_client_priority)) continue;
         if (xp.parse_bool("dont_suspend_nci", dont_suspend_nci)) continue;
         if (xp.parse_bool("dont_use_vbox", dont_use_vbox)) continue;
         if (xp.match_tag("exclude_gpu")) {
@@ -397,6 +422,8 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
         if (xp.parse_bool("no_info_fetch", no_info_fetch)) continue;
         if (xp.parse_bool("no_priority_change", no_priority_change)) continue;
         if (xp.parse_bool("os_random_only", os_random_only)) continue;
+        if (xp.parse_int("process_priority", process_priority)) continue;
+        if (xp.parse_int("process_priority_special", process_priority_special)) continue;
 #ifndef SIM
         if (xp.match_tag("proxy_info")) {
             retval = proxy_info.parse_config(xp);
@@ -583,6 +610,12 @@ void process_gpu_exclusions() {
                 COPROC& cp = coprocs.coprocs[k];
                 if (eg.type == cp.type) {
                     found = true;
+
+                    // skip exclusions of non-existent devices
+                    //
+                    if (eg.device_num && (cp.device_num_index(eg.device_num) < 0)) {
+                        break;
+                    }
                     rsc_work_fetch[k].has_exclusions = true;
                     break;
                 }

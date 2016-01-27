@@ -614,12 +614,12 @@ bool ACTIVE_TASK::finish_file_present() {
     strcpy(buf, "");
     strcpy(buf2, "");
     sprintf(path, "%s/%s", slot_dir, BOINC_FINISH_CALLED_FILE);
-    FILE* f = fopen(path, "r");
+    FILE* f = boinc_fopen(path, "r");
     if (!f) return false;
-    fgets(buf, sizeof(buf), f);
-    fgets(buf, sizeof(buf), f);
-    fgets(buf2, sizeof(buf2), f);
-    if (strlen(buf)) {
+    fgets(buf, sizeof(buf), f);     // read (and discard) exit status
+    char* p = fgets(buf, sizeof(buf), f);
+    if (p && strlen(buf)) {
+        fgets(buf2, sizeof(buf2), f);
         msg_printf(result->project,
             strstr(buf2, "notice")?MSG_USER_ALERT:MSG_INFO,
             "Message from task: %s", buf
@@ -634,7 +634,7 @@ bool ACTIVE_TASK::temporary_exit_file_present(
 ) {
     char path[MAXPATHLEN], buf2[256];
     sprintf(path, "%s/%s", slot_dir, TEMPORARY_EXIT_FILE);
-    FILE* f = fopen(path, "r");
+    FILE* f = boinc_fopen(path, "r");
     if (!f) return false;
     strcpy(buf, "");
     int y;
@@ -1052,8 +1052,8 @@ void ACTIVE_TASK_SET::request_reread_app_info() {
 
 
 // send quit message to all tasks in the project
-// (or all tasks, if proj==0).
-// If they don't exit in 5 seconds,
+// (or all tasks, if proj is NULL).
+// If they don't exit in QUIT_TIMEOUT seconds,
 // send them a kill signal and wait up to 5 more seconds to exit.
 // This is called when the client exits,
 // or when a project is detached or reset
@@ -1064,13 +1064,13 @@ int ACTIVE_TASK_SET::exit_tasks(PROJECT* proj) {
     }
     request_tasks_exit(proj);
 
-    // Wait 15 seconds for them to exit normally; if they don't then kill them
+    // Wait for tasks to exit normally; if they don't then kill them
     //
-    if (wait_for_exit(MAX_EXIT_TIME, proj)) {
+    if (wait_for_exit(QUIT_TIMEOUT, proj)) {
         if (log_flags.task_debug) {
             msg_printf(NULL, MSG_INFO,
                 "[task_debug] all tasks haven't exited after %d sec; killing them",
-                MAX_EXIT_TIME
+                QUIT_TIMEOUT
             );
         }
         kill_tasks(proj);
@@ -1352,6 +1352,7 @@ bool ACTIVE_TASK::get_app_status_msg() {
     double fd;
     int other_pid;
     double dtemp;
+    static double last_msg_time=0;
 
     if (!app_client_shm.shm) {
         msg_printf(result->project, MSG_INFO,
@@ -1380,6 +1381,14 @@ bool ACTIVE_TASK::get_app_status_msg() {
             if (!first_fraction_done) {
                 first_fraction_done = fd;
                 first_fraction_done_elapsed_time = elapsed_time;
+            }
+            if (log_flags.task_debug && (fd<0 || fd>1)) {
+                if (gstate.now > last_msg_time + 60) {
+                    msg_printf(this->wup->project, MSG_INFO,
+                        "[task_debug] app reported bad fraction done: %f", fd
+                    );
+                    last_msg_time = gstate.now;
+                }
             }
         }
     }
@@ -1505,7 +1514,7 @@ void ACTIVE_TASK_SET::get_msgs() {
         atp = active_tasks[i];
         if (!atp->process_exists()) continue;
         old_time = atp->checkpoint_cpu_time;
-        if (atp->task_state() == PROCESS_EXECUTING) {
+        if (atp->scheduler_state == CPU_SCHED_SCHEDULED && !gstate.tasks_suspended) {
             double x = atp->result->dont_throttle()?et_diff:et_diff_throttle;
             atp->elapsed_time += x;
             atp->wup->project->elapsed_time += x;
@@ -1548,7 +1557,7 @@ void ACTIVE_TASK_SET::get_msgs() {
 void ACTIVE_TASK::write_task_state_file() {
     char path[MAXPATHLEN];
     sprintf(path, "%s/%s", slot_dir, TASK_STATE_FILENAME);
-    FILE* f = fopen(path, "w");
+    FILE* f = boinc_fopen(path, "w");
     if (!f) return;
     fprintf(f,
         "<active_task>\n"
@@ -1579,7 +1588,7 @@ void ACTIVE_TASK::write_task_state_file() {
 void ACTIVE_TASK::read_task_state_file() {
     char buf[4096], path[MAXPATHLEN], s[1024];
     sprintf(path, "%s/%s", slot_dir, TASK_STATE_FILENAME);
-    FILE* f = fopen(path, "r");
+    FILE* f = boinc_fopen(path, "r");
     if (!f) return;
     buf[0] = 0;
     (void) fread(buf, 1, 4096, f);

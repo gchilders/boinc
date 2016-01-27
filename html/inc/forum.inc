@@ -25,16 +25,18 @@ require_once("../inc/text_transform.inc");
 
 define('THREADS_PER_PAGE', 50);
 
-// sorting styles
+// sorting styles (for both threads and posts)
+//
 define('MODIFIED_NEW', 1);
-define('MODIFIED_OLD',2);
-define('VIEWS_MOST',3);
-define('REPLIES_MOST',4);
-define('CREATE_TIME_NEW',5);
-define('CREATE_TIME_OLD',6);
-define('POST_SCORE',7);
+define('MODIFIED_OLD', 2);
+define('VIEWS_MOST', 3);
+define('REPLIES_MOST', 4);
+define('CREATE_TIME_NEW', 5);
+define('CREATE_TIME_OLD', 6);
+define('POST_SCORE', 7);
 
 // names for the above
+//
 $thread_sort_styles[CREATE_TIME_OLD] = tra("Oldest first");
 $thread_sort_styles[CREATE_TIME_NEW] = tra("Newest first");
 $thread_sort_styles[POST_SCORE] = tra("Highest rated posts first");
@@ -486,6 +488,12 @@ function is_ignoring($user, $other_user) {
     return in_array($other_user->id, $list);
 }
 
+// if avatar is from gravatar, make it HTTPS
+//
+function avatar_url($url) {
+    return str_replace('http:', 'https:', $url);
+}
+
 // Display an individual post
 //
 function show_post(
@@ -577,7 +585,7 @@ function show_post(
     echo "<span class=\"authorinfo\">";
     if (!$filter || !$ignore_poster){
         if ($user->prefs && $user->prefs->avatar!="" && (!$logged_in_user || ($logged_in_user->prefs->hide_avatars==false))) {
-            echo "<img class=authorinfo width=\"".AVATAR_WIDTH."\" height=\"".AVATAR_HEIGHT."\" src=\"".$user->prefs->avatar."\" alt=\"Avatar\"><br>";
+            echo "<img class=authorinfo width=\"".AVATAR_WIDTH."\" height=\"".AVATAR_HEIGHT."\" src=\"".avatar_url($user->prefs->avatar)."\" alt=\"Avatar\"><br>";
         }
     }
     
@@ -774,9 +782,10 @@ function post_rules() {
             gambling, or intolerance of others.
         <li> No messages intended to annoy or antagonize other people,
             or to hijack a thread.
-        <li> No messages that are deliberately hostile or insulting.
+        <li> No messages that are deliberately hostile, threatening, or insulting.
         <li> No abusive comments involving race, religion,
             nationality, gender, class or sexuality.
+        <li> The posting privileges of violators may be suspended or revoked.
         ").$project_rules."
         </ul>
     ";
@@ -836,7 +845,7 @@ function create_post($content, $parent_id, $user, $forum, $thread, $signature) {
     $content = BoincDb::escape_string($content);
     $now = time();
     $sig = $signature?1:0;
-    $id = BoincPost::insert("(thread, user, timestamp, content, parent_post, signature) values ($thread->id, $user->id, $now, '$content', $parent_id, $sig)");
+    $id = BoincPost::insert("(thread, user, timestamp, content, modified, parent_post, score, votes, signature, hidden) values ($thread->id, $user->id, $now, '$content', 0, $parent_id, 0, 0, $sig, 0)");
     if (!$id) return null;
 
     notify_subscribers($thread, $user);
@@ -875,7 +884,7 @@ function create_thread($title, $content, $user, $forum, $signature, $export) {
     if (is_news_forum($forum) && !$export) {
         $status = 1;
     }
-    $id  = BoincThread::insert("(forum, owner, title, create_time, timestamp, replies, status) values ($forum->id, $user->id, '$title', $now, $now, -1, $status)");
+    $id  = BoincThread::insert("(forum, owner, status, title, timestamp, views, replies, activity, sufferers, score, votes, create_time, hidden, sticky, locked) values ($forum->id, $user->id, $status, '$title', $now, 0, -1, 0, 0, 0, 0, $now, 0, 0, 0)");
     if (!$id) return null;
     $thread = BoincThread::lookup_id($id);
     create_post($content, 0, $user, $forum, $thread, $signature);
@@ -886,8 +895,8 @@ function create_thread($title, $content, $user, $forum, $signature, $export) {
 function hide_post($post, $thread, $forum) {
     $ret = $post->update("hidden=1");
     if (!$ret) return $ret;
-    $thread->update("replies=replies-1");
-    $forum->update("posts=posts-1");
+    $thread->update("replies=if(replies>0, replies-1, 0)");
+    $forum->update("posts=if(posts>0, posts-1, 0)");
     update_thread_timestamp($thread);
     update_forum_timestamp($forum);
     return true;
@@ -906,13 +915,13 @@ function unhide_post($post, $thread, $forum) {
 function delete_post($post, $thread, $forum) {
     $post->delete();
     if (!$post->hidden) {
-        $thread->update("replies=replies-1");
-        $forum->update("posts=posts-1");
+        $thread->update("replies=if(replies>0, replies-1, 0)");
+        $forum->update("posts=if(posts>0, posts-1, 0)");
     }
     $count = BoincPost::count("thread=$thread->id");
     if ($count == 0) {
         if (!$thread->hidden) {
-            $forum->update("threads=threads-1");
+            $forum->update("threads=if(threads>0, threads-1, 0)");
         }
         $thread->delete();
     } else {
@@ -926,7 +935,7 @@ function delete_thread($thread, $forum) {
     $forum->update("posts=posts-$nposts");
     BoincPost::delete_aux("thread=$thread->id");
     if (!$thread->hidden) {
-        $forum->update("threads=threads-1");
+        $forum->update("threads=if(threads>0, threads-1, 0)");
     }
     $thread->delete();
 }
@@ -954,9 +963,9 @@ function forum_delete_user($user) {
 function move_post($post, $old_thread, $old_forum, $new_thread, $new_forum) {
     global $g_logged_in_user;
     $post->update("thread=$new_thread->id");
-    $old_thread->update("replies=replies-1");
+    $old_thread->update("replies=if(replies>0, replies-1, 0)");
     $new_thread->update("replies=replies+1");
-    $old_forum->update("posts=posts-1");
+    $old_forum->update("posts=if(posts>0, posts-1, 0)");
     $new_forum->update("posts=posts+1");
     update_thread_timestamp($old_thread);
     update_thread_timestamp($new_thread);
@@ -969,7 +978,7 @@ function move_post($post, $old_thread, $old_forum, $new_thread, $new_forum) {
 function hide_thread($thread, $forum) {
     $ret = $thread->update("hidden=1");
     if (!$ret) return $ret;
-    $forum->update("threads=threads-1");
+    $forum->update("threads=if(threads>0, threads-1, 0)");
     $forum->update("posts=posts-$thread->replies-1");
     update_forum_timestamp($forum);
     return true;
@@ -985,7 +994,7 @@ function unhide_thread($thread, $forum) {
 
 function move_thread($thread, $old_forum, $new_forum) {
     $now = time();
-    $old_forum->update("threads=threads-1, posts=posts-$thread->replies-1");
+    $old_forum->update("threads=if(threads>0, threads-1, 0), posts=posts-$thread->replies-1");
     $new_forum->update("threads=threads+1, posts=posts+$thread->replies+1, timestamp=$now");
     return $thread->update("forum=$new_forum->id");
 }
@@ -1176,14 +1185,14 @@ function check_post_access($user, $forum) {
     // no need to make it easy for them to break the system.
     //
     if ($user->total_credit<$forum->post_min_total_credit || $user->expavg_credit<$forum->post_min_expavg_credit) {
-        error_page(tra("In order to create a new thread in %1 you must have a certain amount of credit. This is to prevent and protect against abuse of the system.", $forum->title));
+        error_page(tra("To create a new thread in %1 you must have a certain level of average credit. This is to protect against abuse of the system.", $forum->title));
     }
 
     // If the user is posting faster than forum regulations allow
     // Tell the user to wait a while before creating any more posts
     //
     if (time()-$user->prefs->last_post <$forum->post_min_interval) {
-        error_page(tra("You cannot create any more threads right now. Please wait a while before trying again. This delay has been enforced to protect against abuse of the system."));
+        error_page(tra("You cannot create threads right now. Please wait before trying again. This is to protect against abuse of the system."));
     }
 }
 
@@ -1298,7 +1307,7 @@ function subscribe_rss($notify, &$title, &$msg, &$url) {
     $thread = BoincThread::lookup_id($notify->opaque);
     $title = tra("New posts in subscribed thread");
     $msg = tra("There are new posts in the thread '%1'",$thread->title);
-    $url = URL_BASE."forum_thread.php?id=$thread->id";
+    $url = secure_url_base()."forum_thread.php?id=$thread->id";
 }
 
 function show_mark_as_read_button($user) {

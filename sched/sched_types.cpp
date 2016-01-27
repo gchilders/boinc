@@ -177,6 +177,48 @@ void WORK_REQ::add_no_work_message(const char* message) {
     no_work_messages.push_back(USER_MESSAGE(message, "notice"));
 }
 
+SCHEDULER_REQUEST::SCHEDULER_REQUEST() {
+    clear();
+}
+
+void SCHEDULER_REQUEST::clear() {
+    strcpy(authenticator, "");
+    strcpy(cross_project_id, "");
+    hostid = 0;
+    core_client_major_version = 0;
+    core_client_minor_version = 0;
+    core_client_release = 0;
+    core_client_version = 0;
+    rpc_seqno = 0;
+    work_req_seconds = 0;
+    cpu_req_secs = 0;
+    cpu_req_instances = 0;
+    resource_share_fraction = 0;
+    rrs_fraction = 0;
+    prrs_fraction = 0;
+    cpu_estimated_delay = 0;
+    duration_correction_factor = 0;
+    uptime = 0;
+    previous_uptime = 0;
+    strcpy(global_prefs_xml, "");
+    strcpy(working_global_prefs_xml, "");
+    strcpy(code_sign_key, "");
+    dont_send_work = false;
+    strcpy(client_brand, "");
+    global_prefs.defaults();
+    strcpy(global_prefs_source_email_hash, "");
+    results_truncated = false;
+    have_other_results_list = false;
+    have_ip_results_list = false;
+    have_time_stats_log = false;
+    client_cap_plan_class = false;
+    sandbox = -1;
+    allow_multiple_clients = -1;
+    using_weak_auth = false;
+    last_rpc_dayofyear = 0;
+    current_rpc_dayofyear = 0;
+}
+
 // return an error message or NULL
 //
 const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
@@ -220,7 +262,9 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
         return "xp.get_tag() failed";
     }
     if (xp.match_tag("?xml")) {
-        xp.get_tag();
+        if (xp.get_tag()) {
+            return "xp.get_tag() failed";
+        }
     }
     if (!xp.match_tag("scheduler_request")) return "no start tag";
     while (!xp.get_tag()) {
@@ -233,7 +277,7 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
             continue;
         }
         if (xp.parse_str("cross_project_id", cross_project_id, sizeof(cross_project_id))) continue;
-        if (xp.parse_int("hostid", hostid)) continue;
+        if (xp.parse_long("hostid", hostid)) continue;
         if (xp.parse_int("rpc_seqno", rpc_seqno)) continue;
         if (xp.parse_double("uptime", uptime)) continue;
         if (xp.parse_double("previous_uptime", previous_uptime)) continue;
@@ -255,13 +299,17 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
                     if (retval) {
                         if (!strcmp(platform.name, "anonymous")) {
                             if (retval == ERR_NOT_FOUND) {
-                                g_reply->insert_message(
-                                    _("Unknown app name in app_info.xml"),
-                                    "notice"
+                                char buf[1024];
+                                snprintf(buf, sizeof(buf),
+                                    "Unknown app name %s in app_info.xml",
+                                    cav.app_name
+
                                 );
+                                buf[1023] = 0;
+                                g_reply->insert_message(buf, "notice");
                             } else {
                                 g_reply->insert_message(
-                                    _("Syntax error in app_info.xml"),
+                                    "Syntax error in app_info.xml",
                                     "notice"
                                 );
                             }
@@ -322,8 +370,12 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
             continue;
         }
         if (xp.match_tag("time_stats_log")) {
-            handle_time_stats_log(xp.f->f);
-            have_time_stats_log = true;
+            if (handle_time_stats_log(xp.f->f)) {
+                log_messages.printf(MSG_NORMAL,
+                    "SCHEDULER_REQUEST::parse(): Couldn't parse contents of <time_stats_log>. Ignoring it.");
+            } else {
+                have_time_stats_log = true;
+            }
             continue;
         }
         if (xp.match_tag("net_stats")) {
@@ -481,7 +533,7 @@ int SCHEDULER_REQUEST::write(FILE* fout) {
         "  <authenticator>%s</authentiicator>\n"
         "  <platform_name>%s</platform_name>\n"
         "  <cross_project_id>%s</cross_project_id>\n"
-        "  <hostid>%d</hostid>\n"
+        "  <hostid>%lu</hostid>\n"
         "  <core_client_major_version>%d</core_client_major_version>\n"
         "  <core_client_minor_version>%d</core_client_minor_version>\n"
         "  <core_client_release>%d</core_client_release>\n"
@@ -535,7 +587,7 @@ int SCHEDULER_REQUEST::write(FILE* fout) {
   
     fprintf(fout,
         "  <host>\n"
-        "    <id>%d</id>\n"
+        "    <id>%lu</id>\n"
         "    <rpc_time>%d</rpc_time>\n"
         "    <timezone>%d</timezone>\n"
         "    <d_total>%.15f</d_total>\n"
@@ -679,7 +731,7 @@ int SCHEDULER_REPLY::write(FILE* fout, SCHEDULER_REQUEST& sreq) {
         fprintf(fout, "<request_delay>%f</request_delay>\n", request_delay);
     }
     log_messages.printf(MSG_NORMAL,
-        "Sending reply to [HOST#%d]: %d results, delay req %.2f\n",
+        "Sending reply to [HOST#%lu]: %d results, delay req %.2f\n",
         host.id, wreq.njobs_sent, request_delay
     );
 
@@ -761,7 +813,7 @@ int SCHEDULER_REPLY::write(FILE* fout, SCHEDULER_REQUEST& sreq) {
     if (user.id) {
         xml_escape(user.name, buf, sizeof(buf));
         fprintf(fout,
-            "<userid>%d</userid>\n"
+            "<userid>%lu</userid>\n"
             "<user_name>%s</user_name>\n"
             "<user_total_credit>%f</user_total_credit>\n"
             "<user_expavg_credit>%f</user_expavg_credit>\n"
@@ -806,7 +858,7 @@ int SCHEDULER_REPLY::write(FILE* fout, SCHEDULER_REQUEST& sreq) {
     }
     if (hostid) {
         fprintf(fout,
-            "<hostid>%d</hostid>\n",
+            "<hostid>%lu</hostid>\n",
             hostid
         );
     }
@@ -826,7 +878,7 @@ int SCHEDULER_REPLY::write(FILE* fout, SCHEDULER_REQUEST& sreq) {
     if (team.id) {
         xml_escape(team.name, buf, sizeof(buf));
         fprintf(fout,
-            "<teamid>%d</teamid>\n"
+            "<teamid>%lu</teamid>\n"
             "<team_name>%s</team_name>\n",
             team.id,
             buf
@@ -1065,7 +1117,7 @@ int APP_VERSION::write(FILE* fout) {
     safe_strcpy(buf, xml_doc);
     char* p = strstr(buf, "</app_version>");
     if (!p) {
-        fprintf(stderr, "ERROR: app version %d XML has no end tag!\n", id);
+        fprintf(stderr, "ERROR: app version %lu XML has no end tag!\n", id);
         return -1;
     }
     *p = 0;
@@ -1138,7 +1190,7 @@ int SCHED_DB_RESULT::write_to_client(FILE* fout) {
     safe_strcpy(buf, xml_doc_in);
     char* p = strstr(buf, "</result>");
     if (!p) {
-        fprintf(stderr, "ERROR: result %d XML has no end tag!\n", id);
+        fprintf(stderr, "ERROR: result %lu XML has no end tag!\n", id);
         return -1;
     }
     *p = 0;
@@ -1418,10 +1470,10 @@ void GUI_URLS::get_gui_urls(USER& user, HOST& host, TEAM& team, char* buf, int l
     if (!text) return;
     strlcpy(buf, text, len);
 
-    sprintf(userid, "%d", user.id);
-    sprintf(hostid, "%d", host.id);
+    sprintf(userid, "%lu", user.id);
+    sprintf(hostid, "%lu", host.id);
     if (user.teamid) {
-        sprintf(teamid, "%d", team.id);
+        sprintf(teamid, "%lu", team.id);
     } else {
         strcpy(teamid, "0");
         while (remove_element(buf, "<ifteam>", "</ifteam>")) {
@@ -1457,28 +1509,28 @@ void get_weak_auth(USER& user, char* buf) {
     char buf2[1024], out[256];
     sprintf(buf2, "%s%s", user.authenticator, user.passwd_hash);
     md5_block((unsigned char*)buf2, strlen(buf2), out);
-    sprintf(buf, "%d_%s", user.id, out);
+    sprintf(buf, "%lu_%s", user.id, out);
 }
 
 void get_rss_auth(USER& user, char* buf) {
     char buf2[256], out[256];
     sprintf(buf2, "%s%s%s", user.authenticator, user.passwd_hash, "notify_rss");
     md5_block((unsigned char*)buf2, strlen(buf2), out);
-    sprintf(buf, "%d_%s", user.id, out);
+    sprintf(buf, "%lu_%s", user.id, out);
 }
 
 void read_host_app_versions() {
     DB_HOST_APP_VERSION hav;
     char clause[256];
 
-    sprintf(clause, "where host_id=%d", g_reply->host.id);
+    sprintf(clause, "where host_id=%lu", g_reply->host.id);
     while (!hav.enumerate(clause)) {
         g_wreq->host_app_versions.push_back(hav);
     }
     g_wreq->host_app_versions_orig = g_wreq->host_app_versions;
 }
 
-DB_HOST_APP_VERSION* gavid_to_havp(int gavid) {
+DB_HOST_APP_VERSION* gavid_to_havp(DB_ID_TYPE gavid) {
     for (unsigned int i=0; i<g_wreq->host_app_versions.size(); i++) {
         DB_HOST_APP_VERSION& hav = g_wreq->host_app_versions[i];
         if (hav.app_version_id == gavid) return &hav;

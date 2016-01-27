@@ -80,6 +80,7 @@ int LOG_FLAGS::parse(XML_PARSER& xp) {
         if (xp.parse_bool("heartbeat_debug", heartbeat_debug)) continue;
         if (xp.parse_bool("http_debug", http_debug)) continue;
         if (xp.parse_bool("http_xfer_debug", http_xfer_debug)) continue;
+	if (xp.parse_bool("idle_detection_debug", idle_detection_debug)) continue;
         if (xp.parse_bool("mem_usage_debug", mem_usage_debug)) continue;
         if (xp.parse_bool("network_status_debug", network_status_debug)) continue;
         if (xp.parse_bool("notice_debug", notice_debug)) continue;
@@ -127,6 +128,7 @@ int LOG_FLAGS::write(MIOFILE& out) {
         "        <heartbeat_debug>%d</heartbeat_debug>\n"
         "        <http_debug>%d</http_debug>\n"
         "        <http_xfer_debug>%d</http_xfer_debug>\n"
+	"        <idle_detection_debug>%d</idle_detection_debug>\n"
         "        <mem_usage_debug>%d</mem_usage_debug>\n"
         "        <network_status_debug>%d</network_status_debug>\n"
         "        <notice_debug>%d</notice_debug>\n"
@@ -167,6 +169,7 @@ int LOG_FLAGS::write(MIOFILE& out) {
         heartbeat_debug ? 1 : 0,
         http_debug ? 1 : 0,
         http_xfer_debug ? 1 : 0,
+	idle_detection_debug ? 1 : 0,
         mem_usage_debug ? 1 : 0,
         network_status_debug ? 1 : 0,
         notice_debug ? 1 : 0,
@@ -192,6 +195,7 @@ int LOG_FLAGS::write(MIOFILE& out) {
 }
 
 CC_CONFIG::CC_CONFIG() {
+    defaults();
 }
 
 // this is called first thing by client
@@ -208,6 +212,7 @@ void CC_CONFIG::defaults() {
     disallow_attach = false;
     dont_check_file_sizes = false;
     dont_contact_ref_site = false;
+    lower_client_priority = false;
     dont_suspend_nci = false;
     dont_use_vbox = false;
     exclude_gpus.clear();
@@ -238,6 +243,8 @@ void CC_CONFIG::defaults() {
     no_info_fetch = false;
     no_priority_change = false;
     os_random_only = false;
+    process_priority = -1;
+    process_priority_special = -1;
     proxy_info.clear();
     rec_half_life = 10*86400;
 #ifdef ANDROID
@@ -339,6 +346,7 @@ int CC_CONFIG::parse_options(XML_PARSER& xp) {
         if (xp.parse_bool("disallow_attach", disallow_attach)) continue;
         if (xp.parse_bool("dont_check_file_sizes", dont_check_file_sizes)) continue;
         if (xp.parse_bool("dont_contact_ref_site", dont_contact_ref_site)) continue;
+        if (xp.parse_bool("lower_client_priority", lower_client_priority)) continue;
         if (xp.parse_bool("dont_suspend_nci", dont_suspend_nci)) continue;
         if (xp.parse_bool("dont_use_vbox", dont_use_vbox)) continue;
         if (xp.match_tag("exclude_gpu")) {
@@ -405,6 +413,8 @@ int CC_CONFIG::parse_options(XML_PARSER& xp) {
         if (xp.parse_bool("no_info_fetch", no_info_fetch)) continue;
         if (xp.parse_bool("no_priority_change", no_priority_change)) continue;
         if (xp.parse_bool("os_random_only", os_random_only)) continue;
+        if (xp.parse_int("process_priority", process_priority)) continue;
+        if (xp.parse_int("process_priority_special", process_priority_special)) continue;
 #ifndef SIM
         if (xp.match_tag("proxy_info")) {
             proxy_info.parse_config(xp);
@@ -543,11 +553,13 @@ int CC_CONFIG::write(MIOFILE& out, LOG_FLAGS& log_flags) {
         "        <disallow_attach>%d</disallow_attach>\n"
         "        <dont_check_file_sizes>%d</dont_check_file_sizes>\n"
         "        <dont_contact_ref_site>%d</dont_contact_ref_site>\n"
+        "        <lower_client_priority>%d</lower_client_priority>\n"
         "        <dont_suspend_nci>%d</dont_suspend_nci>\n"
         "        <dont_use_vbox>%d</dont_use_vbox>\n",
         disallow_attach,
         dont_check_file_sizes,
         dont_contact_ref_site,
+        lower_client_priority,
         dont_suspend_nci,
         dont_use_vbox
     );
@@ -625,7 +637,9 @@ int CC_CONFIG::write(MIOFILE& out, LOG_FLAGS& log_flags) {
         "        <no_gpus>%d</no_gpus>\n"
         "        <no_info_fetch>%d</no_info_fetch>\n"
         "        <no_priority_change>%d</no_priority_change>\n"
-        "        <os_random_only>%d</os_random_only>\n",
+        "        <os_random_only>%d</os_random_only>\n"
+        "        <process_priority>%d</process_priority>\n"
+        "        <process_priority_special>%d</process_priority_special>\n",
         max_event_log_lines,
         max_file_xfers,
         max_file_xfers_per_project,
@@ -638,7 +652,9 @@ int CC_CONFIG::write(MIOFILE& out, LOG_FLAGS& log_flags) {
         no_gpus,
         no_info_fetch,
         no_priority_change,
-        os_random_only
+        os_random_only,
+        process_priority,
+        process_priority_special
     );
     
     proxy_info.write(out);

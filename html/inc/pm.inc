@@ -106,10 +106,10 @@ $content
 
 --------------------------
 To delete or respond to this message, visit:
-".URL_BASE."pm.php
+".secure_url_base()."pm.php
 
 To change email preferences, visit:
-".URL_BASE."edit_forum_preferences_form.php
+".secure_url_base()."edit_forum_preferences_form.php
 Do not reply to this message.
 " ;
     send_email($to_user, "[".PROJECT."] - private message", $message);
@@ -129,7 +129,7 @@ function pm_web_line($notify) {
     return "<a href=pm.php>".tra("Private message%1 from %2, subject:" , "</a>", $from_user->name )." $pm->subject";
 }
 
-function pm_send($from_user, $to_user, $subject, $content, $send_email) {
+function pm_send_msg($from_user, $to_user, $subject, $content, $send_email) {
     $sql_subject = BoincDb::escape_string(sanitize_tags($subject));
     $sql_content = BoincDb::escape_string($content);
     $mid = BoincPrivateMessage::insert("(userid, senderid, date, subject, content) VALUES ($to_user->id, $from_user->id, UNIX_TIMESTAMP(), '$sql_subject', '$sql_content')");
@@ -202,8 +202,8 @@ function pm_rss($notify, &$title, &$msg, &$url) {
         return;
     }
     $title = tra("Private message");
-    $msg = "You have received a <a href=".URL_BASE."pm.php>private message</a>.";
-    $url = URL_BASE."pm.php";
+    $msg = "You have received a <a href=".secure_url_base()."pm.php>private message</a>.";
+    $url = secure_url_base()."pm.php";
 }
 
 function pm_delete_user($user) {

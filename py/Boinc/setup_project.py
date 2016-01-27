@@ -8,7 +8,7 @@
 import boinc_path_config
 from Boinc import database, db_mid, configxml, tools
 from Boinc.boinc_db import *
-import os, sys, glob, time, shutil, re, random, socket
+import os, sys, glob, time, shutil, re, random
 
 class Options:
     pass
@@ -305,12 +305,6 @@ def install_boinc_files(dest_dir, install_web_files, install_server_files):
 
     create_project_dirs(dest_dir);
 
-    # make a symbolic link from html/user/user_profile to html/user_profile
-    try:
-        my_symlink(dir('html/user_profile'), dir('html/user/user_profile'));
-    except:
-        pass
-
     # copy html/ops files in all cases.
     # The critical one is db_update.php,
     # which is needed even for a server_only upgrade
@@ -454,13 +448,16 @@ class Project:
                  project_dir=None, key_dir=None,
                  master_url=None,
                  db_name=None,
+                 host=None,
                  web_only=False,
+                 no_db=False,
                  production=False
                  ):
         init()
 
         self.production     = production
         self.web_only       = web_only
+        self.no_db          = no_db
         self.short_name     = short_name
         self.long_name      = long_name or 'Project ' + self.short_name.replace('_',' ').capitalize()
 
@@ -478,8 +475,7 @@ class Project:
         config.db_host = options.db_host
         config.shmem_key = generate_shmem_key()
         config.uldl_dir_fanout = 1024
-        local_host = socket.gethostname()
-        config.host = local_host.split('.')[0]
+        config.host = host
         config.min_sendwork_interval = 0
         config.max_wus_to_send = 50
         config.daily_result_quota = 500
@@ -570,20 +566,20 @@ class Project:
             install(srcdir('test/uc_result'), self.dir('templates/uc_result'))
             install(srcdir('test/uc_wu_nodelete'), self.dir('templates/uc_wu'))
 
-        my_symlink(self.config.config.download_dir, self.dir('html', 'user', 'download'))
-        my_symlink('../stats', self.dir('html/user/stats'))
-
         f = open(self.dir('html/user', 'schedulers.txt'), 'w')
         print >>f, "<!-- <scheduler>" + self.scheduler_url.strip() + "</scheduler> -->"
         print >>f, "<link rel=\"boinc_scheduler\" href=\"" + self.scheduler_url.strip()+ "\">"
         f.close()
 
-        verbose_echo(1, "Setting up database")
-        database.create_database(
-            srcdir = options.srcdir,
-            config = self.config.config,
-            drop_first = options.drop_db_first
-            )
+        if self.no_db:
+            verbose_echo(1, "Not setting up database (--no_db was specified)")
+        else:
+            verbose_echo(1, "Setting up database")
+            database.create_database(
+                srcdir = options.srcdir,
+                config = self.config.config,
+                drop_first = options.drop_db_first
+                )
 
         verbose_echo(1, "Writing config files")
 
