@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
     
      while (!wu.enumerate(buf)) {
            count++;
-           printf("Workunit id %d to userid %d\n",wu.id,userid);
+           printf("Workunit id %lu to userid %d\n",wu.id,userid);
            retval = restrict_wu_to_user(wu, userid); 
            if (retval) {
                fprintf(stderr, "restrict_wu_to_user() failed: %s\n", boincerror(retval));

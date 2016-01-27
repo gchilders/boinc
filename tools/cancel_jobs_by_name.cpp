@@ -56,7 +56,7 @@ int main(int argc, char** argv) {
     
      while (!wu.enumerate(buf)) {
            count++;
-           printf("Canceling %d\n",wu.id);
+           printf("Canceling %lu\n",wu.id);
            retval = cancel_jobs(wu.id, wu.id);; 
            if (retval) {
                fprintf(stderr, "cancel_jobs() failed: %s\n", boincerror(retval));
