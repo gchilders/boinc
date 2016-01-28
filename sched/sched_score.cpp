@@ -128,7 +128,7 @@ bool JOB::get_score(WU_RESULT& wu_result) {
         }
     }
 
-    score += wu_result.res_priority;
+    // score += wu_result.res_priority;  // DISABLED AT NFSatHOME
 
     if (config.debug_send_job) {
         log_messages.printf(MSG_NORMAL,
