@@ -109,14 +109,10 @@ function display_team_page($team, $user) {
     if (!no_computing()) {
         row2(tra('Total credit'), format_credit_large($team->total_credit));
         row2(tra('Recent average credit'), format_credit_large($team->expavg_credit));
-
-        // display app credits
-
         if (function_exists('project_team_credit')) {
-             project_team_credit($team);
+            project_team_credit($team);
         }
         show_badges_row(false, $team);
-
 
         $x = "";
         shuffle($team_name_sites);
@@ -225,7 +221,8 @@ function display_team_members($team, $offset, $sort_by) {
 
     start_table();
     echo '<tr>
-        <th>'.tra('Name').'</th>';
+        <th>'.tra('Name').'</th>
+    ';
     if (!no_computing()) {
         if ($nosort) {
             echo '

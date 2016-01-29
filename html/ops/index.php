@@ -118,7 +118,6 @@ echo "
         <li><a href=\"job_times.php\">FLOP count statistics</a>
         <li><a href=\"$stripchart_cgi_url/stripchart.cgi\">Stripcharts</a>
         <li><a href=\"show_log.php\">Show/Grep logs</a>
-	<li><a href=\"manage_e.php\">Manage e numbers</a>
         <li>
             <form method=\"get\" action=\"clear_host.php\">
             <input class=\"btn btn-default\" type=\"submit\" value=\"Clear RPC seqno\">

@@ -774,7 +774,6 @@ struct VDA_CHUNK_HOST {
     void print_status(int level);
 };
 
-
 struct BADGE {
     DB_ID_TYPE id;
     double create_time;
