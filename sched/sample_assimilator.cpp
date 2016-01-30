@@ -81,7 +81,7 @@ int assimilate_handler(
                 copy_path = config.project_path("sample_results/%s_%d", wu.name, i);
             }
             retval = boinc_copy(fi.path.c_str() , copy_path);
-            if (!retval) {
+            if (!retval || retval==ERR_CHOWN || retval==ERR_CHMOD) {
                 file_copied = true;
             }
         }
