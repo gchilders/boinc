@@ -191,7 +191,7 @@ function show_status_html($x) {
     table_header(tra("Last 24 hours"), "#");
     item_html("14e results completed", $j->a14e_past_24_hours);
     item_html("15e results completed", $j->a15e_past_24_hours);
-    item_html("16e results completed", $j->a16e_past_24_hours);
+    // item_html("16e results completed", $j->a16e_past_24_hours);
     item_html("16e v5 results completed", $j->a16ev5_past_24_hours);
     item_html("Total credit granted", $j->credit_past_24_hours);
     end_table();
