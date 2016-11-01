@@ -543,6 +543,7 @@ const char* boincerror(int which_error) {
         case ERR_NEED_HTTPS: return "HTTPS needed";
         case ERR_CHMOD : return "chmod() failed";
         case ERR_STAT : return "stat() failed";
+        case ERR_FCLOSE : return "fclose() failed";
         case HTTP_STATUS_NOT_FOUND: return "HTTP file not found";
         case HTTP_STATUS_PROXY_AUTH_REQ: return "HTTP proxy authentication failure";
         case HTTP_STATUS_RANGE_REQUEST_ERROR: return "HTTP range request error";
@@ -772,8 +773,8 @@ vector<string> split(string s, char delim) {
 // - can't have ..
 //
 bool is_valid_filename(const char* name) {
-    int n = strlen(name);
-    for (int i=0; i<n; i++) {
+    size_t n = strlen(name);
+    for (size_t i=0; i<n; i++) {
         if (iscntrl(name[i])) {
             return false;
         }
