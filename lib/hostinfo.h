@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2018 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _HOSTINFO_
-#define _HOSTINFO_
+#ifndef BOINC_HOSTINFO_H
+#define BOINC_HOSTINFO_H
 
 // Description of a host's hardware and software.
 // This is used a few places:
@@ -31,6 +31,16 @@
 #include "miofile.h"
 #include "coproc.h"
 #include "common_defs.h"
+
+enum LINUX_OS_INFO_PARSER {
+    lsbrelease,
+    osrelease,
+    redhatrelease
+};
+
+const char command_lsbrelease[] = "/usr/bin/lsb_release -a 2>&1";
+const char file_osrelease[] = "/etc/os-release";
+const char file_redhatrelease[] = "/etc/redhat-release";
 
 // if you add fields, update clear_host_info()
 
@@ -61,8 +71,13 @@ public:
 
     char os_name[256];
     char os_version[256];
+
+    // WSL information for Win10 only
+    bool os_wsl_enabled;
+    char os_wsl_name[256];
+    char os_wsl_version[256];
+
     char product_name[256];       // manufacturer and/or model of system
-                                  // currently used for Android devices
     char mac_address[256];      // MAC addr e.g. 00:00:00:00:00:00
                                 // currently populated for Android
 
@@ -100,9 +115,23 @@ public:
     void clear_host_info();
     void make_random_string(const char* salt, char* out);
     void generate_host_cpid();
+    static bool parse_linux_os_info(FILE* file, const LINUX_OS_INFO_PARSER parser,
+        char* os_name, const int os_name_size, char* os_version, const int os_version_size);
+    static bool parse_linux_os_info(const std::string& line, const LINUX_OS_INFO_PARSER parser,
+        char* os_name, const int os_name_size, char* os_version, const int os_version_size);
+    static bool parse_linux_os_info(const std::vector<std::string>& lines, const LINUX_OS_INFO_PARSER parser,
+        char* os_name, const int os_name_size, char* os_version, const int os_version_size);
 };
 
+#ifdef _WIN32
+int get_wsl_information(
+    bool& wsl_enabled, char* wsl_os_name, const int wsl_os_name_size, char* wsl_os_version, const int wsl_os_version_size
+);
+#endif
+
 #ifdef __APPLE__
+    int get_system_uptime();
+
 #ifdef __cplusplus
 extern "C" {
 #endif

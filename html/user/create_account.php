@@ -22,8 +22,9 @@ require_once("../inc/boinc_db.inc");
 require_once("../inc/util.inc");
 require_once("../inc/email.inc");
 require_once("../inc/xml.inc");
-require_once("../inc/user.inc");
+require_once("../inc/user_util.inc");
 require_once("../inc/team.inc");
+require_once("../inc/password_compat/password.inc");
 
 xml_header();
 
@@ -67,9 +68,14 @@ if (strlen($passwd_hash) != 32) {
     xml_error(-1, "password hash length not 32");
 }
 
+$tmpuser = BoincUser::lookup_prev_email_addr($email_addr);
+if ($tmpuser) {
+    xml_error(ERR_DB_NOT_UNIQUE);
+}
+
 $user = BoincUser::lookup_email_addr($email_addr);
 if ($user) {
-    if ($user->passwd_hash != $passwd_hash) {
+    if ($user->passwd_hash != $passwd_hash && !password_verify($passwd_hash, $user->passwd_hash)) {
         xml_error(ERR_DB_NOT_UNIQUE);
     } else {
         $authenticator = $user->authenticator;

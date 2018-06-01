@@ -58,7 +58,7 @@ function do_inbox($logged_in_user) {
 
     make_script();
     if (get_int("sent", true) == 1) {
-        echo "<div class=\"notice\">".tra("Your message has been sent.")."</div>\n";
+        echo "<h3>".tra("Your message has been sent.")."</h3>\n";
     }
     $options = get_output_options($logged_in_user);
 
@@ -74,18 +74,18 @@ function do_inbox($logged_in_user) {
             <input type=hidden name=action value=delete_selected>
         ";
         echo form_tokens($logged_in_user->authenticator);
-        start_table();
-        echo "<tr><th>".tra("Subject")."</th><th>".tra("Sender and date")."</th><th>".tra("Message")."</th></tr>\n";
-        $i = 0;
+        start_table('table-striped');
+        row_heading_array(
+            array(tra("Subject"), tra("Sender and date"), tra("Message")),
+            array('style="width: 12em;"', 'style="width: 10em;"', "")
+        );
         foreach($msgs as $msg) {
             $sender = BoincUser::lookup_id($msg->senderid);
             if (!$sender) {
                 $msg->delete();
                 continue;
             }
-            $i++;
-            $class = ($i%2)? "row0": "row1";
-            echo "<tr class=$class>\n";
+            echo "<tr>\n";
             $checkbox = "<input type=checkbox name=pm_select_$msg->id>";
             if (!$msg->opened) {
                 $msg->update("opened=1");
@@ -136,7 +136,7 @@ function do_read($logged_in_user) {
     echo "</td></tr>";
     echo "<tr><th>".tra("Date")."</th><td>".time_str($message->date)."</td></tr>";
     echo "<tr><th>".tra("Message")."</th><td>".output_transform($message->content, $options)."</td></tr>";
-    echo "<tr><td class=\"pm_footer\"></td><td>\n";
+    echo "<tr><td></td><td>\n";
     echo "<a href=\"pm.php?action=new&amp;replyto=$id\">".tra("Reply")."</a>\n";
     echo " &middot; <a href=\"pm.php?action=delete&amp;id=$id\">".tra("Delete")."</a>\n";
     echo " &middot; <a href=\"pm.php?action=inbox\">".tra("Inbox")."</a>\n";
@@ -300,7 +300,7 @@ function do_confirmedblock($logged_in_user) {
     page_head(tra("User %1 blocked", $blocked_user->name));
 
     echo "<div>".tra("User %1 has been blocked from sending you private messages.", $blocked_user->name)."\n";
-    echo tra("To unblock, visit %1message board preferences%2", "<a href=\"edit_forum_preferences_form.php\">", "</a>")."</div>\n";
+    echo tra("To unblock, visit %1 message board preferences %2", "<a href=\"edit_forum_preferences_form.php\">", "</a>")."</div>\n";
     page_tail();
 }
 

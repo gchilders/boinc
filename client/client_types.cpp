@@ -290,7 +290,7 @@ int FILE_INFO::set_permissions(const char* path) {
 //
 int FILE_INFO::parse(XML_PARSER& xp) {
     char buf2[1024];
-    std::string url;
+    string url;
     PERS_FILE_XFER *pfxp;
     int retval;
     bool btemp;
@@ -690,6 +690,7 @@ void FILE_INFO::failure_message(string& s) {
     s = s + "</file_xfer_error>\n";
 }
 
+#ifndef SIM
 #define BUFSIZE 16384
 int FILE_INFO::gzip() {
     char buf[BUFSIZE];
@@ -760,6 +761,7 @@ int FILE_INFO::gunzip(char* md5_buf) {
     delete_project_owned_file(inpath, true);
     return 0;
 }
+#endif  // SIM
 
 void APP_VERSION::init() {
     safe_strcpy(app_name, "");
@@ -768,7 +770,6 @@ void APP_VERSION::init() {
     safe_strcpy(plan_class, "");
     safe_strcpy(api_version, "");
     avg_ncpus = 1;
-    max_ncpus = 1;
     gpu_usage.rsc_type = 0;
     gpu_usage.usage = 0;
     gpu_ram = 0;
@@ -855,7 +856,7 @@ int APP_VERSION::parse(XML_PARSER& xp) {
         if (xp.parse_str("platform", platform, sizeof(platform))) continue;
         if (xp.parse_str("plan_class", plan_class, sizeof(plan_class))) continue;
         if (xp.parse_double("avg_ncpus", avg_ncpus)) continue;
-        if (xp.parse_double("max_ncpus", max_ncpus)) continue;
+        if (xp.parse_double("max_ncpus", dtemp)) continue;
         if (xp.parse_double("flops", dtemp)) {
             if (dtemp <= 0) {
                 msg_printf(0, MSG_INTERNAL_ERROR,
@@ -914,13 +915,11 @@ int APP_VERSION::write(MIOFILE& out, bool write_file_info) {
         "    <version_num>%d</version_num>\n"
         "    <platform>%s</platform>\n"
         "    <avg_ncpus>%f</avg_ncpus>\n"
-        "    <max_ncpus>%f</max_ncpus>\n"
         "    <flops>%f</flops>\n",
         app_name,
         version_num,
         platform,
         avg_ncpus,
-        max_ncpus,
         flops
     );
     if (strlen(plan_class)) {
@@ -1089,6 +1088,7 @@ int FILE_REF::write(MIOFILE& out) {
 int WORKUNIT::parse(XML_PARSER& xp) {
     FILE_REF file_ref;
     double dtemp;
+    char buf[1024];
 
     safe_strcpy(name, "");
     safe_strcpy(app_name, "");
@@ -1124,6 +1124,10 @@ int WORKUNIT::parse(XML_PARSER& xp) {
 #endif
             continue;
         }
+        if (xp.parse_str("job_keyword_ids", buf, sizeof(buf))) {
+            job_keyword_ids.parse_str(buf );
+            continue;
+        }
         // unused stuff
         if (xp.parse_double("credit", dtemp)) continue;
         if (log_flags.unparsed_xml) {
@@ -1137,7 +1141,7 @@ int WORKUNIT::parse(XML_PARSER& xp) {
     return ERR_XML_PARSE;
 }
 
-int WORKUNIT::write(MIOFILE& out) {
+int WORKUNIT::write(MIOFILE& out, bool gui) {
     unsigned int i;
 
     out.printf(
@@ -1169,6 +1173,16 @@ int WORKUNIT::write(MIOFILE& out) {
     }
     for (i=0; i<input_files.size(); i++) {
         input_files[i].write(out);
+    }
+
+    if (!job_keyword_ids.empty()) {
+        if (gui) {
+            if (gstate.keywords.present) {
+                job_keyword_ids.write_xml_text(out, gstate.keywords);
+            }
+        } else {
+            job_keyword_ids.write_xml_num(out);
+        }
     }
     out.printf("</workunit>\n");
     return 0;

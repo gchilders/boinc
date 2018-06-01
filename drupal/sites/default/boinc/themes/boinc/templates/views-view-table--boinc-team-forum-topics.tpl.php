@@ -27,7 +27,6 @@
   $topic_count = count($topics);
   $topic_index = 0;
   $first_non_sticky = FALSE;
-  
 ?>
 
 <table id="forum-topic-<?php print $team_forum_id; ?>">
@@ -42,7 +41,7 @@
     </tr>
   </thead>
   <tbody>
-  <?php foreach ($topics as $topic): ?>
+  <?php foreach ($topics as $id => $topic): ?>
     <?php
       $topic = (object) $topic;
       $author = user_load($topic->uid);
@@ -51,32 +50,32 @@
       if ($topic_index == 1) {
         $row_class .= ' first';
       }
-      if ($topic->sticky=="True") {
+      if ($result[$id]->node_boincteam_forum_node_sticky) {
         $row_class .= ' sticky';
       }
-      elseif (!$first_non_sticky AND !($topic->sticky=="True")) {
+      elseif (!$first_non_sticky AND !($result[$id]->node_boincteam_forum_node_sticky)) {
         $row_class .= ' first-non-sticky';
         $first_non_sticky = TRUE;
       }
       if ($topic_index == $topic_count) {
         $row_class .= ' last';
       }
-      if ($topic->timestamp=="new" OR $topic->new_comments) {
+      if (!empty($topic->timestamp) OR $topic->new_comments) {
         $row_class .= ' updated';
       }
     ?>
     <tr class="<?php print $row_class;?>">
       <td class="icon"><?php //print $topic->icon; ?>
-        <?php if ($topic->sticky=="True"): ?>
-          <span class='fa fa-thumb-tack'></span>
+        <?php if ($result[$id]->node_boincteam_forum_node_sticky): ?>
+          <i class='fas fa-thumbtack'></i>
         <?php endif; ?>
-        <?php if ($topic->comment != "Read/Write"): ?>
-          <span class='fa fa-lock'></span>
+        <?php if ($result[$id]->node_boincteam_forum_node_comment != COMMENT_NODE_READ_WRITE): ?>
+          <i class='fas fa-lock'></i>
         <?php endif; ?>
-        <?php if ($topic->timestamp=="new"): ?>
-            <span class='fa fa-star-o'></span>
+        <?php if (!empty($topic->timestamp)): ?>
+            <i class='far fa-star'></i>
         <?php elseif ($topic->new_comments): ?>
-            <span class='fa fa-bell-o'></span>
+            <i class='far fa-bell'></i>
         <?php endif; ?>
       </td>
       <td class="title" title="<?php print $author->boincuser_name; ?>">
@@ -87,8 +86,8 @@
     <?php else: ?>
       <td class="replies">
         <?php if ($topic->new_comments): ?>
-          <?php preg_match_all('/<a[^>]+href=([\'"])(.+?)\1[^>]*>/i', $topic->new_comments, $result); ?>
-          <a href="<?php print $result[2][0]; ?>">
+          <?php preg_match_all('/<a[^>]+href=([\'"])(.+?)\1[^>]*>/i', $topic->new_comments, $myresult); ?>
+          <a href="<?php print $myresult[2][0]; ?>">
         <?php endif; ?>
         <?php print $topic->comment_count; ?>
         <?php if ($topic->new_comments): ?>

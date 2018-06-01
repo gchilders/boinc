@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef OPENCL_BOINC_H
-#define OPENCL_BOINC_H
+#ifndef BOINC_OPENCL_BOINC_H
+#define BOINC_OPENCL_BOINC_H
 
 #include "cl_boinc.h"
 #include "miofile.h"
@@ -66,7 +66,7 @@ struct OPENCL_DEVICE_PROP {
 
     char opencl_platform_version[64];   // Version of OpenCL supported
                                         // the device's platform
-    char opencl_device_version[64];     // OpenCL version supported by device;
+    char opencl_device_version[128];     // OpenCL version supported by device;
                                         // example: "OpenCL 1.1 beta"
     int opencl_device_version_int;      // same, encoded as e.g. 101
     int get_device_version_int();       // call this to encode
@@ -80,7 +80,9 @@ struct OPENCL_DEVICE_PROP {
     int opencl_device_index;            // zero-based device number within this OpenCL platform
     bool warn_bad_cuda;                 // If true, warn we can't use GPU due to CUDA version
 
+#ifndef _USING_FCGI_
     void write_xml(MIOFILE&, const char* tag, bool temp_file=false);
+#endif
     int parse(XML_PARSER&, const char* end_tag);
     void description(char* buf, int buflen, const char* type);
     void clear() {

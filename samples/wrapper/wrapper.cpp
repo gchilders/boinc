@@ -248,10 +248,11 @@ vector<TASK> daemons;
 //
 void str_replace_all(char* buf, const char* s1, const char* s2) {
     char buf2[64000];
+    const size_t s1_len = strlen(s1);
     while (1) {
         char* p = strstr(buf, s1);
         if (!p) break;
-        strcpy(buf2, p+strlen(s1));
+        strcpy(buf2, p+s1_len);
         strcpy(p, s2);
         strcat(p, buf2);
     }
@@ -306,9 +307,10 @@ void macro_substitute(string &str) {
     fprintf(stderr, "[DEBUG] replacing '%s' with '%s'\n", "$PWD", nt);
 #endif
 #else
-    str_replace_all(str, "$PWD", getenv("PWD"));
+    char cwd[1024];
+    str_replace_all(str, "$PWD", getcwd(cwd, sizeof(cwd)));
 #ifdef DEBUG
-    fprintf(stderr, "[DEBUG] replacing '%s' with '%s'\n", "$PWD", getenv("PWD"));
+    fprintf(stderr, "[DEBUG] replacing '%s' with '%s'\n", "$PWD", getcwd(cwd, sizeof(cwd)));
 #endif
 #endif
 }
@@ -704,6 +706,7 @@ int TASK::run(int argct, char** argvt) {
     }
 
     // resolve "boinc_resolve(...)" phrases in command-line
+    const size_t boinc_resolve_prefix_len = strlen("boinc_resolve(");
     while (1) {
         char lbuf[16384];
         char fname[1024];
@@ -721,7 +724,7 @@ int TASK::run(int argct, char** argvt) {
             exit(1);
         }
         *to = 0;
-        boinc_resolve_filename(from + strlen("boinc_resolve("), fname, sizeof(fname));
+        boinc_resolve_filename(from + boinc_resolve_prefix_len, fname, sizeof(fname));
 #ifdef _WIN32
         if(forward_slashes) {
             backslash_to_slash(fname);

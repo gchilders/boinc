@@ -153,7 +153,7 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
         "    <client_cap_plan_class>1</client_cap_plan_class>\n"
     );
 
-    write_platforms(p, mf);
+    write_platforms(p, mf.f);
 
     if (strlen(p->code_sign_key)) {
         fprintf(f, "    <code_sign_key>\n%s\n</code_sign_key>\n", p->code_sign_key);
@@ -383,6 +383,10 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
         fprintf(f, "    <client_brand>%s</client_brand>\n", client_brand);
     }
 
+    if (acct_mgr_info.using_am()) {
+        acct_mgr_info.user_keywords.write(f);
+    }
+
     fprintf(f, "</scheduler_request>\n");
 
     fclose(f);
@@ -557,7 +561,7 @@ int CLIENT_STATE::handle_scheduler_reply(
     unsigned int i;
     bool signature_valid, update_global_prefs=false, update_project_prefs=false;
     char buf[1024], filename[256];
-    std::string old_gui_urls = project->gui_urls;
+    string old_gui_urls = project->gui_urls;
     PROJECT* p2;
     vector<RESULT*>new_results;
 
@@ -679,10 +683,20 @@ int CLIENT_STATE::handle_scheduler_reply(
     // insert extra elements, write to disk, and parse
     //
     if (sr.global_prefs_xml) {
-        // skip this if we have host-specific prefs
-        // and we're talking to an old scheduler
-        //
-        if (!global_prefs.host_specific || sr.scheduler_version >= 507) {
+        // ignore prefs if we're using prefs from account mgr
+        // BAM! currently has mixed http, https; trim off
+        char* p = strchr(global_prefs.source_project, '/');
+        char* q = strchr(gstate.acct_mgr_info.master_url, '/');
+        if (gstate.acct_mgr_info.using_am() && p && q && !strcmp(p, q)) {
+            if (log_flags.sched_op_debug) {
+                msg_printf(project, MSG_INFO,
+                    "ignoring prefs from project; using prefs from AM"
+                );
+            }
+        } else if (!global_prefs.host_specific || sr.scheduler_version >= 507) {
+            // ignore prefs if we have host-specific prefs
+            // and we're talking to an old scheduler
+            //
             retval = save_global_prefs(
                 sr.global_prefs_xml, project->master_url, scheduler_url
             );
@@ -879,7 +893,6 @@ int CLIENT_STATE::handle_scheduler_reply(
             // update app version attributes in case they changed on server
             //
             avp->avg_ncpus = avpp.avg_ncpus;
-            avp->max_ncpus = avpp.max_ncpus;
             avp->flops = avpp.flops;
             safe_strcpy(avp->cmdline, avpp.cmdline);
             avp->gpu_usage = avpp.gpu_usage;
@@ -919,8 +932,10 @@ int CLIENT_STATE::handle_scheduler_reply(
         workunits.push_back(wup);
     }
     double est_rsc_runtime[MAX_RSC];
+    bool got_work_for_rsc[MAX_RSC];
     for (int j=0; j<coprocs.n_rsc; j++) {
         est_rsc_runtime[j] = 0;
+        got_work_for_rsc[j] = false;
     }
     for (i=0; i<sr.results.size(); i++) {
         RESULT* rp2 = lookup_result(project, sr.results[i].name);
@@ -968,9 +983,11 @@ int CLIENT_STATE::handle_scheduler_reply(
             rp->abort_inactive(EXIT_MISSING_COPROC);
         } else {
             rp->set_state(RESULT_NEW, "handle_scheduler_reply");
+            got_work_for_rsc[0] = true;
             int rt = rp->avp->gpu_usage.rsc_type;
             if (rt > 0) {
                 est_rsc_runtime[rt] += rp->estimated_runtime();
+                got_work_for_rsc[rt] = true;
                 gpus_usable = true;
                     // trigger a check of whether GPU is actually usable
             } else {
@@ -982,6 +999,21 @@ int CLIENT_STATE::handle_scheduler_reply(
         new_results.push_back(rp);
         results.push_back(rp);
     }
+
+    // find the resources for which we requested work and didn't get any
+    // This is currently used for AM starvation mechanism.
+    //
+    if (!sr.too_recent) {
+        for (int j=0; j<coprocs.n_rsc; j++) {
+            RSC_WORK_FETCH& rwf = rsc_work_fetch[j];
+            if (got_work_for_rsc[j]) {
+                project->sched_req_no_work[j] = false;
+            } else if (rwf.req_secs>0 || rwf.req_instances>0) {
+                project->sched_req_no_work[j] = true;
+            }
+        }
+    }
+
     sort_results();
 
     if (log_flags.sched_op_debug) {
@@ -1295,6 +1327,14 @@ PROJECT* CLIENT_STATE::find_project_with_overdue_results(
         }
 
         if (cc_config.report_results_immediately) {
+            return p;
+        }
+
+        if (p->report_results_immediately) {
+            return p;
+        }
+
+        if (r->app->report_results_immediately) {
             return p;
         }
 

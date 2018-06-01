@@ -127,10 +127,7 @@ class BoincDb extends DbConn {
                 if ($generating_xml) {
                     xml_error(-183, "project down for maintenance");
                 } else {
-                    show_page("Project down for maintenance",
-                        "Please check back in a few hours."
-                    );
-                    exit;
+                    show_project_down();
                 }
             }
             self::get_aux($readonly, $fallback_mode);
@@ -138,12 +135,7 @@ class BoincDb extends DbConn {
                 if ($generating_xml) {
                     xml_error(-138, "the project's database server is down");
                 } else {
-                    show_page(
-                        "Project is down",
-                        "The project's database server is down.
-                        Please check back in a few hours."
-                    );
-                    exit;
+                    show_project_down();
                 }
             }
         }
@@ -184,14 +176,18 @@ class BoincUser {
         return self::$cache[$id];
     }
     static function lookup_auth($auth) {
-        $db = BoincDb::get();
         $auth = BoincDb::escape_string($auth);
         return self::lookup("authenticator='$auth'");
     }
     static function lookup_email_addr($email_addr) {
-        $db = BoincDb::get();
-        $email_addr = BoincDb::escape_string($email_addr);
+        $email_addr = strtolower(BoincDb::escape_string($email_addr));
         return self::lookup("email_addr='$email_addr'");
+    }
+    //This is to find email addresses that have changed in the past 7 days.
+    static function lookup_prev_email_addr($email_addr) {
+        $email_addr = strtolower(BoincDb::escape_string($email_addr));
+        $mytime = time() - 604800;
+        return self::lookup("email_addr_change_time > $mytime and previous_email_addr='$email_addr'");
     }
     // name is not necessarily unique
     //
@@ -265,9 +261,9 @@ class BoincTeam {
         $db = BoincDb::get();
         return $db->update($this, 'team', $clause);
     }
-    static function enum($clause, $clause2=null) {
+    static function enum($where_clause, $order_clause=null) {
         $db = BoincDb::get();
-        return $db->enum('team', 'BoincTeam', $clause, $clause2);
+        return $db->enum('team', 'BoincTeam', $where_clause, $order_clause);
     }
     static function lookup($clause) {
         $db = BoincDb::get();
@@ -303,9 +299,13 @@ class BoincTeamDelta {
         $db = BoincDb::get();
         return $db->insert('team_delta', $clause);
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('team_delta', 'BoincTeamDelta', $clause);
+        return $db->enum('team_delta', 'BoincTeamDelta', $where_clause);
+    }
+    static function delete_for_user($user_id) {
+        $db = BoincDb::get();
+        return $db->delete_aux('team_delta', "userid=$user_id");
     }
 }
 
@@ -322,9 +322,9 @@ class BoincHost {
         $db = BoincDb::get();
         return $db->delete($this, 'host');
     }
-    static function enum($clause, $clause2=null) {
+    static function enum($where_clause, $order_clause=null) {
         $db = BoincDb::get();
-        return $db->enum('host', 'BoincHost', $clause, $clause2);
+        return $db->enum('host', 'BoincHost', $where_clause, $order_clause);
     }
     static function enum_fields($fields, $where_clause, $order_clause=null) {
         $db = BoincDb::get();
@@ -335,6 +335,21 @@ class BoincHost {
     static function count($clause) {
         $db = BoincDb::get();
         return $db->count('host', $clause);
+    }
+    static function lookup_cpid($cpid) {
+        $db = BoincDb::get();
+        $cpid = BoincDb::escape_string($cpid);
+        return $db->lookup('host', 'BoincHost', "host_cpid='$cpid'");
+    }
+    static function insert($clause) {
+        $db = BoincDb::get();
+        $ret = $db->insert('host', $clause);
+        if (!$ret) return $ret;
+        return $db->insert_id();
+    }
+    static function delete_for_user($user_id) {
+        $db = BoincDb::get();
+        return $db->delete_aux('host', "userid=$user_id");
     }
 }
 
@@ -347,9 +362,9 @@ class BoincResult {
         $db = BoincDb::get();
         return $db->sum('result', $field, $clause);      
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('result', 'BoincResult', $clause);
+        return $db->enum('result', 'BoincResult', $where_clause);
     }
     static function enum_fields($fields, $where_clause, $order_clause) {
         $db = BoincDb::get();
@@ -393,9 +408,9 @@ class BoincWorkunit {
         if (!$ret) return $ret;
         return $db->insert_id();
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('workunit', 'BoincWorkunit', $clause);
+        return $db->enum('workunit', 'BoincWorkunit', $where_clause);
     }
     function update($clause) {
         $db = BoincDb::get();
@@ -420,9 +435,9 @@ class BoincApp {
         $db = BoincDb::get();
         return $db->lookup('app', 'BoincApp', $clause);
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('app', 'BoincApp', $clause);
+        return $db->enum('app', 'BoincApp', $where_clause);
     }
     static function insert($clause) {
         $db = BoincDb::get();
@@ -441,9 +456,9 @@ class BoincApp {
 }
 
 class BoincAppVersion {
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('app_version', 'BoincAppVersion', $clause);
+        return $db->enum('app_version', 'BoincAppVersion', $where_clause);
     }
     static function lookup($clause) {
         $db = BoincDb::get();
@@ -490,9 +505,9 @@ class BoincProfile {
         $db = BoincDb::get();
         return $db->insert('profile', $clause);
     }
-    static function enum($clause=null, $clause2=null) {
+    static function enum($where_clause=null, $order_clause=null) {
         $db = BoincDb::get();
-        return $db->enum('profile', 'BoincProfile', $clause, $clause2);
+        return $db->enum('profile', 'BoincProfile', $where_clause, $order_clause);
     }
     static function enum_fields($fields, $where_clause=null, $order_clause=null) {
         $db = BoincDb::get();
@@ -513,9 +528,9 @@ class BoincTeamAdmin {
         $db = BoincDb::get();
         return $db->insert('team_admin', $clause);
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('team_admin', 'BoincTeamAdmin', $clause);
+        return $db->enum('team_admin', 'BoincTeamAdmin', $where_clause);
     }
     static function delete($clause) {
         $db = BoincDb::get();
@@ -536,9 +551,9 @@ class BoincPrivateMessage {
         $db = BoincDb::get();
         return $db->update($this, 'private_messages', $clause);
     }
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('private_messages', 'BoincPrivateMessage', $clause);
+        return $db->enum('private_messages', 'BoincPrivateMessage', $where_clause);
     }
     static function insert($clause) {
         $db = BoincDb::get();
@@ -561,9 +576,9 @@ class BoincPrivateMessage {
 }
 
 class BoincPlatform {
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('platform', 'BoincPlatform', $clause);
+        return $db->enum('platform', 'BoincPlatform', $where_clause);
     }
     static function lookup_id($id) {
         $db = BoincDb::get();
@@ -584,9 +599,9 @@ class BoincPlatform {
 }
 
 class BoincHostAppVersion {
-    static function enum($clause) {
+    static function enum($where_clause) {
         $db = BoincDb::get();
-        return $db->enum('host_app_version', 'BoincHostAppVersion', $clause);
+        return $db->enum('host_app_version', 'BoincHostAppVersion', $where_clause);
     }
     static function lookup($host_id, $app_version_id) {
         $db = BoincDb::get();
@@ -598,6 +613,10 @@ class BoincHostAppVersion {
     static function update_aux($clause) {
         $db = BoincDb::get();
         return $db->update_aux('host_app_version', $clause);
+    }
+    static function delete_for_user($user_id) {
+        $db = BoincDb::get();
+        return $db->delete_aux('host_app_version', "host_id in (select id from host where userid = $user_id)");
     }
 }
 
@@ -748,6 +767,10 @@ class BoincCreditUser {
         $db = BoincDb::get();
         $db->delete_aux('credit_user', "userid=$user->id");
     }
+    static function get_list($where_clause, $order_clause, $limit) {
+        $db = BoincDB::get();
+        return $db->get_list('user', 'credit_user', 'id', 'userid', 'BoincCreditUser', '*', $where_clause, $order_clause, $limit);
+    }
 }
 
 class BoincCreditTeam {
@@ -767,7 +790,100 @@ class BoincCreditTeam {
         $db = BoincDb::get();
         return $db->update_aux('credit_team', $clause);
     }
+    static function get_list($where_clause, $order_clause, $limit) {
+        $db = BoincDB::get();
+        return $db->get_list('team', 'credit_team', 'id', 'teamid', 'BoincCreditTeam', '*', $where_clause, $order_clause, $limit);
+    }
 }
+
+class BoincToken {
+
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('token', 'BoincToken', $clause);
+    }
+    
+    static function lookup_valid_token($userid, $token, $type) {
+        $db = BoincDb::get();
+        $token = BoincDb::escape_string($token);
+        $type = BoincDb::escape_string($type);
+        $now = time();
+        return self::lookup("userid=$userid and token='$token' and expire_time > $now and type = '$type'");
+    }
+    
+    static function enum($where_clause) {
+        $db = BoincDb::get();
+        return $db->enum('token', 'BoincToken', $where_clause);
+    }
+
+    static function insert($clause) {
+        $db = BoincDb::get();
+        return $db->insert('token', $clause);
+    }
+
+    static function get_list($where_clause, $order_clause, $limit) {
+        $db = BoincDB::get();
+        return $db->get_list('token', 'userid', 'type', 'create_time', 'expire_time', 'BoincToken', '*', $where_clause, $order_clause, $limit);
+    }
+
+    static function delete_token($where_clause) {
+        $db = BoincDb::get();
+        $db->delete_aux('token', $where_clause);
+        return $db->affected_rows();
+    }
+    
+    static function delete_expired() {
+        $db = BoincDb::get();
+        $now = time();
+        $db->delete_aux('token', "expire_time < $now");
+        return $db->affected_rows();
+    }
+
+    static function delete_for_user($user_id) {
+        $db = BoincDb::get();
+        $db->delete_aux('token', "userid=$user_id");
+        return $db->affected_rows();
+    }
+
+}
+
+class BoincUserDeleted {
+    
+    static function insert_user($user) {
+        $now = time();
+        $cpid = md5($user->cross_project_id.$user->email_addr);
+        $clause = "(userid, public_cross_project_id, create_time) values ($user->id, '$cpid', $now)";
+        $db = BoincDb::get();
+        return $db->insert('user_deleted', $clause);
+    }
+    
+    static function delete_expired() {
+        $db = BoincDb::get();
+        $expire_time = time() - 60*86400; //60 days ago
+        $db->delete_aux('user_deleted', "create_time < $expire_time");
+        return $db->affected_rows();
+    }
+
+}
+
+class BoincHostDeleted {
+    
+    static function insert_hosts_for_user($user) {
+        $now = time();
+        $clause = "select id, host_cpid, $now from host where userid = $user->id";
+        $db = BoincDb::get();
+        return $db->insert('host_deleted', $clause);
+    }
+    
+    static function delete_expired() {
+        $db = BoincDb::get();
+        $expire_time = time() - 60*86400; //60 days ago
+        $db->delete_aux('host_deleted', "create_time < $expire_time");
+        return $db->affected_rows();
+    }
+
+}
+
 
 // DEPRECATED: use BoincDb::escape_string where possible
 // 

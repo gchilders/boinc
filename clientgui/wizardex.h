@@ -14,8 +14,8 @@
 // Licence:     wxWindows licence
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef _WX_WIZARDEX_H_
-#define _WX_WIZARDEX_H_
+#ifndef BOINC_WIZARDEX_H
+#define BOINC_WIZARDEX_H
 
 // ----------------------------------------------------------------------------
 // headers and other simple declarations
@@ -59,6 +59,8 @@ public:
     // user chooses "Back" or "Next" button
     virtual wxWizardPageEx *GetPrev() const = 0;
     virtual wxWizardPageEx *GetNext() const = 0;
+
+    virtual void RefreshPage();
 
 #if wxUSE_VALIDATORS
     /// Override the base functions to allow a validator to be assigned to this page.
@@ -217,6 +219,8 @@ private:
 
     void OnWizEvent(wxWizardExEvent& event);
 
+    void OnShowEvent(wxShowEvent& event);
+
     void AddBitmapRow(wxBoxSizer *mainColumn);
     void AddStaticLine(wxBoxSizer *mainColumn);
     void AddBackNextPair(wxBoxSizer *buttonRow);
@@ -230,6 +234,8 @@ private:
 
     // wizard state
     wxWizardPageEx *m_page;       // the current page or NULL
+
+    bool m_pageRefreshed;
 
     // wizard controls
 protected:
@@ -334,4 +340,4 @@ typedef void (wxEvtHandler::*wxWizardExEventFunction)(wxWizardExEvent&);
 #define EVT_WIZARDEX_HELP(id, fn) wx__DECLARE_WIZARDEXEVT(HELP, id, fn)
 
 
-#endif // _WX_WIZARDEX_H_
+#endif

@@ -17,8 +17,13 @@
 
 // a C++ interface to BOINC GUI RPC
 
-#ifndef _GUI_RPC_CLIENT_H_
-#define _GUI_RPC_CLIENT_H_
+#ifndef BOINC_GUI_RPC_CLIENT_H
+#define BOINC_GUI_RPC_CLIENT_H
+
+#ifdef _WIN32
+#include "boinc_win.h"
+#endif
+#include "config.h"
 
 #if !defined(_WIN32) || defined (__CYGWIN__)
 #include <cstdio>
@@ -30,8 +35,9 @@
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <locale.h>
 #endif
+
+#include <locale.h>
 
 #include <deque>
 
@@ -39,6 +45,7 @@
 #include "common_defs.h"
 #include "filesys.h"
 #include "hostinfo.h"
+#include "keyword.h"
 #include "miofile.h"
 #include "network.h"
 #include "notice.h"
@@ -232,6 +239,7 @@ struct WORKUNIT {
     double rsc_disk_bound;
     PROJECT* project;
     APP* app;
+    JOB_KEYWORDS job_keywords;
 
     WORKUNIT();
 
@@ -364,6 +372,7 @@ struct GR_PROXY_INFO {
     int socks_server_port;
     std::string socks5_user_name;
     std::string socks5_user_passwd;
+    bool socks5_remote_dns;
 
 	std::string noproxy_hosts;
 
@@ -400,7 +409,10 @@ struct CC_STATE {
     APP_VERSION* lookup_app_version(PROJECT*, APP*,
         char* platform, int vnum, char* plan_class
     );
-    APP_VERSION* lookup_app_version_old(PROJECT*, APP*, int);
+    APP_VERSION* lookup_app_version(PROJECT*, APP*,
+        int vnum, char* plan_class
+    );
+    APP_VERSION* lookup_app_version(PROJECT*, APP*, int vnum);
     WORKUNIT* lookup_wu(PROJECT*, const char* name);
     RESULT* lookup_result(PROJECT*, const char* name);
     RESULT* lookup_result(const char* url, const char* name);
@@ -487,6 +499,7 @@ struct ACCT_MGR_INFO {
     ACCT_MGR_INFO();
 
     int parse(XML_PARSER&);
+    void print();
     void clear();
 };
 
@@ -748,6 +761,8 @@ struct RPC_CLIENT {
     int set_global_prefs_override_struct(GLOBAL_PREFS&, GLOBAL_PREFS_MASK&);
     int get_cc_config(CC_CONFIG& config, LOG_FLAGS& log_flags);
     int set_cc_config(CC_CONFIG& config, LOG_FLAGS& log_flags);
+    int get_app_config(const char* url, APP_CONFIGS& conf);
+    int set_app_config(const char* url, APP_CONFIGS& conf);
     int get_daily_xfer_history(DAILY_XFER_HISTORY&);
 	int set_language(const char*);
 };
@@ -764,75 +779,27 @@ struct RPC {
     int parse_reply();
 };
 
-// We recommend using the XCode project under OS 10.5 to compile 
-// the BOINC library, but some projects still use config & make, 
-// so the following compatibility code avoids compiler errors when 
-// building libboinc.a using config & make on system OS 10.3.9 or 
-// with the OS 10.3.9 SDK (but using config & make is not recommended.)
-//
-#if defined(__APPLE__) && (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4) && (!defined(BUILDING_MANAGER))
-#define NO_PER_THREAD_LOCALE 1
-#endif
 
-// uselocal() API should be available on UNIX, Fedora & Ubuntu.
-// For any platforms which do not support setting locale on a 
-// per-thread basis, add code here similar to the following sample:
-//#if defined(__UNIVAC__)
-//#define NO_PER_THREAD_LOCALE 1
-//#endif
-#if defined(__HAIKU__)
-#define NO_PER_THREAD_LOCALE 1
-#endif
-
-
-#ifdef NO_PER_THREAD_LOCALE  
-    // Use this code for any platforms which do not support 
-    // setting locale on a per-thread basis (see comment above)
- struct SET_LOCALE {
-    std::string locale;
-    inline SET_LOCALE() {
-        locale = setlocale(LC_ALL, NULL);
-        setlocale(LC_ALL, "C");
-    }
-    inline ~SET_LOCALE() {
-        setlocale(LC_ALL, locale.c_str());
-    }
-};
-
-#elif defined(__APPLE__) && (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_4)
-// uselocale() is not available in OS 10.3.9 so use weak linking
-#include <xlocale.h>
-extern int		freelocale(locale_t) __attribute__((weak_import));
-extern locale_t	newlocale(int, __const char *, locale_t) __attribute__((weak_import));
-extern locale_t	uselocale(locale_t) __attribute__((weak_import));
-
+#if defined(HAVE__CONFIGTHREADLOCALE) || defined(HAVE_USELOCALE)
+// no-op, the calling thread is already set to use C locale
 struct SET_LOCALE {
-    locale_t old_locale, RPC_locale;
-    std::string locale;
-    inline SET_LOCALE() {
-        if (uselocale == NULL) {
-            locale = setlocale(LC_ALL, NULL);
-            setlocale(LC_ALL, "C");
-        }
-    }
-    inline ~SET_LOCALE() {
-        if (uselocale == NULL) {
-            setlocale(LC_ALL, locale.c_str());
-        }
-    }
+    SET_LOCALE() {}
+    ~SET_LOCALE() {}
 };
 
 #else
-
 struct SET_LOCALE {
-    // Don't need to juggle locales if we have per-thread locale
-    inline SET_LOCALE() {
+    std::string old_locale;
+    SET_LOCALE() {
+        old_locale = setlocale(LC_ALL, NULL);
+        setlocale(LC_ALL, "C");
     }
-    inline ~SET_LOCALE() {
+    ~SET_LOCALE() {
+        setlocale(LC_ALL, old_locale.c_str());
     }
 };
 #endif
 
 extern int read_gui_rpc_password(char*);
 
-#endif /* _GUI_RPC_CLIENT_H_ */
+#endif // BOINC_GUI_RPC_CLIENT_H

@@ -73,7 +73,7 @@ static void get_user_agent_string() {
     if (g_user_agent_string[0]) return;
     snprintf(g_user_agent_string, sizeof(g_user_agent_string),
         "BOINC client (%s %d.%d.%d)",
-        gstate.get_primary_platform(),
+        HOSTTYPE,
         BOINC_MAJOR_VERSION, BOINC_MINOR_VERSION, BOINC_RELEASE
     );
     if (strlen(gstate.client_brand)) {
@@ -865,7 +865,9 @@ void HTTP_OP::setup_proxy_session(bool no_proxy) {
 
     } else if (pi.use_socks_proxy) {
         // CURL only supports SOCKS version 5
-        curl_easy_setopt(curlEasy, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+        curl_easy_setopt(curlEasy, CURLOPT_PROXYTYPE,
+            pi.socks5_remote_dns?CURLPROXY_SOCKS5_HOSTNAME:CURLPROXY_SOCKS5
+        );
         curl_easy_setopt(curlEasy, CURLOPT_PROXYPORT, (long) pi.socks_server_port);
         curl_easy_setopt(curlEasy, CURLOPT_PROXY, (char*) pi.socks_server_name);
         // libcurl uses blocking sockets with socks proxy, so limit timeout.

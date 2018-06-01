@@ -145,7 +145,7 @@ struct APP_VERSION {
     double expavg_time;
     bool beta;
 
-    // the following used by scheduler, not in DB
+    // the following used by scheduler (add_wu_to_reply()), not in DB
     //
     BEST_APP_VERSION* bavp;
 
@@ -212,6 +212,17 @@ struct USER {
     char passwd_hash[256];
     bool email_validated;           // deprecated
     int donated;
+    char login_token[32];
+    double login_token_time;
+    char previous_email_addr[256];
+    double email_addr_change_time;
+    void clear();
+};
+
+struct USER_DELETED {
+    DB_ID_TYPE userid;
+    char public_cross_project_id[256];
+    double create_time;
     void clear();
 };
 
@@ -347,6 +358,8 @@ struct HOST {
         // DEPRECATED
     char product_name[256];
     double gpu_active_frac;
+    int p_ngpus;
+    double p_gpu_fpops;
 
     // the following items are passed in scheduler requests,
     // and used in the scheduler,
@@ -373,6 +386,13 @@ struct HOST {
     void fix_nans();
     void clear();
     bool get_opencl_cpu_prop(const char* platform, OPENCL_CPU_PROP&);
+};
+
+struct HOST_DELETED {
+    DB_ID_TYPE hostid;
+    char public_cross_project_id[256];
+    double create_time;
+    void clear();
 };
 
 // values for file_delete state
@@ -478,9 +498,11 @@ struct WORKUNIT {
     int size_class;
         // -1 means none; encode this here so that transitioner
         // doesn't have to look up app
+    char keywords[256];
+        // keywords, as space-separated integers
+    int app_version_num;
+        // if nonzero, use only this version num
 
-    // the following not used in the DB
-    char app_name[256];
     void clear();
     WORKUNIT(){clear();}
 };
@@ -583,7 +605,7 @@ struct RESULT {
     int batch;
     int file_delete_state;          // see above; values for file_delete_state
     int validate_state;
-    double claimed_credit;          // deprecated
+    double claimed_credit;          // used for post-assigned credit
     double granted_credit;          // == canonical credit of WU
     double opaque;                  // project-specific; usually external ID
     int random;                     // determines send order

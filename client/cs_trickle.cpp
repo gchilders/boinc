@@ -44,8 +44,6 @@
 #include "project.h"
 #include "sandbox.h"
 
-using std::string;
-
 // Scan project dir for file names of the form trickle_up_X_Y
 // where X is a result name and Y is a timestamp.
 // Convert them to XML (for sched request message)
@@ -61,10 +59,11 @@ int CLIENT_STATE::read_trickle_files(PROJECT* project, FILE* f) {
 
     // trickle-up filenames are of the form trickle_up_RESULTNAME_TIME[.sent]
     //
+    const size_t prefix_len = strlen("trickle_up_");
     while (ds.scan(fn)) {
         safe_strcpy(fname, fn.c_str());
         if (strstr(fname, "trickle_up_") != fname) continue;
-        q = fname + strlen("trickle_up_");
+        q = fname + prefix_len;
         p = strrchr(fname, '_');
         if (p <= q) continue;
         *p = 0;
@@ -303,7 +302,7 @@ int TRICKLE_UP_OP::do_rpc(const char* msg) {
     return retval;
 }
 
-int parse_trickle_up_urls(XML_PARSER& xp, std::vector<std::string>& urls) {
+int parse_trickle_up_urls(XML_PARSER& xp, vector<string>& urls) {
     string s;
     while (!xp.get_tag()) {
         if (xp.match_tag("/trickle_up_urls")) {
@@ -326,4 +325,4 @@ void TRICKLE_UP_OP::handle_reply(int http_op_retval) {
         free(req_buf);
         req_buf = 0;
     }
-};
+}

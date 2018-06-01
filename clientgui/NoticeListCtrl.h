@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 //
-#ifndef _NOTICELISTCTRL_H_
-#define _NOTICELISTCTRL_H_
+#ifndef BOINC_NOTICELISTCTRL_H
+#define BOINC_NOTICELISTCTRL_H
 
 #if defined(__GNUG__) && !defined(__APPLE__)
 #pragma interface "NoticeListCtrl.cpp"
@@ -42,11 +42,14 @@ public:
 
     int     GetItemCount();
     void    SetItemCount(int newCount);
-    
-////@begin CNoticeListCtrl event handler declarations
 
+////@begin CNoticeListCtrl event handler declarations
+#if wxUSE_WEBVIEW
     void OnLinkClicked( wxWebViewEvent& event );
     void OnWebViewError( wxWebViewEvent& event );
+#else
+    void OnLinkClicked( wxHtmlLinkEvent & event );
+#endif
 
 ////@end CNoticeListCtrl event handler declarations
 
@@ -56,10 +59,14 @@ public:
     bool        m_bDisplayFetchingNotices;
     bool        m_bDisplayEmptyNotice;
 private:
+#if wxUSE_WEBVIEW
     wxWebView*  m_browser;
+#else
+    wxHtmlWindow* m_browser;
+#endif
     bool        m_bNeedsReloading;
     int         m_itemCount;
     wxString    m_noticesBody;
 };
 
-#endif // _NOTICELISTCTRL_H_
+#endif

@@ -17,6 +17,7 @@
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
 // web interfaces for viewing and controlling batches
+// DEPRECATED: replaced by submit.php
 
 ini_set('display_errors', 'stdout');
 error_reporting(E_ALL);
@@ -34,10 +35,9 @@ function show_batch($user) {
     }
     page_head("Batch $batch->id");
     $results = BoincResult::enum("batch=$batch->id order by workunitid");
-    $i = 0;
     result_table_start(true, true, null);
     foreach ($results as $result) {
-        show_result_row($result, true, true, true, $i++);
+        show_result_row($result, true, true, true);
     }
     end_table();
     page_tail();

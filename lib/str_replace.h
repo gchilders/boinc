@@ -17,17 +17,15 @@
 
 // declare replacement string functions for platforms that lack themn
 
-#ifndef STR_REPLACE_H
-#define STR_REPLACE_H
+#ifndef BOINC_STR_REPLACE_H
+#define BOINC_STR_REPLACE_H
 
 #ifndef _WIN32
-#include "config.h"
 #include <sys/types.h>
-#endif
-
-#ifdef __APPLE__
 #include <ctype.h>
 #endif
+
+#include "config.h"
 
 // strlcpy and strlcat guarantee NULL-terminated result
 // (unlike strncpy and strncat)

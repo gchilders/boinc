@@ -53,6 +53,7 @@ void PROJECT::init() {
         no_rsc_config[i] = false;
         no_rsc_apps[i] = false;
         no_rsc_ams[i] = false;
+        sched_req_no_work[i] = false;
     }
     safe_strcpy(host_venue, "");
     using_venue_specific_prefs = false;
@@ -88,6 +89,7 @@ void PROJECT::init() {
     anonymous_platform = false;
     non_cpu_intensive = false;
     verify_files_on_app_start = false;
+    report_results_immediately = false;
     pwf.reset(this);
     send_time_stats_log = 0;
     send_job_log = 0;
@@ -111,6 +113,10 @@ void PROJECT::init() {
     njobs_success = 0;
     njobs_error = 0;
     elapsed_time = 0;
+    cpu_ec = 0;
+    cpu_time = 0;
+    gpu_ec = 0;
+    gpu_time = 0;
     app_configs.clear();
 
 #ifdef SIM
@@ -167,7 +173,7 @@ static bool parse_rsc_param(XML_PARSER& xp, const char* end_tag, int& rsc_type, 
 //
 int PROJECT::parse_state(XML_PARSER& xp) {
     char buf[256];
-    std::string sched_url, stemp;
+    string sched_url, stemp;
     string str1, str2;
     int retval, rt;
     double x;
@@ -323,6 +329,12 @@ int PROJECT::parse_state(XML_PARSER& xp) {
         if (xp.parse_int("njobs_error", njobs_error)) continue;
         if (xp.parse_double("elapsed_time", elapsed_time)) continue;
         if (xp.parse_double("last_rpc_time", last_rpc_time)) continue;
+        if (xp.parse_double("cpu_ec", cpu_ec)) continue;
+        if (xp.parse_double("cpu_time", cpu_time)) continue;
+        if (xp.parse_double("gpu_ec", gpu_ec)) continue;
+        if (xp.parse_double("gpu_time", gpu_time)) continue;
+        if (xp.parse_double("disk_usage", disk_usage)) continue;
+        if (xp.parse_double("disk_share", disk_share)) continue;
 #ifdef SIM
         if (xp.match_tag("available")) {
             available.parse(xp, "/available");
@@ -498,7 +510,7 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
         }
         out.printf("    <project_dir>%s</project_dir>\n", project_dir_absolute());
     } else {
-       for (i=0; i<scheduler_urls.size(); i++) {
+        for (i=0; i<scheduler_urls.size(); i++) {
             out.printf(
                 "    <scheduler_url>%s</scheduler_url>\n",
                 scheduler_urls[i].c_str()
@@ -516,6 +528,15 @@ int PROJECT::write_state(MIOFILE& out, bool gui_rpc) {
                 t->url.c_str()
             );
         }
+        out.printf(
+            "    <cpu_ec>%f</cpu_ec>\n"
+            "    <cpu_time>%f</cpu_time>\n"
+            "    <gpu_ec>%f</gpu_ec>\n"
+            "    <gpu_time>%f</gpu_time>\n"
+            "    <disk_usage>%f</disk_usage>\n"
+            "    <disk_share>%f</disk_share>\n",
+            cpu_ec, cpu_time, gpu_ec, gpu_time, disk_usage, disk_share
+        );
     }
     out.printf(
         "</project>\n"
@@ -583,6 +604,10 @@ void PROJECT::copy_state_fields(PROJECT& p) {
     njobs_error = p.njobs_error;
     elapsed_time = p.elapsed_time;
     last_rpc_time = p.last_rpc_time;
+    cpu_ec = p.cpu_ec;
+    cpu_time = p.cpu_time;
+    gpu_ec = p.gpu_ec;
+    gpu_time = p.gpu_time;
 }
 
 // Write project statistic to GUI RPC reply
@@ -595,7 +620,7 @@ int PROJECT::write_statistics(MIOFILE& out) {
         master_url
     );
 
-    for (std::vector<DAILY_STATS>::iterator i=statistics.begin();
+    for (vector<DAILY_STATS>::iterator i=statistics.begin();
         i!=statistics.end(); ++i
     ) {
         out.printf(

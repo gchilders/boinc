@@ -18,14 +18,35 @@
 
 // PHP interfaces to some of BOINC's Web RPCs
 
+// my PHP currently doesn't support file_get_contents(https://...)
+// so do it with Curl
+//
+function fetch_url($url) {
+    if (0) {
+        return file_get_contents($url);
+    } else {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADER, 0);
+
+        $x = curl_exec($ch);
+        curl_close($ch);
+        //echo "curl return: $x\n";
+        return $x;
+    }
+}
+
 function lookup_account(
     $project_url,
     $email_addr,
     $passwd_hash
 ) {
     $url = $project_url."/lookup_account.php?email_addr=".urlencode($email_addr)."&passwd_hash=$passwd_hash";
-    $reply = file_get_contents($url);
-    if (!$reply) return array(null, -1, "HTTP error");
+    $reply = fetch_url($url);
+    if (!$reply) {
+        return array(null, -1, "HTTP error to $url");
+    }
     $r = @simplexml_load_string($reply);
     if (!$r) {
         return array(null, -1, "Can't parse reply XML:\n$reply");
@@ -48,10 +69,23 @@ function create_account(
 ) {
     $url = $project_url."/create_account.php?email_addr=".urlencode($email_addr)."&passwd_hash=$passwd_hash&user_name=".urlencode($user_name);
 
-    $reply = file_get_contents($url);
-    if (!$reply) return array(null, -1, "HTTP error");
+    $reply = fetch_url($url);
+    if (!$reply) return array(null, -1, "HTTP error to $url");
+
     $r = @simplexml_load_string($reply);
     if (!$r) {
+        // old server code returns PHP warnings, which break XML.
+        // do ad-hoc parsing instead
+        //
+        $auth = parse_element($reply, "<authenticator>");
+        if ($auth) {
+            return array($auth, 0, null);
+        }
+        $error_num = parse_element($reply, "<error_num>");
+        $error_msg = parse_element($reply, "<error_msg>");
+        if ($error_num) {
+            return array(null, $error_num, $error_msg);
+        }
         return array(null, -1, "Can't parse reply XML:\n$reply");
     }
     $auth = (string)$r->authenticator;

@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _DLGEVENTLOGLISTCTRL_H_
-#define _DLGEVENTLOGLISTCTRL_H_
+#ifndef BOINC_DLGEVENTLOGLISTCTRL_H
+#define BOINC_DLGEVENTLOGLISTCTRL_H
 
 #if defined(__GNUG__) && !defined(__APPLE__)
 #pragma interface "DlgEventLogListCtrl.cpp"
@@ -33,8 +33,6 @@ class CDlgEventLog;
 
 class CDlgEventLogListCtrl : public DLG_LISTCTRL_BASE
 {
-using DLG_LISTCTRL_BASE::GetBackgroundColour;
-
     DECLARE_DYNAMIC_CLASS(CDlgEventLogListCtrl)
     DECLARE_EVENT_TABLE()
 
@@ -54,7 +52,6 @@ private:
     virtual wxString        OnGetItemText(long item, long column) const;
     virtual int             OnGetItemImage(long item) const;
     virtual wxListItemAttr* OnGetItemAttr(long item) const;
-    virtual wxColour        GetBackgroundColour();
     void                    OnMouseUp(wxMouseEvent& event);
 
     void                    OnShow( wxShowEvent& event );

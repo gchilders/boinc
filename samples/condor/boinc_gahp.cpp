@@ -34,6 +34,9 @@
 #include "md5_file.h"
 #include "parse.h"
 #include "remote_submit.h"
+#include "svn_version.h"
+
+#define BOINC_GAHP_VERSION "1.0.1"
 
 using std::map;
 using std::pair;
@@ -67,6 +70,8 @@ struct SUBMIT_REQ {
     char app_name[256];
     vector<JOB> jobs;
     int batch_id;
+    JOB_PARAMS job_params;
+    char app_version_num[256];
 };
 
 struct LOCAL_FILE {
@@ -245,7 +250,7 @@ int process_input_files(SUBMIT_REQ& req, string& error_msg) {
             INFILE& infile = job.infiles[j];
             map<string, LOCAL_FILE>::iterator iter = local_files.find(infile.src_path);
             LOCAL_FILE& lf = iter->second;
-            sprintf(infile.physical_name, "jf_%s", lf.boinc_name);
+            sprintf(infile.physical_name, "%s", lf.boinc_name);
         }
     }
 
@@ -276,6 +281,21 @@ int COMMAND::parse_submit(char* p) {
         }
         submit_req.jobs.push_back(job);
     }
+    
+    JOB_PARAMS jp;
+    char *chr = NULL;
+    chr = strtok_r(NULL, " ", &p);
+    if (chr != NULL) {
+      jp.rsc_fpops_est = atof(chr);
+      jp.rsc_fpops_bound = atof(strtok_r(NULL, " ", &p));
+      jp.rsc_memory_bound = atof(strtok_r(NULL, " ", &p));
+      jp.rsc_disk_bound = atof(strtok_r(NULL, " ", &p));
+      jp.delay_bound = atof(strtok_r(NULL, " ", &p));
+      strlcpy(submit_req.app_version_num, strtok_r(NULL, " ", &p), sizeof(submit_req.app_version_num));
+    }
+
+    submit_req.job_params = jp;
+
     return 0;
 }
 
@@ -319,9 +339,10 @@ void handle_submit(COMMAND& c) {
         return;
     }
 
-    retval = submit_jobs(
+    retval = submit_jobs_params(
         project_url, authenticator,
-        req.app_name, req.batch_id, req.jobs, error_msg
+	req.app_name, req.batch_id, req.jobs, error_msg,
+	req.job_params, atoi(req.app_version_num)
     );
     if (retval) {
         sprintf(buf, "error\\ submitting\\ jobs:\\ %d\\ ", retval);
@@ -702,8 +723,7 @@ int COMMAND::parse_command() {
 }
 
 void print_version(bool startup) {
-    BPRINTF("%s$GahpVersion: 1.0 %s BOINC\\ GAHP $\n", startup ? "" : "S ",
-            __DATE__);
+    BPRINTF("%s$GahpVersion: %s %s BOINC\\ GAHP\\ GIT:%x $\n", startup ? "" : "S ", BOINC_GAHP_VERSION, __DATE__, GIT_REVISION);
 }
 
 int n_results() {
@@ -859,7 +879,13 @@ void read_config() {
     }
 }
 
-int main() {
+int main(int argc, char*argv[]) {
+    if (argc>1) {
+        if (!strcmp(argv[1],"--version")) {
+            fprintf(stderr,SVN_VERSION"\n");
+            return 0;
+        }
+    }
     read_config();
     strcpy(response_prefix, "");
     print_version(true);
@@ -870,4 +896,5 @@ int main() {
         handle_command(p);
         fflush(stdout);
     }
+    return 0;
 }

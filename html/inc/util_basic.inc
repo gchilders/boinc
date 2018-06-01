@@ -16,8 +16,10 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// minimal set of util functions;
-// doesn't pull in translation.inc etc.
+// minimal set of utility functions, usable outside a BOINC project.
+// Doesn't pull in translation.inc etc.
+
+require_once("../inc/random_compat/random.inc");
 
 $generating_xml = false;
 
@@ -167,6 +169,19 @@ function url_get_contents($url) {
     $content = curl_exec($ch);
     curl_close($ch);
     return $content;
+}
+
+
+// return hard-to-guess string of 32 random hex chars
+//
+function random_string() {
+    return bin2hex(random_bytes(16));
+}
+
+// return high-resolution time
+//
+function dtime() {
+    return microtime(true);
 }
 
 ?>

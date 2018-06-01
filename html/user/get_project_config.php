@@ -55,13 +55,16 @@ if (!$min_passwd_length) {
     $min_passwd_length = 6;
 }
 $disable_account_creation = parse_bool($config, "disable_account_creation");
-$master_url = parse_config($config, "<master_url>");
 
 echo "<project_config>
     <name>$long_name</name>
     <master_url>$master_url</master_url>
     <web_rpc_url_base>".secure_url_base()."</web_rpc_url_base>
 ";
+
+if (parse_config($config, "<account_manager>")) {
+    echo "    <account_manager/>\n";
+}
 
 $local_revision = @trim(file_get_contents("../../local.revision"));
 if ($local_revision) {
@@ -110,6 +113,10 @@ if (file_exists($tou_file)) {
 
 if (LDAP_HOST) {
     echo "<ldap_auth/>\n";
+}
+
+if (file_exists("../../project_keywords.xml")) {
+    readfile("../../project_keywords.xml");
 }
 
 echo "</project_config>";

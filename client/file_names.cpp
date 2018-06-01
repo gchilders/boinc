@@ -267,13 +267,8 @@ void get_account_filename(char* master_url, char* path, int len) {
     snprintf(path, len, "account_%s.xml", buf);
 }
 
-static bool bad_account_filename(const char* filename) {
-    msg_printf(NULL, MSG_INTERNAL_ERROR, "Invalid account filename: %s", filename);
-    return false;
-}
-
-// account filenames are of the form
-// account_URL.xml
+// Is this an account file?
+// Account filenames are of the form account_URL.xml
 // where URL is master URL with slashes replaced by underscores
 //
 bool is_account_file(const char* filename) {
@@ -283,11 +278,11 @@ bool is_account_file(const char* filename) {
 
     q = filename + strlen("account_");
     p = strstr(q, ".xml");
-    if (!p) return bad_account_filename(filename);
-    if (p == q) return bad_account_filename(filename);
+    if (!p) return false;
+    if (p == q) return false;
 
     q = p + strlen(".xml");
-    if (strlen(q)) return bad_account_filename(filename);
+    if (strlen(q)) return false;
     return true;
 }
 
@@ -302,16 +297,16 @@ bool is_statistics_file(const char* filename) {
     q = filename + strlen("statistics_");
 
     p = strstr(q, ".");
-    if (!p) return bad_account_filename(filename);
-    if (p == q) return bad_account_filename(filename);
+    if (!p) return false;
+    if (p == q) return false;
 
     q = p+1;
     p = strstr(q, ".xml");
-    if (!p) return bad_account_filename(filename);
-    if (p == q) return bad_account_filename(filename);
+    if (!p) return false;
+    if (p == q) return false;
 
     q = p + strlen(".xml");
-    if (strlen(q)) return bad_account_filename(filename);
+    if (strlen(q)) return false;
     return true;
 }
 
@@ -322,11 +317,11 @@ void get_statistics_filename(char* master_url, char* path, int len) {
 }
 
 bool is_image_file(const char* filename) {
-    std::string fn = filename;
+    string fn = filename;
     downcase_string(fn);
-    if (ends_with(fn, std::string(".jpg"))) return true;
-    if (ends_with(fn, std::string(".jpeg"))) return true;
-    if (ends_with(fn, std::string(".png"))) return true;
+    if (ends_with(fn, string(".jpg"))) return true;
+    if (ends_with(fn, string(".jpeg"))) return true;
+    if (ends_with(fn, string(".png"))) return true;
     return false;
 }
 

@@ -35,8 +35,10 @@ function do_query($query) {
     $result = _mysql_query($query);
     if (!$result) {
         echo "Failed:\n"._mysql_error()."\n";
+        return false;
     } else {
         echo "Success.\n";
+        return true;
     }
 }
 
@@ -1027,6 +1029,139 @@ function update_1_27_2016() {
     do_query("alter table team add column mod_time timestamp default current_timestamp on update current_timestamp");
 }
 
+function update_2_17_2017() {
+    do_query("alter table job_file change md5 name varchar(255) not null");
+}
+
+function update_3_17_2017() {
+    do_query("alter table credit_user
+        add index cu_total(appid, total),
+        add index cu_avg(appid, expavg)
+    ");
+    do_query("alter table credit_team
+        add index ct_total(appid, total),
+        add index ct_avg(appid, expavg)
+    ");
+}
+
+function update_6_13_2017() {
+    do_query("alter table host
+        add column p_ngpus integer not null,
+        add column p_gpu_fpops double not null
+    ");
+}
+
+function update_7_21_2017() {
+    do_query("alter table workunit
+        add column keywords varchar(254) not null
+    ");
+}
+
+function update_8_9_2017() {
+    do_query("alter table workunit
+        add column app_version_num integer not null
+    ");
+}
+
+function update_10_25_2017() {
+    do_query("alter table user
+        add column login_token char(32) not null,
+        add column login_token_time double not null
+    ");
+}
+
+function update_3_8_2018() {
+    do_query("alter table user
+        modify column login_token char(32) not null default '',
+        modify column login_token_time double not null default 0
+    ");
+}
+
+function update_4_5_2018() {
+    do_query("create table token (
+        token                   varchar(255)    not null,
+        userid                  integer         not null,
+        type                    char            not null,
+        create_time             integer         not null,
+        expire_time             integer,
+        primary key (token),
+        index token_userid (userid)
+        ) engine=InnoDB
+    ");
+}
+
+function update_4_6_2018() {
+    do_query("alter table team
+        modify column total_credit double not null default 0.0,
+        modify column expavg_credit double not null default 0.0,
+        modify column seti_id integer not null default 0
+    ");
+}
+
+function update_4_18_2018() {
+    do_query("alter table token
+        modify column create_time integer not null
+    ");
+}
+
+function update_4_19_2018() {
+    do_query("alter table user
+	add column previous_email_addr varchar(254) not null default '',
+	add column email_addr_change_time double not null default 0
+    ");
+    do_query("alter table user add index user_email_time (email_addr_change_time)");
+}
+
+function update_5_9_2018() {
+    $retval = do_query("create table user_deleted (
+            userid                  integer         not null,
+            public_cross_project_id varchar(254)    not null,
+            create_time             double          not null,
+            primary key (userid)
+        ) engine=InnoDB;
+    ");
+    
+    $retval = $retval && do_query("create table host_deleted (
+            hostid                  integer         not null,
+            public_cross_project_id varchar(254)    not null,
+            create_time             double          not null,
+            primary key (hostid)
+        ) engine=InnoDB;
+    ");
+    
+    $retval = $retval && do_query("alter table user_deleted
+        add index user_deleted_create(create_time)
+    ");
+    
+    $retval = $retval && do_query("alter table host_deleted
+        add index host_deleted_create(create_time)
+    ");
+    
+    $retval = $retval && do_query("alter table team_delta
+        add index team_delta_userid (userid)
+    ");
+    
+    $retval = $retval && do_query("alter table donation_paypal
+        add index donation_paypal_userid(userid)
+    ");
+    
+    $retval = $retval && do_query("alter table banishment_vote
+        add index banishment_vote_userid(userid)
+    ");
+    
+    $retval = $retval && do_query("alter table post_ratings
+        add index post_ratings_user(user)
+    ");
+    
+    $retval = $retval && do_query("alter table msg_from_host
+        add index message_hostid(hostid)
+    ");
+    
+    return $retval && do_query("alter table sent_email
+        add index sent_email_userid(userid)
+    ");
+}
+
 // Updates are done automatically if you use "upgrade".
 //
 // If you need to do updates manually,
@@ -1073,6 +1208,18 @@ $db_updates = array (
     array(27012, "update_10_8_2014"),
     array(27013, "update_4_15_2015"),
     array(27014, "update_1_27_2016"),
+    array(27015, "update_2_17_2017"),
+    array(27016, "update_3_17_2017"),
+    array(27017, "update_6_13_2017"),
+    array(27018, "update_7_21_2017"),
+    array(27019, "update_8_9_2017"),
+    array(27020, "update_10_25_2017"),
+    array(27021, "update_3_8_2018"),
+    array(27022, "update_4_5_2018"),
+    array(27023, "update_4_6_2018"),
+    array(27024, "update_4_18_2018"),
+    array(27025, "update_4_19_2018"),
+    array(27026, "update_5_9_2018")
 );
 
 ?>

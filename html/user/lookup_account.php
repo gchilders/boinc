@@ -23,6 +23,8 @@ require_once("../inc/util.inc");
 require_once("../inc/email.inc");
 require_once("../inc/xml.inc");
 require_once("../inc/ldap.inc");
+require_once("../inc/user_util.inc");
+require_once("../inc/password_compat/password.inc");
 
 xml_header();
 $retval = db_init_xml();
@@ -37,6 +39,7 @@ if (LDAP_HOST && $ldap_auth) {
     $passwd = get_str("passwd");
     list ($ldap_user, $error_msg) = ldap_auth($ldap_uid, $passwd);
     if ($error_msg) {
+        sleep(LOGIN_FAIL_SLEEP_SEC);
         xml_error(ERR_BAD_USER_NAME, $error_msg);
     }
     $x = ldap_email_string($ldap_uid);
@@ -55,9 +58,12 @@ if (LDAP_HOST && $ldap_auth) {
     $email_addr = BoincDb::escape_string($email_addr);
     $user = BoincUser::lookup("email_addr='$email_addr'");
     if (!$user) {
+        sleep(LOGIN_FAIL_SLEEP_SEC);
         xml_error(ERR_DB_NOT_FOUND);
     }
 
+    // here the caller was testing for existence of acct w/ given email
+    //
     if (!$passwd_hash) {
         echo "<account_out>\n";
         echo "   <success/>\n";
@@ -68,15 +74,21 @@ if (LDAP_HOST && $ldap_auth) {
     $auth_hash = md5($user->authenticator.$user->email_addr);
 
     // if no password set, set password to account key
+    // WHEN WOULD THIS EVER HAPPEN?
+    // WHY SET IT TO AUTHENTICATOR?
+    // SHOULD RETURN PASSWD FAILURE?
     //
     if (!strlen($user->passwd_hash)) {
-        $user->passwd_hash = $auth_hash;
-        $user->update("passwd_hash='$user->passwd_hash'");
+        $user->passwd_hash = password_hash($auth_hash, PASSWORD_DEFAULT);
+        $user->update(" passwd_hash='$user->passwd_hash' ");
     }
 
-    // if the given password hash matches (auth+email), accept it
-    //
-    if ($user->passwd_hash != $passwd_hash && $auth_hash != $passwd_hash) {
+    if (check_passwd_hash($user, $passwd_hash)) {
+    } else if ($auth_hash == $passwd_hash) {
+        // if the passed hash matches the auth hash, then allow it
+    } else {
+        // if none of the above match, the password is invalid
+        sleep(LOGIN_FAIL_SLEEP_SEC);
         xml_error(ERR_BAD_PASSWD);
     }
 }

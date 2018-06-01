@@ -81,6 +81,12 @@ class BoincUserSubmit {
         $db = BoincDb::get();
         return $db->update_aux('user_submit', $clause);
     }
+    
+    static function delete_user($user_id) {
+        $db = BoincDb::get();
+        return $db->delete_aux('user_submit', "user_id = $user_id");
+    }
+
 }
 
 class BoincUserSubmitApp {
@@ -113,15 +119,15 @@ class BoincJobFile {
         $db = BoincDb::get();
         $ret = $db->insert('job_file', $clause);
         if (!$ret) return false;
-        return true;
+        return $db->insert_id();
     }
-    static function lookup_md5($md5) {
+    static function lookup_name($name) {
         $db = BoincDb::get();
-        return $db->lookup('job_file', 'BoincJobFile', "md5='$md5'");
+        return $db->lookup('job_file', 'BoincJobFile', "name='$name'");
     }
     function delete() {
         $db = BoincDb::get();
-        return $db->delete_aux('job_file', "md5='$this->md5'");
+        return $db->delete($this, 'job_file');
     }
     function update($clause) {
         $db = BoincDb::get();

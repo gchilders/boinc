@@ -15,8 +15,13 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _VALIDATE_UTIL2_
-#define _VALIDATE_UTIL2_
+#ifndef BOINC_VALIDATE_UTIL2_H
+#define BOINC_VALIDATE_UTIL2_H
+
+// return value of init_result if an "adaptive replication"
+// result looks suspicious
+//
+#define VAL_RESULT_SUSPICIOUS 1
 
 #include <vector>
 
@@ -25,10 +30,14 @@
 extern int init_result(RESULT&, void*&);
 extern int compare_results(RESULT &, void*, RESULT const&, void*, bool&);
 extern int cleanup_result(RESULT const&, void*);
+
+// old/internal interface:
+//
 extern double compute_granted_credit(WORKUNIT&, std::vector<RESULT>& results);
 extern int check_set(
     std::vector<RESULT>& results, WORKUNIT& wu,
     DB_ID_TYPE& canonicalid, double& credit_deprecated, bool& retry
 );
 extern void check_pair(RESULT& r1, RESULT& r2, bool& retry);
+
 #endif

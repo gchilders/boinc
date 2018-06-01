@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef H_BACKEND_LIB
-#define H_BACKEND_LIB
+#ifndef BOINC_BACKEND_LIB_H
+#define BOINC_BACKEND_LIB_H
 
 #include <limits.h>
 
@@ -24,7 +24,22 @@
 #include "sched_config.h"
 #include "boinc_db.h"
 
-// describes an input file, possibly remote
+// default job parameters
+//
+#define DEFAULT_MIN_QUORUM  2
+#define DEFAULT_TARGET_NRESULTS 2
+#define DEFAULT_MAX_ERROR_RESULTS 3
+#define DEFAULT_MAX_TOTAL_RESULTS 10
+#define DEFAULT_MAX_SUCCESS_RESULTS 6
+#define DEFAULT_RSC_FPOPS_EST 3600.e9
+#define DEFAULT_RSC_FPOPS_BOUND 86400.e9
+#define DEFAULT_RSC_MEMORY_BOUND 5.e8
+#define DEFAULT_RSC_DISK_BOUND 1.e9
+#define DEFAULT_DELAY_BOUND 7.*86400
+
+// describes an input file;
+// either an argument to create_work(),
+// or a <file_info> in input template
 //
 struct INFILE_DESC {
     bool is_remote;
@@ -157,4 +172,5 @@ extern int cancel_job(DB_WORKUNIT&);
 extern int get_total_quota(double&);
 extern int get_project_flops(double&);
 extern double user_priority_delta(DB_USER_SUBMIT&, double, double, double);
+
 #endif

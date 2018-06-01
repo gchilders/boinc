@@ -18,7 +18,6 @@
 
 include_once("../inc/translation.inc");
 
-global $team_types;
 $team_types = array(
     "",
     tra("Unclassified"),

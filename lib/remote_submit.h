@@ -18,8 +18,8 @@
 // C++ interfaces to remote job submission and file management RPCs
 // See http://boinc.berkeley.edu/trac/wiki/RemoteJobs#Cinterface
 
-#ifndef REMOTE_SUBMIT_H
-#define REMOTE_SUBMIT_H
+#ifndef BOINC_REMOTE_SUBMIT_H
+#define BOINC_REMOTE_SUBMIT_H
 
 #include <stdio.h>
 #include <string>
@@ -67,6 +67,17 @@ struct JOB_STATUS {
     std::string job_name;
     std::string status;
     JOB_STATUS(){}
+};
+
+struct JOB_PARAMS {
+    // 0 means unspecified for all params
+    double rsc_disk_bound;
+    double rsc_fpops_est;
+    double rsc_fpops_bound;
+    double rsc_memory_bound;
+    double delay_bound;
+    JOB_PARAMS(): rsc_disk_bound(0), rsc_fpops_est(0),rsc_fpops_bound(0),
+        rsc_memory_bound(0), delay_bound(0) {}
 };
 
 struct QUERY_BATCH_SET_REPLY {
@@ -147,7 +158,19 @@ extern int submit_jobs(
     char app_name[256],
     int batch_id,
     std::vector<JOB> jobs,
-    std::string& error_msg
+    std::string& error_msg,
+    int app_version_num = 0
+);
+
+extern int submit_jobs_params(
+    const char* project_url,
+    const char* authenticator,
+    char app_name[256],
+    int batch_id,
+    std::vector<JOB> jobs,
+    std::string& error_msg,
+    JOB_PARAMS &job_params,
+    int app_version_num
 );
 
 extern int estimate_batch(

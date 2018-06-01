@@ -15,8 +15,8 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#ifndef _SCHEDULER_OP_
-#define _SCHEDULER_OP_
+#ifndef BOINC_SCHEDULER_OP_H
+#define BOINC_SCHEDULER_OP_H
 
 #include <vector>
 
@@ -134,6 +134,8 @@ struct SCHEDULER_REPLY {
     std::vector<std::string> trickle_up_urls;
     bool got_rss_feeds;
         // whether scheduler reply included <rss_feeds>
+    bool too_recent;
+        // whether reply included "too recent" message
 
     void clear();
     SCHEDULER_REPLY();

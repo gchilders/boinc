@@ -18,7 +18,14 @@
 #ifndef _BOINC_DB_
 #define _BOINC_DB_
 
-// Structures corresponding to database records.
+// Structures passed to and from DB queries.
+//
+// Mostly these correspond to DB tables, and inherit structs
+// defined in boinc_db_types.h
+// But some of them - TRANSITIONER_ITEM, STATE_COUNTS, SCHED_RESULT_ITEM, etc. -
+// combine the info from multiple tables (from joins)
+// or have subsets of table data.
+//
 // Some of these types have counterparts in client/types.h,
 // but don't be deceived - client and server have different variants.
 
@@ -152,6 +159,15 @@ public:
     void operator=(USER& r) {USER::operator=(r);}
 };
 
+class DB_USER_DELETED : public DB_BASE, public USER_DELETED {
+public:
+    DB_USER_DELETED(DB_CONN* p=0);
+    DB_ID_TYPE get_id();
+    void db_print(char*);
+    void db_parse(MYSQL_ROW &row);
+    void operator=(USER_DELETED& r) {USER_DELETED::operator=(r);}
+};
+
 class DB_TEAM : public DB_BASE, public TEAM {
 public:
     DB_TEAM(DB_CONN* p=0);
@@ -173,6 +189,15 @@ public:
     void db_print(char*);
     void db_parse(MYSQL_ROW &row);
     void operator=(HOST& r) {HOST::operator=(r);}
+};
+
+class DB_HOST_DELETED : public DB_BASE, public HOST_DELETED {
+public:
+    DB_HOST_DELETED(DB_CONN* p=0);
+    DB_ID_TYPE get_id();
+    void db_print(char*);
+    void db_parse(MYSQL_ROW &row);
+    void operator=(HOST_DELETED& r) {HOST_DELETED::operator=(r);}
 };
 
 class DB_RESULT : public DB_BASE, public RESULT {

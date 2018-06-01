@@ -16,6 +16,94 @@ function boinc_standard_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_debug_4';
+  $strongarm->value = '0';
+  $export['bbcode_debug_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_debug_6';
+  $strongarm->value = '0';
+  $export['bbcode_debug_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_encode_mailto_4';
+  $strongarm->value = '1';
+  $export['bbcode_encode_mailto_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_encode_mailto_6';
+  $strongarm->value = '1';
+  $export['bbcode_encode_mailto_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_filter_nofollow_4';
+  $strongarm->value = '0';
+  $export['bbcode_filter_nofollow_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_filter_nofollow_6';
+  $strongarm->value = '0';
+  $export['bbcode_filter_nofollow_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_make_links_4';
+  $strongarm->value = '1';
+  $export['bbcode_make_links_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_make_links_6';
+  $strongarm->value = '1';
+  $export['bbcode_make_links_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_paragraph_breaks_4';
+  $strongarm->value = '2';
+  $export['bbcode_paragraph_breaks_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'bbcode_paragraph_breaks_6';
+  $strongarm->value = '2';
+  $export['bbcode_paragraph_breaks_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'boinctranslate_filter_debug_4';
+  $strongarm->value = '0';
+  $export['boinctranslate_filter_debug_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'boinctranslate_filter_nodetypes';
+  $strongarm->value = array(
+    'page' => 'page',
+    'story' => 'story',
+    'news' => 0,
+  );
+  $export['boinctranslate_filter_nodetypes'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'comment_anonymous_page';
   $strongarm->value = 0;
   $export['comment_anonymous_page'] = $strongarm;
@@ -79,6 +167,26 @@ function boinc_standard_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'content_extra_weights_page';
+  $strongarm->value = array(
+    'apachesolr' => '100',
+    'title' => '-5',
+    'body_field' => '0',
+    'revision_information' => '20',
+    'author' => '20',
+    'options' => '25',
+    'comment_settings' => '30',
+    'language' => '0',
+    'translation' => '30',
+    'menu' => '-2',
+    'path' => '30',
+    'attachments' => '30',
+  );
+  $export['content_extra_weights_page'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'error_level';
   $strongarm->value = '0';
   $export['error_level'] = $strongarm;
@@ -93,9 +201,99 @@ function boinc_standard_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'filter_pathologic_absolute_4';
+  $strongarm->value = 1;
+  $export['filter_pathologic_absolute_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'filter_pathologic_absolute_6';
+  $strongarm->value = 1;
+  $export['filter_pathologic_absolute_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'filter_pathologic_local_paths_4';
+  $strongarm->value = '/';
+  $export['filter_pathologic_local_paths_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'filter_pathologic_local_paths_6';
+  $strongarm->value = '/';
+  $export['filter_pathologic_local_paths_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'format';
   $strongarm->value = '4';
   $export['format'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_clear_cache';
+  $strongarm->value = 'Clear cache (Warning: Can result in performance degradation)';
+  $export['htmlpurifier_clear_cache'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_config_4';
+  $strongarm->value = array(
+    'Attr.EnableID' => '0',
+    'AutoFormat.AutoParagraph' => '1',
+    'AutoFormat.Linkify' => '1',
+    'AutoFormat.RemoveEmpty' => '0',
+    'Null_HTML.Allowed' => '1',
+    'HTML.ForbiddenAttributes' => '',
+    'HTML.ForbiddenElements' => '',
+    'HTML.SafeObject' => '0',
+    'Output.FlashCompat' => '0',
+    'URI.DisableExternalResources' => '0',
+    'URI.DisableResources' => '0',
+    'Null_URI.Munge' => '1',
+  );
+  $export['htmlpurifier_config_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_help_4';
+  $strongarm->value = 1;
+  $export['htmlpurifier_help_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_help_6';
+  $strongarm->value = 1;
+  $export['htmlpurifier_help_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_version_check_failed';
+  $strongarm->value = FALSE;
+  $export['htmlpurifier_version_check_failed'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_version_current';
+  $strongarm->value = '4.9.1';
+  $export['htmlpurifier_version_current'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'htmlpurifier_version_ours';
+  $strongarm->value = '4.10.0';
+  $export['htmlpurifier_version_ours'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
@@ -581,6 +779,655 @@ function boinc_standard_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_allowed_tags_4';
+  $strongarm->value = '<em> <i> <strong> <b> <u> <del> <ins> <sub> <sup> <cite> <strike> <s> <tt> <span> <font> <abbr> <acronym> <dfn> <q> <bdo> <big> <small>';
+  $export['tableofcontents_allowed_tags_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_allowed_tags_6';
+  $strongarm->value = '<em> <i> <strong> <b> <u> <del> <ins> <sub> <sup> <cite> <strike> <s> <tt> <span> <font> <abbr> <acronym> <dfn> <q> <bdo> <big> <small>';
+  $export['tableofcontents_allowed_tags_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_allow_override_4';
+  $strongarm->value = 1;
+  $export['tableofcontents_allow_override_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_allow_override_6';
+  $strongarm->value = 1;
+  $export['tableofcontents_allow_override_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_attachments_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_attachments_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_automatic_4';
+  $strongarm->value = '0';
+  $export['tableofcontents_automatic_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_automatic_6';
+  $strongarm->value = '0';
+  $export['tableofcontents_automatic_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_4';
+  $strongarm->value = '';
+  $export['tableofcontents_back_to_top_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_6';
+  $strongarm->value = '';
+  $export['tableofcontents_back_to_top_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_anchor_4';
+  $strongarm->value = 'toc';
+  $export['tableofcontents_back_to_top_anchor_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_anchor_6';
+  $strongarm->value = 'toc';
+  $export['tableofcontents_back_to_top_anchor_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_location_4';
+  $strongarm->value = 'bottom';
+  $export['tableofcontents_back_to_top_location_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_location_6';
+  $strongarm->value = 'bottom';
+  $export['tableofcontents_back_to_top_location_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_maxlevel_4';
+  $strongarm->value = '4';
+  $export['tableofcontents_back_to_top_maxlevel_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_maxlevel_6';
+  $strongarm->value = '4';
+  $export['tableofcontents_back_to_top_maxlevel_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_minlevel_4';
+  $strongarm->value = '2';
+  $export['tableofcontents_back_to_top_minlevel_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_back_to_top_minlevel_6';
+  $strongarm->value = '2';
+  $export['tableofcontents_back_to_top_minlevel_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_collapsed_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_collapsed_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_collapsed_6';
+  $strongarm->value = 0;
+  $export['tableofcontents_collapsed_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_comments_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_comments_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_comments_6';
+  $strongarm->value = 0;
+  $export['tableofcontents_comments_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_comments_level_4';
+  $strongarm->value = '3';
+  $export['tableofcontents_comments_level_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_comments_level_6';
+  $strongarm->value = '3';
+  $export['tableofcontents_comments_level_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_hide_show_4';
+  $strongarm->value = 1;
+  $export['tableofcontents_hide_show_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_hide_show_6';
+  $strongarm->value = 1;
+  $export['tableofcontents_hide_show_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_hide_table_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_hide_table_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_hide_table_6';
+  $strongarm->value = 0;
+  $export['tableofcontents_hide_table_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_identifier_introducer_4';
+  $strongarm->value = 'header';
+  $export['tableofcontents_identifier_introducer_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_identifier_introducer_6';
+  $strongarm->value = 'header';
+  $export['tableofcontents_identifier_introducer_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_generator_4';
+  $strongarm->value = 'title';
+  $export['tableofcontents_id_generator_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_generator_6';
+  $strongarm->value = 'title';
+  $export['tableofcontents_id_generator_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_separator_4';
+  $strongarm->value = '-';
+  $export['tableofcontents_id_separator_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_separator_6';
+  $strongarm->value = '-';
+  $export['tableofcontents_id_separator_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_stripping_4';
+  $strongarm->value = array(
+    'digits' => 0,
+    'dashes' => 0,
+    'periods' => 0,
+    'underscores' => 0,
+    'colons' => 0,
+  );
+  $export['tableofcontents_id_stripping_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_id_stripping_6';
+  $strongarm->value = array(
+    'digits' => 0,
+    'dashes' => 0,
+    'periods' => 0,
+    'underscores' => 0,
+    'colons' => 0,
+  );
+  $export['tableofcontents_id_stripping_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_maxlevel_4';
+  $strongarm->value = '3';
+  $export['tableofcontents_maxlevel_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_maxlevel_6';
+  $strongarm->value = '3';
+  $export['tableofcontents_maxlevel_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_minlevel_4';
+  $strongarm->value = '2';
+  $export['tableofcontents_minlevel_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_minlevel_6';
+  $strongarm->value = '2';
+  $export['tableofcontents_minlevel_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_min_limit_4';
+  $strongarm->value = '5';
+  $export['tableofcontents_min_limit_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_min_limit_6';
+  $strongarm->value = '5';
+  $export['tableofcontents_min_limit_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_automatic_';
+  $strongarm->value = '0';
+  $export['tableofcontents_nodetype_toc_automatic_'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_automatic_forum';
+  $strongarm->value = '0';
+  $export['tableofcontents_nodetype_toc_automatic_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_automatic_profile';
+  $strongarm->value = '0';
+  $export['tableofcontents_nodetype_toc_automatic_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_automatic_team';
+  $strongarm->value = '0';
+  $export['tableofcontents_nodetype_toc_automatic_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_automatic_team_forum';
+  $strongarm->value = '0';
+  $export['tableofcontents_nodetype_toc_automatic_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_remove_from_teaser_';
+  $strongarm->value = 1;
+  $export['tableofcontents_nodetype_toc_remove_from_teaser_'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_remove_from_teaser_forum';
+  $strongarm->value = 1;
+  $export['tableofcontents_nodetype_toc_remove_from_teaser_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_remove_from_teaser_profile';
+  $strongarm->value = 1;
+  $export['tableofcontents_nodetype_toc_remove_from_teaser_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_remove_from_teaser_team';
+  $strongarm->value = 1;
+  $export['tableofcontents_nodetype_toc_remove_from_teaser_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_remove_from_teaser_team_forum';
+  $strongarm->value = 1;
+  $export['tableofcontents_nodetype_toc_remove_from_teaser_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_vtoc_';
+  $strongarm->value = 0;
+  $export['tableofcontents_nodetype_toc_vtoc_'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_vtoc_forum';
+  $strongarm->value = 0;
+  $export['tableofcontents_nodetype_toc_vtoc_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_vtoc_profile';
+  $strongarm->value = 0;
+  $export['tableofcontents_nodetype_toc_vtoc_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_vtoc_team';
+  $strongarm->value = 0;
+  $export['tableofcontents_nodetype_toc_vtoc_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_nodetype_toc_vtoc_team_forum';
+  $strongarm->value = 0;
+  $export['tableofcontents_nodetype_toc_vtoc_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_numbering_4';
+  $strongarm->value = '0';
+  $export['tableofcontents_numbering_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_numbering_6';
+  $strongarm->value = '0';
+  $export['tableofcontents_numbering_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_end_letter_4';
+  $strongarm->value = '.';
+  $export['tableofcontents_number_end_letter_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_end_letter_6';
+  $strongarm->value = '.';
+  $export['tableofcontents_number_end_letter_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_headers_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_number_headers_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_headers_6';
+  $strongarm->value = 0;
+  $export['tableofcontents_number_headers_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_mode_4';
+  $strongarm->value = '0';
+  $export['tableofcontents_number_mode_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_mode_6';
+  $strongarm->value = '0';
+  $export['tableofcontents_number_mode_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_separator_4';
+  $strongarm->value = '.';
+  $export['tableofcontents_number_separator_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_separator_6';
+  $strongarm->value = '.';
+  $export['tableofcontents_number_separator_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_start_letter_4';
+  $strongarm->value = '';
+  $export['tableofcontents_number_start_letter_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_number_start_letter_6';
+  $strongarm->value = '';
+  $export['tableofcontents_number_start_letter_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_from_teaser_admin_forum';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_from_teaser_admin_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_from_teaser_forum';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_from_teaser_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_from_teaser_profile';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_from_teaser_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_from_teaser_team';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_from_teaser_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_from_teaser_team_forum';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_from_teaser_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_teaser_4';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_teaser_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_remove_teaser_6';
+  $strongarm->value = 1;
+  $export['tableofcontents_remove_teaser_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_safe_title_4';
+  $strongarm->value = 1;
+  $export['tableofcontents_safe_title_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_safe_title_6';
+  $strongarm->value = 1;
+  $export['tableofcontents_safe_title_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_scroll_back_to_top_4';
+  $strongarm->value = 0;
+  $export['tableofcontents_scroll_back_to_top_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_scroll_back_to_top_6';
+  $strongarm->value = 0;
+  $export['tableofcontents_scroll_back_to_top_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_title_4';
+  $strongarm->value = 'Table of Contents';
+  $export['tableofcontents_title_4'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_title_6';
+  $strongarm->value = 'Table of Contents';
+  $export['tableofcontents_title_6'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_toc_automatic_admin_forum';
+  $strongarm->value = '0';
+  $export['tableofcontents_toc_automatic_admin_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_toc_automatic_forum';
+  $strongarm->value = '0';
+  $export['tableofcontents_toc_automatic_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_toc_automatic_profile';
+  $strongarm->value = '0';
+  $export['tableofcontents_toc_automatic_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_toc_automatic_team';
+  $strongarm->value = '0';
+  $export['tableofcontents_toc_automatic_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_toc_automatic_team_forum';
+  $strongarm->value = '0';
+  $export['tableofcontents_toc_automatic_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_vtoc_admin_forum';
+  $strongarm->value = 0;
+  $export['tableofcontents_vtoc_admin_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_vtoc_forum';
+  $strongarm->value = 0;
+  $export['tableofcontents_vtoc_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_vtoc_profile';
+  $strongarm->value = 0;
+  $export['tableofcontents_vtoc_profile'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_vtoc_team';
+  $strongarm->value = 0;
+  $export['tableofcontents_vtoc_team'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'tableofcontents_vtoc_team_forum';
+  $strongarm->value = 0;
+  $export['tableofcontents_vtoc_team_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'tabtamer_tab_settings';
   $strongarm->value = array(
     'node/%/view' => array(
@@ -1056,6 +1903,90 @@ function boinc_standard_strongarm() {
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
+  $strongarm->name = 'upload_extensions_2938987599';
+  $strongarm->value = 'jpg jpeg gif png txt doc xls pdf ppt pps odt ods odp';
+  $export['upload_extensions_2938987599'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_extensions_3519698132';
+  $strongarm->value = 'jpg jpeg gif png txt doc xls pdf ppt pps odt ods odp';
+  $export['upload_extensions_3519698132'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_extensions_default';
+  $strongarm->value = 'jpg jpeg gif png txt pdf';
+  $export['upload_extensions_default'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_forum';
+  $strongarm->value = '0';
+  $export['upload_forum'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_list_default';
+  $strongarm->value = '0';
+  $export['upload_list_default'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_max_resolution';
+  $strongarm->value = '0';
+  $export['upload_max_resolution'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_uploadsize_2938987599';
+  $strongarm->value = '2';
+  $export['upload_uploadsize_2938987599'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_uploadsize_3519698132';
+  $strongarm->value = '2';
+  $export['upload_uploadsize_3519698132'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_uploadsize_default';
+  $strongarm->value = '2';
+  $export['upload_uploadsize_default'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_usersize_2938987599';
+  $strongarm->value = '1000';
+  $export['upload_usersize_2938987599'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_usersize_3519698132';
+  $strongarm->value = '1000';
+  $export['upload_usersize_3519698132'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
+  $strongarm->name = 'upload_usersize_default';
+  $strongarm->value = '10';
+  $export['upload_usersize_default'] = $strongarm;
+
+  $strongarm = new stdClass;
+  $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
+  $strongarm->api_version = 1;
   $strongarm->name = 'user_email_verification';
   $strongarm->value = 0;
   $export['user_email_verification'] = $strongarm;
@@ -1064,7 +1995,7 @@ function boinc_standard_strongarm() {
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_password_reset_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
 A request to reset the password for your account has been made at !site.
 
@@ -1074,26 +2005,25 @@ You may now log in to !uri_brief by clicking on this link or copying and pasting
 
 This is a one-time login, so it can be used only once. It expires after one day and nothing will happen if it\'s not used.
 
-After logging in, you will be redirected to !edit_uri so you can change your password.';
+After logging in, you will be redirected to !edit_uri so you can change your password.
+
+--  !site team';
   $export['user_mail_password_reset_body'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_password_reset_subject';
-  $strongarm->value = 'Replacement login information for !username at !site';
+  $strongarm->value = 'Replacement login information for !mailto at !site';
   $export['user_mail_password_reset_subject'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_register_admin_created_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
-A site administrator at !site has created an account for you. You may now log in to !login_uri using the following username and password:
-
-username: !username
-password: !password
+A site administrator at !site has created an account for you. You may now log in to !login_uri using your email and your passphrase.
 
 You may also log in by clicking on this link or copying and pasting it in your browser:
 
@@ -1102,7 +2032,6 @@ You may also log in by clicking on this link or copying and pasting it in your b
 This is a one-time login, so it can be used only once.
 
 After logging in, you will be redirected to !edit_uri so you can change your password.
-
 
 --  !site team';
   $export['user_mail_register_admin_created_body'] = $strongarm;
@@ -1118,21 +2047,9 @@ After logging in, you will be redirected to !edit_uri so you can change your pas
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_register_no_approval_required_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
-Thank you for registering at !site. You may now log in to !login_uri using the following username and password:
-
-username: !username
-password: !password
-
-You may also log in by clicking on this link or copying and pasting it in your browser:
-
-!login_url
-
-This is a one-time login, so it can be used only once.
-
-After logging in, you will be redirected to !edit_uri so you can change your password.
-
+Thank you for registering at !site. You may now log in to !login_uri using your email address and your passphrase.
 
 --  !site team';
   $export['user_mail_register_no_approval_required_body'] = $strongarm;
@@ -1141,17 +2058,16 @@ After logging in, you will be redirected to !edit_uri so you can change your pas
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_register_no_approval_required_subject';
-  $strongarm->value = 'Account details for !username at !site';
+  $strongarm->value = 'Account details for !mailto at !site';
   $export['user_mail_register_no_approval_required_subject'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_register_pending_approval_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
 Thank you for registering at !site. Your application for an account is currently pending approval. Once it has been approved, you will receive another e-mail containing information about how to log in, set your password, and other details.
-
 
 --  !site team';
   $export['user_mail_register_pending_approval_body'] = $strongarm;
@@ -1160,28 +2076,26 @@ Thank you for registering at !site. Your application for an account is currently
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_register_pending_approval_subject';
-  $strongarm->value = 'Account details for !username at !site (pending admin approval)';
+  $strongarm->value = 'Account details for !mailto at !site (pending admin approval)';
   $export['user_mail_register_pending_approval_subject'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_activated_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
 Your account at !site has been activated.
 
-You may now log in by clicking on this link or copying and pasting it in your browser:
+You may now log in to !uri_brief by clicking on this link or copying and pasting it in your browser:
 
 !login_url
 
-This is a one-time login, so it can be used only once.
+This is a one-time login, so it can be used only once. It expires after one day and nothing will happen if it\'s not used.
 
 After logging in, you will be redirected to !edit_uri so you can change your password.
 
-Once you have set your own password, you will be able to log in to !login_uri in the future using:
-
-username: !username
+--  !site team
 ';
   $export['user_mail_status_activated_body'] = $strongarm;
 
@@ -1196,16 +2110,18 @@ username: !username
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_activated_subject';
-  $strongarm->value = 'Account details for !username at !site (approved)';
+  $strongarm->value = 'Account details for !mailto at !site (approved)';
   $export['user_mail_status_activated_subject'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_blocked_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
-Your account on !site has been blocked.';
+Your account on !site has been blocked.
+
+--  !site team';
   $export['user_mail_status_blocked_body'] = $strongarm;
 
   $strongarm = new stdClass;
@@ -1219,16 +2135,18 @@ Your account on !site has been blocked.';
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_blocked_subject';
-  $strongarm->value = 'Account details for !username at !site (blocked)';
+  $strongarm->value = 'Account details for !mailto at !site (blocked)';
   $export['user_mail_status_blocked_subject'] = $strongarm;
 
   $strongarm = new stdClass;
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_deleted_body';
-  $strongarm->value = '!username,
+  $strongarm->value = 'Hello,
 
-Your account on !site has been deleted.';
+Your account on !site has been deleted.
+
+--  !site team';
   $export['user_mail_status_deleted_body'] = $strongarm;
 
   $strongarm = new stdClass;
@@ -1242,7 +2160,7 @@ Your account on !site has been deleted.';
   $strongarm->disabled = FALSE; /* Edit this to true to make a default strongarm disabled initially */
   $strongarm->api_version = 1;
   $strongarm->name = 'user_mail_status_deleted_subject';
-  $strongarm->value = 'Account details for !username at !site (deleted)';
+  $strongarm->value = 'Account details for !mailto at !site (deleted)';
   $export['user_mail_status_deleted_subject'] = $strongarm;
 
   $strongarm = new stdClass;

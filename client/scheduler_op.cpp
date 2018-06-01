@@ -325,12 +325,13 @@ int SCHEDULER_OP::init_master_fetch(PROJECT* p) {
 
 // parse a master file.
 //
-int SCHEDULER_OP::parse_master_file(PROJECT* p, vector<std::string> &urls) {
+int SCHEDULER_OP::parse_master_file(PROJECT* p, vector<string> &urls) {
     char buf[256], buf2[256];
     char master_filename[256];
-    std::string str;
+    string str;
     FILE* f;
     int n;
+    const size_t scheduler_close_tag_len = strlen("</scheduler>");
 
     get_master_filename(*p, master_filename, sizeof(master_filename));
     f = boinc_fopen(master_filename, "r");
@@ -348,7 +349,7 @@ int SCHEDULER_OP::parse_master_file(PROJECT* p, vector<std::string> &urls) {
         while (q && parse_str(q, "<scheduler>", str)) {
             push_unique(str, urls);
             q = strstr(q, "</scheduler>");
-            if (q) q += strlen("</scheduler>");
+            if (q) q += scheduler_close_tag_len;
         }
 
         // check for new syntax: <link ...>
@@ -392,7 +393,7 @@ int SCHEDULER_OP::parse_master_file(PROJECT* p, vector<std::string> &urls) {
 // transfer scheduler URLs to project.
 // Return true if any of them is new
 //
-bool SCHEDULER_OP::update_urls(PROJECT* p, vector<std::string> &urls) {
+bool SCHEDULER_OP::update_urls(PROJECT* p, vector<string> &urls) {
     unsigned int i, j;
     bool found, any_new;
 
@@ -422,7 +423,7 @@ bool SCHEDULER_OP::update_urls(PROJECT* p, vector<std::string> &urls) {
 //
 bool SCHEDULER_OP::poll() {
     int retval;
-    vector<std::string> urls;
+    vector<string> urls;
     bool changed;
 
     switch(state) {
@@ -557,6 +558,7 @@ void SCHEDULER_REPLY::clear() {
     send_job_log = 0;
     scheduler_version = 0;
     got_rss_feeds = false;
+    too_recent = false;
 }
 
 SCHEDULER_REPLY::SCHEDULER_REPLY() {
@@ -587,7 +589,7 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
     int retval;
     MIOFILE mf;
     XML_PARSER xp(&mf);
-    std::string delete_file_name;
+    string delete_file_name;
     bool verify_files_on_app_start = false;
     bool non_cpu_intensive = false;
     bool ended = false;
@@ -703,7 +705,7 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
                 return retval;
             }
         } else if (xp.match_tag("gui_urls")) {
-            std::string foo;
+            string foo;
             retval = copy_element_contents(xp.f->f, "</gui_urls>", foo);
             if (retval) {
                 msg_printf(project, MSG_INTERNAL_ERROR,
@@ -833,6 +835,9 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
             file_deletes.push_back(delete_file_name);
         } else if (xp.parse_str("message", msg_buf, sizeof(msg_buf))) {
             parse_attr(attr_buf, "priority", pri_buf, sizeof(pri_buf));
+            if (strstr(msg_buf, "too recent")) {
+                too_recent = true;
+            }
             USER_MESSAGE um(msg_buf, pri_buf);
             messages.push_back(um);
             continue;

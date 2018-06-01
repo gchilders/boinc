@@ -86,10 +86,29 @@ class DbConn {
     //
     function affected_rows() {
         if (MYSQLI) {
-            $this->db_conn->affected_rows;
+            return $this->db_conn->affected_rows;
         } else {
             return mysql_affected_rows($this->db_conn);
         }
+    }
+
+    function get_list($table1, $table2, $joinfield1, $joinfield2, $classname, $fields, $where_clause, $order_clause, $limit) {
+        $query = "select $fields from DBNAME.$table1 a join DBNAME.$table2 b on a.$joinfield1=b.$joinfield2 where $where_clause order by $order_clause desc limit $limit";
+        $result = $this->do_query($query);
+        if (!$result) return null;
+        $x = array();
+        if (MYSQLI) {
+            while ($obj = $result->fetch_object($classname)) {
+                $x[] = $obj;
+            }
+            $result->free();
+        } else {
+            while ($obj = mysql_fetch_object($result, $classname)) {
+                $x[] = $obj;
+            }
+            mysql_free_result($result);
+        }
+        return $x;
     }
 
     function lookup_fields($table, $classname, $fields, $clause) {
