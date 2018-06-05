@@ -341,7 +341,7 @@ function page_tail(
         // passed to project_footer;
 ) {
     echo "<br>\n";
-    project_footer($is_main, $show_date, $url_prefix);
+    project_footer(!$is_main, $show_date, $url_prefix);
     echo '
         <script src="'.secure_url_base().'/jquery.min.js"></script>
         <script src="'.secure_url_base().'/bootstrap.min.js"></script>
