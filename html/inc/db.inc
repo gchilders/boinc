@@ -101,6 +101,10 @@ if (MYSQLI) {
         global $mysqli;
         return mysqli_escape_string($mysqli, $x);
     }
+    function _mysql_errno() {
+        global $mysqli;
+        return mysqli_errno($mysqli);
+    }
     function _mysql_error() {
         global $mysqli;
         return mysqli_error($mysqli);

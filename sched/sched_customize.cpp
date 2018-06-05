@@ -645,7 +645,6 @@ static inline bool app_plan_notphenomiix6(
        return false;
     }
     hu.avg_ncpus = 1;
-    hu.max_ncpus = 1;
     hu.projected_flops = 1.0*capped_host_fpops();
     hu.peak_flops = capped_host_fpops();
     return true;
