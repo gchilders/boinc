@@ -631,9 +631,7 @@ function latest_avs_app_platform($appid, $platformid) {
     foreach ($avs as $av) {
         foreach ($avs as $av2) {
             if ($av->id == $av2->id) continue;
-            if ($av->plan_class == $av2->plan_class && $av->version_num > $av2->version_num) {
-                $av2->deprecated = 1;
-            } else if ($av2->beta) {
+            if ($av->plan_class == $av2->plan_class && $av->beta == $av2->beta && $av->version_num > $av2->version_num) {
                 $av2->deprecated = 1;
             }
         }
@@ -884,6 +882,86 @@ class BoincHostDeleted {
 
 }
 
+class BoincConsent {
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('consent', 'BoincConsent', $clause);
+    }
+
+    static function enum($where_clause) {
+        $db = BoincDb::get();
+        return $db->enum('consent', 'BoincConsent', $where_clause);
+    }
+
+    static function insert ($clause) {
+        $db = BoincDb::get();
+        return $db->insert('consent', $clause);
+    }
+
+    static function update ($clause) {
+        $db = BoincDb::get();
+        return $db->update_aux('consent', $clause);
+    }
+
+    static function delete($clause) {
+        $db = BoincDb::get();
+        return $db->delete_aux('consent', $clause);
+    }
+
+    static function delete_for_user($user_id) {
+        $db = BoincDb::get();
+        $db->delete_aux('consent', "userid=$user_id");
+        return $db->affected_rows();
+    }
+
+}
+
+class BoincConsentType {
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('consent_type', 'BoincConsentType', $clause);
+    }
+
+    static function enum($where_clause, $order_clause=null) {
+        $db = BoincDb::get();
+        return $db->enum('consent_type', 'BoincConsentType', $where_clause, $order_clause);
+    }
+
+    static function insert ($clause) {
+        $db = BoincDb::get();
+        return $db->insert('consent_type', $clause);
+    }
+
+    static function update ($clause) {
+        $db = BoincDb::get();
+        return $db->update_aux('consent_type', $clause);
+    }
+
+    function delete() {
+        $db = BoincDb::get();
+        return $db->delete($this, 'consent_type');
+    }
+
+    function delete_aux($clause) {
+        $db = BoincDb::get();
+        return $db->delete_aux('consent_type', $clause);
+    }
+
+}
+
+// Class to interface with SQL View latest_consent. Only read
+// operations permitted.
+class BoincLatestConsent {
+    static function lookup($clause) {
+        $db = BoincDb::get();
+        return $db->lookup('latest_consent', 'BoincLatestConsent', $clause);
+    }
+
+    static function enum($where_clause, $order_clause=null) {
+        $db = BoincDb::get();
+        return $db->enum('latest_consent', 'BoincLatestConsent', $where_clause, $order_clause);
+    }
+}
 
 // DEPRECATED: use BoincDb::escape_string where possible
 // 

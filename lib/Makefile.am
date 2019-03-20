@@ -35,7 +35,8 @@ libfcgi_sources = \
     str_util.cpp \
     synch.cpp \
     url.cpp \
-    util.cpp
+    util.cpp \
+	wslinfo.cpp
 
 generic_sources = \
     app_ipc.cpp \
@@ -69,7 +70,8 @@ generic_sources = \
     shmem.cpp \
     str_util.cpp \
     url.cpp \
-    util.cpp
+    util.cpp \
+	wslinfo.cpp
 
 if OS_WIN32
 win_sources = \
@@ -80,13 +82,15 @@ win_sources = \
     procinfo_win.cpp \
     run_app_windows.cpp \
     stackwalker_win.cpp \
-    win_util.cpp
+    win_util.cpp \
+    wslinfo.cpp
 win_headers= \
     boinc_win.h \
     diagnostics_win.h \
     run_app_windows.h \
     stackwalker_win.h \
-    win_util.h
+    win_util.h \
+    wslinfo.h
 else # !OS_WIN32
 if OS_DARWIN
 mac_sources = \

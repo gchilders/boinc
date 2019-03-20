@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2018 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -377,7 +377,7 @@ static void handle_set_gpu_mode(GUI_RPC_CONN& grc) {
     grc.mfout.printf("<success/>\n");
 }
 
-// On Android, get product name, OS name, OS version, and MAC addr from GUI,
+// On Android, get product name, OS name, OS version, domain name (device name), and MAC addr from GUI,
 //
 static void handle_set_host_info(GUI_RPC_CONN& grc) {
     while (!grc.xp.get_tag()) {
@@ -408,6 +408,12 @@ static void handle_set_host_info(GUI_RPC_CONN& grc) {
                     safe_strcat(gstate.host_info.os_version, ")");
                 }
             }
+
+            // Device name
+            if (strlen(hi.domain_name)) {
+                safe_strcpy(gstate.host_info.domain_name, hi.domain_name);
+            }
+
             grc.mfout.printf("<success/>\n");
             gstate.set_client_state_dirty("set_host_info RPC");
             return;
@@ -1030,7 +1036,7 @@ static void handle_get_newer_version(GUI_RPC_CONN& grc) {
         "<newer_version>%s</newer_version>\n"
         "<download_url>%s</download_url>\n",
         gstate.newer_version.c_str(),
-        cc_config.client_download_url.c_str()
+        nvc_config.client_download_url.c_str()
     );
 }
 

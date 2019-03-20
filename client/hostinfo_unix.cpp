@@ -74,11 +74,7 @@
 #include <sys/stat.h>
 
 #if HAVE_SYS_SWAP_H
-#if defined(ANDROID) && !defined(ANDROID_64)
-#include <linux/swap.h>
-#else
 #include <sys/swap.h>
-#endif
 #endif
 
 #if HAVE_SYS_SYSCTL_H
@@ -469,30 +465,30 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
         msg_printf(NULL, MSG_INFO,
             "Can't open /proc/cpuinfo to get CPU info"
         );
-        strcpy(host.p_model, "unknown");
-        strcpy(host.p_vendor, "unknown");
+        safe_strcpy(host.p_model, "unknown");
+        safe_strcpy(host.p_vendor, "unknown");
         return;
     }
 
 #ifdef __mips__
-    strcpy(host.p_model, "MIPS ");
+    safe_strcpy(host.p_model, "MIPS ");
     model_hack = true;
 #elif __alpha__
-    strcpy(host.p_vendor, "HP (DEC) ");
+    safe_strcpy(host.p_vendor, "HP (DEC) ");
     vendor_hack = true;
 #elif __hppa__
-    strcpy(host.p_vendor, "HP ");
+    safe_strcpy(host.p_vendor, "HP ");
     vendor_hack = true;
 #elif __ia64__
-    strcpy(host.p_model, "IA-64 ");
+    safe_strcpy(host.p_model, "IA-64 ");
     model_hack = true;
 #elif defined(__arm__) || defined(__aarch64__)
-    strcpy(host.p_vendor, "ARM");
+    safe_strcpy(host.p_vendor, "ARM");
     vendor_hack = vendor_found = true;
 #endif
 
     host.m_cache=-1;
-    strcpy(features, "");
+    safe_strcpy(features, "");
     while (fgets(buf, 1024, f)) {
         strip_whitespace(buf);
         if (
@@ -533,7 +529,7 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
             strlcpy(buf2, strchr(buf, ':') + 2, ((t<sizeof(buf2))?t:sizeof(buf2)));
             strip_whitespace(buf2);
             if (strlen(host.product_name)) {
-                strcat(host.product_name, " ");
+                safe_strcat(host.product_name, " ");
             }
             safe_strcat(host.product_name, buf2);
         }
@@ -557,7 +553,7 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
                 char *coma = NULL;
                 if ((coma = strrchr(buf, ','))) {   /* we have ", altivec supported" */
                     *coma = '\0';    /* strip the unwanted line */
-                    strcpy(features, "altivec");
+                    safe_strcpy(features, "altivec");
                     features_found = true;
                 }
 #endif
@@ -667,7 +663,7 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
     safe_strcpy(model_buf, host.p_model);
 #if !defined(__aarch64__) && !defined(__arm__)
     if (family>=0 || model>=0 || stepping>0) {
-        strcat(model_buf, " [");
+        safe_strcat(model_buf, " [");
         if (family>=0) {
             sprintf(buf, "Family %d ", family);
             safe_strcat(model_buf, buf);
@@ -680,11 +676,11 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
             sprintf(buf, "Stepping %d", stepping);
             safe_strcat(model_buf, buf);
         }
-        strcat(model_buf, "]");
+        safe_strcat(model_buf, "]");
     }
 #else
     if (model_info_found) {
-        strcat(model_buf, " [");
+        safe_strcat(model_buf, " [");
         if (strlen(implementer)>0) {
             sprintf(buf, "Impl %s ", implementer);
             safe_strcat(model_buf, buf);
@@ -705,7 +701,7 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
             sprintf(buf, "Rev %s", revision);
             safe_strcat(model_buf, buf);
         }
-        strcat(model_buf, "]");
+        safe_strcat(model_buf, "]");
     }
 #endif
     if (strlen(features)) {
@@ -1159,7 +1155,7 @@ int HOST_INFO::get_cpu_info() {
     long cpu_type;
     char *cpu_type_name;
 
-    strcpy(p_vendor, "HP (DEC)");
+    safe_strcpy(p_vendor, "HP (DEC)");
 
     getsysinfo( GSI_PROC_TYPE, (caddr_t) &cpu_type, sizeof( cpu_type));
     CPU_TYPE_TO_TEXT( (cpu_type& 0xffffffff), cpu_type_name);
@@ -1454,11 +1450,10 @@ int HOST_INFO::get_os_info() {
 
 #if LINUX_LIKE_SYSTEM
     bool found_something = false;
-    char buf2[256];
     char dist_name[256], dist_version[256];
     string os_version_extra("");
-    strcpy(dist_name, "");
-    strcpy(dist_version, "");
+    safe_strcpy(dist_name, "");
+    safe_strcpy(dist_version, "");
 
     // see: http://refspecs.linuxbase.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/lsbrelease.html
     // although the output is not clearly specified it seems to be constant
@@ -1492,7 +1487,7 @@ int HOST_INFO::get_os_info() {
         os_version_extra = (string)os_version;
         safe_strcpy(os_version, dist_version);
         if (strlen(dist_name)) {
-            strcat(os_name, " ");
+            safe_strcat(os_name, " ");
             safe_strcat(os_name, dist_name);
         }
     }
@@ -1514,9 +1509,9 @@ int HOST_INFO::get_os_info() {
     }
 
     if (!os_version_extra.empty()) {
-        strcat(os_version, " [");
-        strcat(os_version, os_version_extra.c_str());
-        strcat(os_version, "]");
+        safe_strcat(os_version, " [");
+        safe_strcat(os_version, os_version_extra.c_str());
+        safe_strcat(os_version, "]");
     }
 #endif //LINUX_LIKE_SYSTEM
     return 0;
@@ -1629,65 +1624,6 @@ inline bool all_tty_idle(time_t t) {
     return true;
 }
 
-static const struct dir_input_dev {
-    const char *dir;
-    const char *dev;
-} input_patterns[] = {
-#ifdef unix
-    { "/dev/input","event" },
-    { "/dev/input","mouse" },
-    { "/dev/input/mice","" },
-#endif
-    // add other ifdefs here as necessary.
-    { NULL, NULL },
-};
-
-vector<string> get_input_list() {
-    // Create a list of all terminal devices on the system.
-    char devname[1024];
-    char fullname[1024];
-    int done,i=0;
-    vector<string> input_list;
-
-    do {
-        DIRREF dev=dir_open(input_patterns[i].dir);
-        if (dev) {
-            do {
-                // get next file
-                done=dir_scan(devname,dev,1024);
-                // does it match our tty pattern? If so, add it to the tty list.
-                if (!done && (strstr(devname,input_patterns[i].dev) == devname)) {
-                    // don't add anything starting with .
-                    if (devname[0] != '.') {
-                        sprintf(fullname,"%s/%s",input_patterns[i].dir,devname);
-                        input_list.push_back(fullname);
-                    }
-                }
-            } while (!done);
-            dir_close(dev);
-        }
-        i++;
-    } while (input_patterns[i].dir != NULL);
-    return input_list;
-}
-
-inline bool all_input_idle(time_t t) {
-    static vector<string> input_list;
-    struct stat sbuf;
-    unsigned int i;
-
-    if (input_list.size()==0) input_list=get_input_list();
-    for (i=0; i<input_list.size(); i++) {
-        // ignore errors
-        if (!stat(input_list[i].c_str(), &sbuf)) {
-            // printf("input: %s %d %d\n",input_list[i].c_str(),sbuf.st_atime,t);
-            if (sbuf.st_atime >= t) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
 #ifdef __APPLE__
 
 // We can't link the client with the AppKit framework because the client
@@ -2124,15 +2060,6 @@ bool HOST_INFO::users_idle(bool check_all_logins, double idle_time_to_run) {
     }
 #endif // HAVE_XSS
 
-    // Lets at least check the dev entries which should be correct for
-    // USB keyboards and mice.  If the linux kernel doc is correct it should
-    // also work for bluetooth input devices as well.
-    //
-    // See: https://www.kernel.org/doc/Documentation/input/input.txt
-    //
-    if (!all_input_idle(idle_time)) {
-        return false;
-    }
 #else
     // We should find out which of the following are actually relevant
     // on which systems (if any)

@@ -91,7 +91,7 @@ function boincuser_check_credit_requirements() {
     }
     else {
       drupal_set_message(bts(
-        'You must earn @count more credits to be able to post comments on this site.',
+        'You must earn @count more credits to be able to post comments on this site and create or modify your user profile.',
         array('@count' => $min_credit_to_post - $account->boincuser_total_credit)
       ), 'warning', FALSE);
       if (isset($account->roles[$unrestricted_role])) {
@@ -198,6 +198,88 @@ function boincuser_select_user_of_the_day() {
   return $uotd;
 }
 
+
+/**
+ * Send the user an email about his/her email change.
+ *
+ * An email is sent to the user's previous email address informing
+ * them of the email change, and providing a way to revert the
+ * change. An email is also sent to the new (current) address,
+ * informing the user of the change.
+ *
+ * The user is given a secure URL with which to revert the
+ * change. Because the email address is not yet changed by Drupal when
+ * this function is called, it may be called with optional parameters
+ * new and prev email.
+ */
+function _boincuser_send_emailchange($account, $new_email=NULL, $prev_email=NULL, $adminuser=FALSE) {
+  require_boinc('token');
+  module_load_include('inc', 'rules', 'modules/system.rules');
+
+  global $base_url;
+  $site_name = variable_get('site_name', 'Drupal-BOINC');
+
+  if (is_null($new_email)) {
+    $new_email = $account->mail;
+  }
+  if (is_null($prev_email)) {
+    $prev_email = $account->boincuser_previous_email_addr;
+  }
+
+  // @todo - set constant in drupal, or use BOINC contsants
+  $duration = TOKEN_DURATION_ONE_WEEK;
+  $changedate = date('F j, Y \a\t G:i T', time());
+  $newdate = date('F j, Y \a\t G:i T', $account->boincuser_email_addr_change_time + $duration);
+  $token = create_token($account->boincuser_id, TOKEN_TYPE_CHANGE_EMAIL, $duration);
+  if ($adminuser) {
+    $graf1 = "Your email address was changed from {$prev_email} to {$new_email} "
+      . "on {$changedate}. If you need to reverse this change, please look for "
+      . "an email send to the email address: {$prev_email}.\n";
+  }
+  else {
+    $graf1 = "Your email address was changed from {$prev_email} to {$new_email} "
+      . "on {$changedate}. You will not be able to change your email address "
+      . "until {$newdate}. If you need to reverse this change, please look for "
+      . "an email send to the email address: {$prev_email}.\n";
+  }
+
+  // Send email #1 to current address
+  $mysubject = "Notification of email change at {$site_name}";
+  $mymessage = ''
+      . "{$account->boincuser_name},\n"
+      . "\n"
+      . $graf1
+      . "\n"
+      . "Thanks, \n"
+      . "{$site_name} support team\n";
+
+  $settings = array(
+    'from' => '',
+    'to' => $new_email,
+    'subject' => $mysubject,
+    'message' => $mymessage,
+  );
+  rules_action_mail_to_user($account, $settings);
+
+  // Send email #2 to previous address.
+  $mymessage = ''
+      . "Your email address has been changed. If you did not intend to take this action, then please click this link to reverse this change, or copy-and-paste the link into your browser location bar. You will need to change your password as well.\n"
+      . "\n"
+      . "{$base_url}/user/{$account->uid}/recoveremail/{$token}\n"
+      . "\n"
+      . "Thanks, \n"
+      . "{$site_name} support team\n";
+
+  $settings = array(
+    'from' => '',
+    'to' => $prev_email,
+    'subject' => $mysubject,
+    'message' => $mymessage,
+  );
+
+  rules_action_mail($settings);
+}
+
 /**
  * Determine the first unique name from a given base. Also cleans the
  * username so that it will be valid for drupal. And truncates user
@@ -235,27 +317,18 @@ function create_proper_drupalname($requested_name) {
 
 
 /**
- * Determine if user has opted-in to the terms of use. If not, the
- * user must opt-in first. Returns TRUE/FALSE depending on database
- * record.
+ * Determine if user has agreed to the terms of use. If not, the user
+ * must agree to terms of use. Returns TRUE/FALSE depending on
+ * database record.
  *
  * @params object $user
  *   This is a drupal user object.
  *
  */
 function boincuser_check_termsofuse($user) {
-  // @todo - the condition for the terms of use needs to be saved in the
-  // project's user table, which does not exist, but may be added
-  // upstream. If/when that occurs, check it here.
-  $qres = db_query('SELECT bu.privacy_consent_dt FROM {boincuser} AS bu WHERE uid=%d', $user->uid);
-  $optin_dt = db_result($qres);
-  // If datetime the user opted-in is larger than the current
-  // unixtime, then the check passes.
-  if ($optin_dt > 1 ) {
-    return true;
-  }
-
-  return false;
+  require_boinc('consent');
+  $boinc_user = boincuser_load($user->uid, TRUE);
+  return check_user_consent($boinc_user, CONSENT_TYPE_ENROLL);
 }
 
 /**
@@ -266,12 +339,27 @@ function boincuser_check_termsofuse($user) {
  *
  */
 function boincuser_consentto_termsofuse($user) {
-  $uid = $user->uid;
+  require_boinc('consent');
+  $boinc_user = boincuser_load($user->uid, TRUE);
 
-  // @todo - Modify BOINC project database user table to record opt-in datetime.
-  $sql = 'UPDATE {boincuser} set privacy_consent_dt = %d WHERE uid=%d';
-  $qrc = db_query($sql, time(), $uid);
-  return $qrc;
+  list($checkct, $ctid) = check_consent_type(CONSENT_TYPE_ENROLL);
+  if ($checkct) {
+    $rc1 = consent_to_a_policy($boinc_user, $ctid, 1, 0, 'Webform', time());
+    if (!$rc1) {
+      drupal_set_message(
+        bts("ERROR: Database error when attempting to INSERT into table consent with ID=@id. Please contact site administrators.",
+        array('@id' => $boinc_user->id),
+        'NULL', 'boinc:consent-termsofuse'),
+      'error');
+    }
+    return $rc1;
+  }
+  else {
+    drupal_set_message(
+      bts('ERROR: Consent type for enrollment not found. Please contact site administrators.', array(), 'NULL', 'boinc:consent-termsofuse'),
+    'error');
+  }
+  return FALSE;
 }
 
 /**
@@ -292,6 +380,26 @@ function _boincuser_ignore_paths($path, $paths_to_ignore) {
   return FALSE;
 }
 
+/**
+ * A 'menu redirect'. Redirect users from URL recoveremail.php to
+ * Drupal's recover email path.
+ */
+function _boincuser_redirect_recover_email() {
+  $params = array(
+    'boincid' => isset($_GET['id']) ? $_GET['id'] : '',
+    'token' => isset($_GET['token']) ? $_GET['token'] : ''
+  );
+
+  // If boincid or token is not present, then go to the home page.
+  if (empty($params['boincid']) or empty($params['token'])) {
+    $redirect = '';
+  }
+  else {
+    $uid = boincuser_lookup_uid($params['boincid']);
+    $redirect = "/user/${uid}/recoveremail/${params['token']}";
+  }
+  drupal_goto($redirect);
+}
 
 /*  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *  *
  * General BOINC functions
