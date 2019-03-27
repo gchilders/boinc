@@ -78,7 +78,7 @@ tr.message {
 
 input[type="button"],
 input[type="submit"],
-.btn,
+.btn, .btn:hover, .btn:focus,
 a.button {
 	background: #f2f2f2 url(img/white_grad.png) repeat-x scroll left top;
 	color: black;
