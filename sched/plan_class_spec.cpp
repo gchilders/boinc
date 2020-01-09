@@ -18,9 +18,6 @@
 // Support for plan classes defined using an XML file.
 // See https://boinc.berkeley.edu/trac/wiki/AppPlanSpec
 
-// logic for handling an XML specification of plan classes
-// see https://boinc.berkeley.edu/trac/wiki/AppPlanConfig
-
 #include <cmath>
 
 #include "util.h"
@@ -32,7 +29,7 @@
 
 using std::string;
 
-// this returns a numerical OS version for Darwin/OSX and Windows,
+// return a numerical OS version for Darwin/OSX and Windows,
 // letting us define numerical ranges for these OS versions
 //
 static double os_version_num(HOST h) {
@@ -60,7 +57,7 @@ static double os_version_num(HOST h) {
     return 0;
 }
 
-// parse "Android 4.3.1" or "Android 4.3"
+// parse version# from "(Android 4.3.1)" or "(Android 4.3)" or "(Android 4)"
 //
 static int android_version_num(HOST h) {
     int maj, min, rel;
@@ -75,10 +72,16 @@ static int android_version_num(HOST h) {
     if (n == 2) {
         return maj*10000 + min*100;
     }
+    n = sscanf(p, "%d", &maj);
+    if (n == 1) {
+        return maj*10000;
+    }
     return 0;
 }
 
-static bool wu_is_infeasible_for_plan_class(const PLAN_CLASS_SPEC* pc, const WORKUNIT* wu) {
+static bool wu_is_infeasible_for_plan_class(
+    const PLAN_CLASS_SPEC* pc, const WORKUNIT* wu
+) {
     if (pc->min_wu_id && wu->id < pc->min_wu_id) {
         if (config.debug_version_select) {
             log_messages.printf(MSG_NORMAL,
@@ -100,8 +103,8 @@ static bool wu_is_infeasible_for_plan_class(const PLAN_CLASS_SPEC* pc, const WOR
     if (pc->min_batch && wu->batch < pc->min_batch) {
         if (config.debug_version_select) {
             log_messages.printf(MSG_NORMAL,
-                "[version] batch#%ld too old for plan class '%s' (%ld)\n",
-                wu->id, pc->name, pc->min_batch
+                "[version] batch#%d too old for plan class '%s' (%ld)\n",
+                wu->batch, pc->name, pc->min_batch
             );
         }
         return true;
@@ -109,8 +112,8 @@ static bool wu_is_infeasible_for_plan_class(const PLAN_CLASS_SPEC* pc, const WOR
     if (pc->max_batch && wu->batch > pc->max_batch) {
         if (config.debug_version_select) {
             log_messages.printf(MSG_NORMAL,
-                "[version] batch#%ld too new for plan class '%s' (%ld)\n",
-                wu->id, pc->name, pc->max_batch
+                "[version] batch#%d too new for plan class '%s' (%ld)\n",
+                wu->batch, pc->name, pc->max_batch
             );
         }
         return true;
@@ -194,7 +197,9 @@ bool PLAN_CLASS_SPEC::opencl_check(OPENCL_DEVICE_PROP& opencl_prop) {
 // See whether the given host/user can be sent this plan class.
 // If so return the resource usage and estimated FLOPS in hu.
 //
-bool PLAN_CLASS_SPEC::check(SCHEDULER_REQUEST& sreq, HOST_USAGE& hu, const WORKUNIT* wu) {
+bool PLAN_CLASS_SPEC::check(
+    SCHEDULER_REQUEST& sreq, HOST_USAGE& hu, const WORKUNIT* wu
+) {
     COPROC* cpp = NULL;
     bool can_use_multicore = true;
     string msg;
@@ -977,11 +982,11 @@ bool PLAN_CLASS_SPEC::check(SCHEDULER_REQUEST& sreq, HOST_USAGE& hu, const WORKU
 #endif
 
     return true;
-
 }
 
 bool PLAN_CLASS_SPECS::check(
-    SCHEDULER_REQUEST& sreq, char* plan_class, HOST_USAGE& hu, const WORKUNIT* wu
+    SCHEDULER_REQUEST& sreq, char* plan_class, HOST_USAGE& hu,
+    const WORKUNIT* wu
 ) {
     for (unsigned int i=0; i<classes.size(); i++) {
         if (!strcmp(classes[i].name, plan_class)) {
@@ -992,7 +997,9 @@ bool PLAN_CLASS_SPECS::check(
     return false;
 }
 
-bool PLAN_CLASS_SPECS::wu_is_infeasible(char* plan_class_name, const WORKUNIT* wu) {
+bool PLAN_CLASS_SPECS::wu_is_infeasible(
+    char* plan_class_name, const WORKUNIT* wu
+) {
     if(wu_restricted_plan_class) {
         for (unsigned int i=0; i<classes.size(); i++) {
             if(!strcmp(classes[i].name, plan_class_name)) {

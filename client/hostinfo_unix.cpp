@@ -720,10 +720,10 @@ static void parse_cpuinfo_linux(HOST_INFO& host) {
 
 void use_cpuid(HOST_INFO& host) {
     u_int p[4];
-    int hasMMX, hasSSE, hasSSE2, hasSSE3, has3DNow, has3DNowExt;
+    int hasMMX, hasSSE, hasSSE2, hasSSE3, has3DNow, has3DNowExt, hasAVX;
     char capabilities[256];
 
-    hasMMX = hasSSE = hasSSE2 = hasSSE3 = has3DNow = has3DNowExt = 0;
+    hasMMX = hasSSE = hasSSE2 = hasSSE3 = has3DNow = has3DNowExt = hasAVX = 0;
     do_cpuid(0x0, p);
 
     if (p[0] >= 0x1) {
@@ -733,6 +733,7 @@ void use_cpuid(HOST_INFO& host) {
         hasMMX  = (p[3] & (1 << 23 )) >> 23; // 0x0800000
         hasSSE  = (p[3] & (1 << 25 )) >> 25; // 0x2000000
         hasSSE2 = (p[3] & (1 << 26 )) >> 26; // 0x4000000
+        hasAVX  = (p[2] & (1 << 28 )) >> 28;
         hasSSE3 = (p[2] & (1 << 0 )) >> 0;
     }
 
@@ -751,6 +752,7 @@ void use_cpuid(HOST_INFO& host) {
     if (has3DNow) safe_strcat(capabilities, "3dnow ");
     if (has3DNowExt) safe_strcat(capabilities, "3dnowext ");
     if (hasMMX) safe_strcat(capabilities, "mmx ");
+    if (hasAVX) safe_strcat(capabilities, "avx ");
     strip_whitespace(capabilities);
     char buf[1024];
     snprintf(buf, sizeof(buf), "%s [] [%s]",
@@ -1562,45 +1564,58 @@ inline bool device_idle(time_t t, const char *device) {
     return stat(device, &sbuf) || (sbuf.st_atime < t);
 }
 
+// list of directories and prefixes of TTY devices
+//
 static const struct dir_tty_dev {
     const char *dir;
     const char *dev;
 } tty_patterns[] = {
 #ifdef unix
-    { "/dev","tty" },
-    { "/dev","pty" },
-    { "/dev/pts","" },
+    { "/dev", "tty" },
+    { "/dev", "pty" },
+    { "/dev/pts", NULL },
 #endif
     // add other ifdefs here as necessary.
     { NULL, NULL },
 };
 
+// Make a list of all TTY devices on the system.
+//
 vector<string> get_tty_list() {
-    // Create a list of all terminal devices on the system.
     char devname[1024];
     char fullname[1024];
-    int done,i=0;
     vector<string> tty_list;
 
-    do {
-        DIRREF dev=dir_open(tty_patterns[i].dir);
-        if (dev) {
-            do {
-                // get next file
-                done=dir_scan(devname,dev,1024);
-                // does it match our tty pattern? If so, add it to the tty list.
-                if (!done && (strstr(devname,tty_patterns[i].dev) == devname)) {
-                    // don't add anything starting with .
-                    if (devname[0] != '.') {
-                        sprintf(fullname,"%s/%s",tty_patterns[i].dir,devname);
-                        tty_list.push_back(fullname);
-                    }
+    for (int i=0; ; i++) {
+        if (tty_patterns[i].dir == NULL) break;
+        DIRREF dev = dir_open(tty_patterns[i].dir);
+        if (!dev) continue;
+        while (1) {
+            if (dir_scan(devname, dev, 1024)) break;
+            if (devname[0] == '.') continue;
+
+            // check name prefix
+            //
+            if (tty_patterns[i].dev) {
+                if ((strstr(devname, tty_patterns[i].dev) != devname)) continue;
+            }
+
+            sprintf(fullname, "%s/%s", tty_patterns[i].dir, devname);
+
+            // check for ignored paths
+            //
+            bool ignore = false;
+            for (unsigned int j=0; j<cc_config.ignore_tty.size(); j++) {
+                if (strstr(fullname, cc_config.ignore_tty[j].c_str()) == fullname) {
+                    ignore = true;
+                    break;
                 }
-            } while (!done);
-            dir_close(dev);
+            }
+            if (ignore) continue;
+            tty_list.push_back(fullname);
         }
-        i++;
-    } while (tty_patterns[i].dir != NULL);
+        dir_close(dev);
+    }
     return tty_list;
 }
 

@@ -160,13 +160,14 @@ void CC_CONFIG::show() {
     if (abort_jobs_on_exit) {
         msg_printf(NULL, MSG_INFO, "Config: abort jobs on exit");
     }
+    if (allow_gui_rpc_get) {
+        msg_printf(NULL, MSG_INFO, "Config: allow web file fetch");
+    }
     if (allow_multiple_clients) {
         msg_printf(NULL, MSG_INFO, "Config: allow multiple clients");
     }
     if (allow_remote_gui_rpc) {
-        msg_printf(NULL, MSG_INFO,
-            "Config: GUI RPC allowed from any host"
-        );
+        msg_printf(NULL, MSG_INFO, "Config: GUI RPC allowed from any host");
     }
     FILE* f = fopen(REMOTEHOST_FILE_NAME, "r");
     if (f) {
@@ -289,6 +290,11 @@ void CC_CONFIG::show() {
             );
         }
     }
+    for (i=0; i<ignore_tty.size(); i++) {
+        msg_printf(NULL, MSG_INFO,
+            "Config: ignore tty: %s", ignore_tty[i].c_str()
+        );
+    }
 }
 
 // This is used by the BOINC client.
@@ -310,6 +316,7 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
     for (int i=1; i<NPROC_TYPES; i++) {
         ignore_gpu_instance[i].clear();
     }
+    ignore_tty.clear();
 
     while (!xp.get_tag()) {
         if (!xp.is_tag) {
@@ -325,6 +332,7 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
             return 0;
         }
         if (xp.parse_bool("abort_jobs_on_exit", abort_jobs_on_exit)) continue;
+        if (xp.parse_bool("allow_gui_rpc_get", allow_gui_rpc_get)) continue;
         if (xp.parse_bool("allow_multiple_clients", allow_multiple_clients)) continue;
         if (xp.parse_bool("allow_remote_gui_rpc", allow_remote_gui_rpc)) continue;
         if (xp.parse_string("alt_platform", s)) {
@@ -450,6 +458,10 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
         if (xp.parse_bool("use_certs", use_certs)) continue;
         if (xp.parse_bool("use_certs_only", use_certs_only)) continue;
         if (xp.parse_bool("vbox_window", vbox_window)) continue;
+        if (xp.parse_string("ignore_tty", s)) {
+            ignore_tty.push_back(s);
+            continue;
+        }
 
         // The following 3 tags have been moved to nvc_config and
         // NVC_CONFIG_FILE, but CC_CONFIG::write() in older clients 
