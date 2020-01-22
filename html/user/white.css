@@ -1,3 +1,10 @@
+th.bg-primary a, 
+th.bg-primary a:link, 
+th.bg-primary a:visited, 
+th.bg-primary a:active {
+	color: #000088; 
+}
+
 a, a:link, a:visited, a:active {
 	color: #0069A1; 
 }
@@ -12,11 +19,20 @@ h1 {
 }
 
 hr {
+	border:0;
 	border-top: 2px solid #e8e8e8;
 }
 
-table.bordered {
+hr.news_line {
+    border: 0;
+    border-bottom: 1px solid rgb(200, 200, 200);
+}
+
+.table-bordered, .bordered {
 	border-color: #e8e8e8;
+    border-width: 2px;
+    border-style: solid;
+    border-radius: 6px;
 }
 
 th {
@@ -31,8 +47,12 @@ td.indent {
 	border-color: #fff;
 }
 
-td.heading {
+th, td.heading {
 	background-color: #d8d8d8;
+}
+
+th.subheading {
+	background-color: #eee;
 }
 
 td.fieldname {
@@ -78,24 +98,37 @@ tr.message {
 
 input[type="button"],
 input[type="submit"],
-.btn, .btn:hover, .btn:focus,
-a.button {
-	background: #f2f2f2 url(img/white_grad.png) repeat-x scroll left top;
+.btn,
+a.btn {
+#background: #d0f8d0;
+    background: #EDEDED url(img/white_grad.png) repeat-x scroll left top;
 	color: black;
 	border-color: #ccc;
 }
 
 input[type="button"]:hover,
 input[type="submit"]:hover,
-input.btn:hover, 
-.button:hover ,
+input.btn:hover,
+.btn:hover ,
 .forum_toplinks a:hover {
 	border: 1px solid #555;
 	color: #0069A1;
 }
 
-input[type="text"], select, textarea {
-	border-color: #d8d8d8;
+a.btn-green {
+	border: 1px solid #555;
+	color: black;
+    background: #a0f0a0;
+    font-size: 1.2em;
+	border-color: #60a060;
+}
+
+input[type="text"], input[type="password"], select, textarea {
+	border-color: #bbb;
+}
+
+input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
+	border-color: #0069A1;
 }
 
 #news {
@@ -112,30 +145,46 @@ input[type="text"], select, textarea {
 	border-color: #eee;
 }
 
-td.category , tr.subtitle{
-	background-color: #ddd;
+td.news {
+	background-color: #dff0ff;
+	border-color: #add8e6;
 }
 
-td.postheader { 
+td.uotd {
+	background-color: #d3d3d3;
+	border-color: #eee;
+}
+
+td.category {
+   background-color: #ddd;
+}
+
+td.postheader {
 	background-color: #eee;
+	color: #333;
 }
 
-td.postbody { 
-	background: transparent url('img/75pct_white.png');
+td.postbody {
+	background-color: #fff;
 }
 
 td.postfooter {
 	background-color: #eee;
+	color: #333;
 }
 
-tr.postseperator {
+tr.postseparator {
 	background-color: #c8c8c8;
-	border-color: #aaa;
+    border-color: #aaa;
 }
 
 div.authorcol {
 	background-color: white;
 	border-color: #c8c8c8;
+}
+
+.authorinfo {
+	color: #333;
 }
 
 .authorinfo img {
@@ -148,11 +197,39 @@ blockquote.postbody {
 }
 
 span.news_date {
-	color: #646464;
+    color: rgb(100,100,100);
+    font-size: 0.9em;
+    float: right;
 }
 
 span.highlight {
 	background-color: #ffc;
+}
+
+.code {
+	border-left-color: #caa;
+}
+
+p.text-danger, .error {
+	color: #f00;
+}
+
+.notice {
+	color: #090;
+}
+
+div.pm_preview {
+    border-width: 2px;
+    border-style: solid;
+    margin: 1em;
+    padding: 0.2em;
+    font-size: 1.1em;
+    border-bottom-width: 1px;
+    border-bottom-style: solid;
+
+	border-color: #ccc;
+	background-color: #eee;
+	border-bottom-color:  #ccc;
 }
 
 span.page_title {
@@ -161,31 +238,10 @@ span.page_title {
     display: block;
 }
 
-.code {
-	border-left-color: #caa;
-}
-
-.error {
-	color: #f00;
-}
-
-.notice {
-	color: #090;
-}
-
-#preview {
-	border-color: #ccc;
-	background-color: #eee;
-}
-
-#preview .header {
-	border-bottom-color:  #ccc;
-}
-
 /*   Server Status Page   */
 
 td.running { background-color: #9aff4f; }
 
-td.notrunning { background-color: #feff6f; }
+td.notrunning { background-color: #ff4f4f; }
+td.disabled { background-color: #bbb; }
 
-td.disabled { background-color: #ff4f4f; }
