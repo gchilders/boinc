@@ -18,10 +18,8 @@
 // Stuff related to stderr/stdout direction and exception handling;
 // used by both core client and by apps
 
-#if   defined(_WIN32) && !defined(__STDWX_H__)
+#if defined(_WIN32)
 #include "boinc_win.h"
-#elif defined(_WIN32) && defined(__STDWX_H__)
-#include "stdwx.h"
 #endif
 
 #ifdef __EMX__
@@ -60,6 +58,8 @@
 
 
 #include "diagnostics.h"
+
+bool main_exited;   // set at end of main()
 
 #ifdef ANDROID_VOODOO
 // for signal handler backtrace
@@ -154,6 +154,15 @@ int __cdecl boinc_message_reporting(int reportType, char *szMsg, int *retVal){
     int n;
     (*retVal) = 0;
 
+    // can't call CRT functions after main returns
+    //
+    if (main_exited) return 0;
+#if defined(wxUSE_GUI)
+    // in wxWidgets, we don't know if main has returned
+    return 0;
+#else
+
+
     switch(reportType){
 
     case _CRT_WARN:
@@ -179,8 +188,8 @@ int __cdecl boinc_message_reporting(int reportType, char *szMsg, int *retVal){
         break;
 
     }
-
     return(TRUE);
+#endif
 }
 
 #endif //  _DEBUG
@@ -988,7 +997,7 @@ void boinc_info(const char* pszFormat, ...){
 }
 #endif
 
-void diagnostics_set_max_file_sizes(int stdout_size, int stderr_size) {
+void diagnostics_set_max_file_sizes(double stdout_size, double stderr_size) {
     if (stdout_size) max_stdout_file_size = stdout_size;
     if (stderr_size) max_stderr_file_size = stderr_size;
 }

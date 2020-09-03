@@ -22,9 +22,6 @@
 #ifdef _WIN32
 #include "boinc_win.h"
 #include "win_util.h"
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
 #ifndef STATUS_SUCCESS
 #define STATUS_SUCCESS                0x0         // may be in ntstatus.h
 #endif
@@ -69,6 +66,7 @@ using std::vector;
 #include "shmem.h"
 #include "str_replace.h"
 #include "str_util.h"
+#include "url.h"
 #include "util.h"
 
 #include "client_msgs.h"
@@ -190,7 +188,7 @@ bool ACTIVE_TASK::kill_all_children() {
 #endif
 #endif
 
-static void print_descendants(int pid, vector<int>desc, const char* where) {
+static void print_descendants(int pid, const vector<int>& desc, const char* where) {
     msg_printf(0, MSG_INFO, "%s: PID %d has %d descendants",
         where, pid, (int)desc.size()
     );
@@ -502,7 +500,7 @@ void ACTIVE_TASK::handle_exited_app(int stat) {
             char szError[1024];
             set_task_state(PROCESS_EXITED, "handle_exited_app");
             snprintf(err_msg, sizeof(err_msg),
-                "%s - exit code %d (0x%x)",
+                "%s - exit code %lu (0x%x)",
                 windows_format_error_string(exit_code, szError, sizeof(szError)),
                 exit_code, exit_code
             );
@@ -1633,7 +1631,7 @@ void ACTIVE_TASK::read_task_state_file() {
         );
         return;
     }
-    if (strcmp(s, result->project->master_url)) {
+    if (!urls_match(s, result->project->master_url)) {
         msg_printf(wup->project, MSG_INTERNAL_ERROR,
             "wrong project URL in task state file"
         );

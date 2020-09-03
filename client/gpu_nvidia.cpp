@@ -67,9 +67,7 @@
 #endif 
 
 #include "nvapi.h"
-#ifdef _MSC_VER
-#define snprintf _snprintf
-#endif
+
 #else
 #ifdef __APPLE__
 // Suppress obsolete warning when building for OS 10.3.9
@@ -103,7 +101,8 @@ static int nvidia_driver_version() {
     int (*nvml_init)()  = NULL;
     int (*nvml_finish)()  = NULL;
     int (*nvml_driver)(char *f, unsigned int len) = NULL;
-    int dri_ver  = 0;
+    int dri_ver = 0;
+    int major=0, minor=0;
     void *handle = NULL;
     char driver_string[81];
 
@@ -122,8 +121,11 @@ static int nvidia_driver_version() {
 
     if (nvml_init()) goto end;
     if (nvml_driver(driver_string, 80)) goto end;
-    dri_ver = (int) (100. * atof(driver_string));
-
+    sscanf(driver_string, "%d.%d", &major, &minor);
+    dri_ver = major*100 + std::min(minor, 99);
+        // minor can in fact be > 99, at least on Linux
+        // encoding as MMnn doesn't work.
+        // this is a temporary workaround.
 end:
     if (nvml_finish) nvml_finish();
     if (handle) dlclose(handle);
@@ -400,7 +402,7 @@ void* cudalib = NULL;
             warnings.push_back(buf);
             goto leave;
         }
-        (*p_cuDeviceGetName)(cc.prop.name, 256, device);
+        retval = (*p_cuDeviceGetName)(cc.prop.name, 256, device);
         if (retval) {
             sprintf(buf, "cuDeviceGetName(%d) returned %d", j, retval);
             warnings.push_back(buf);
@@ -465,7 +467,10 @@ leave:
 #endif
 }
 
-
+// Find the most capable instance; copy to *this.
+// set is_used (USED, UNUSED, IGNORED) for each instance.
+// Don't use less-capable instances (unless use_all is set)
+//
 void COPROC_NVIDIA::correlate(
     bool use_all,    // if false, use only those equivalent to most capable
     vector<int>& ignore_devs

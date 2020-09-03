@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2012 University of California
+ * Copyright (C) 2020 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,13 +18,6 @@
  */
 package edu.berkeley.boinc;
 
-import edu.berkeley.boinc.attach.SelectionListActivity;
-import edu.berkeley.boinc.client.ClientStatus;
-import edu.berkeley.boinc.client.IMonitor;
-import edu.berkeley.boinc.client.Monitor;
-import edu.berkeley.boinc.utils.Logging;
-
-import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.Service;
 import android.content.BroadcastReceiver;
@@ -34,15 +27,22 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.os.RemoteException;
 import android.util.Log;
-import android.view.View;
-import android.view.View.OnLongClickListener;
-import android.widget.ImageView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import edu.berkeley.boinc.attach.SelectionListActivity;
+import edu.berkeley.boinc.client.ClientStatus;
+import edu.berkeley.boinc.client.IMonitor;
+import edu.berkeley.boinc.client.Monitor;
+import edu.berkeley.boinc.databinding.ActivitySplashBinding;
+import edu.berkeley.boinc.ui.eventlog.EventLogActivity;
+import edu.berkeley.boinc.utils.BOINCUtils;
+import edu.berkeley.boinc.utils.Logging;
 
 /**
  * Activity shown at start. Forwards to BOINCActivity automatically, once Monitor has connected to Client and received first data via RPCs.
@@ -52,13 +52,14 @@ import android.widget.ImageView;
  *
  * @author Joachim Fritzsch
  */
-public class SplashActivity extends Activity {
+public class SplashActivity extends AppCompatActivity {
+    private ActivitySplashBinding binding;
 
-    private Boolean mIsBound = false;
-    private Activity activity = this;
+    private boolean mIsBound = false;
     private static IMonitor monitor = null;
 
     private ServiceConnection mConnection = new ServiceConnection() {
+        @Override
         public void onServiceConnected(ComponentName className, IBinder service) {
             // This is called when the connection with the service has been established
             mIsBound = true;
@@ -76,6 +77,7 @@ public class SplashActivity extends Activity {
             }
         }
 
+        @Override
         public void onServiceDisconnected(ComponentName className) {
             // This should not happen
             mIsBound = false;
@@ -86,8 +88,6 @@ public class SplashActivity extends Activity {
     private BroadcastReceiver mClientStatusChangeRec = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            //if(Logging.DEBUG) Log.d(Logging.TAG, "SplashActivity ClientStatusChange - onReceive()");
-
             if(mIsBound) {
                 try {
                     int setupStatus = SplashActivity.monitor.getSetupStatus();
@@ -97,7 +97,7 @@ public class SplashActivity extends Activity {
                                 Log.d(Logging.TAG, "SplashActivity SETUP_STATUS_AVAILABLE");
                             }
                             // forward to BOINCActivity
-                            Intent startMain = new Intent(activity, BOINCActivity.class);
+                            Intent startMain = new Intent(SplashActivity.this, BOINCActivity.class);
                             startActivity(startMain);
                             break;
                         case ClientStatus.SETUP_STATUS_NOPROJECT:
@@ -110,7 +110,7 @@ public class SplashActivity extends Activity {
                                 Log.d(Logging.TAG, "SplashActivity: runBenchmarks returned: " + benchmarks);
                             }
                             // forward to PROJECTATTACH
-                            Intent startAttach = new Intent(activity, SelectionListActivity.class);
+                            Intent startAttach = new Intent(SplashActivity.this, SelectionListActivity.class);
                             startActivity(startAttach);
                             break;
                         case ClientStatus.SETUP_STATUS_ERROR:
@@ -134,14 +134,22 @@ public class SplashActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_splash);
+        binding = ActivitySplashBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
         // Use BOINC logo in Recent Apps Switcher
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) { // API 21
-            String label = (String) activity.getTitle();
-            Bitmap icon = BitmapFactory.decodeResource(activity.getResources(), R.drawable.boinc);
+            final String label = getTitle().toString();
+            final ActivityManager.TaskDescription taskDescription;
 
-            activity.setTaskDescription(new ActivityManager.TaskDescription(label, icon));
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.P) { // API 28
+                Bitmap icon = BOINCUtils.getBitmapFromVectorDrawable(this, R.drawable.ic_boinc);
+                taskDescription = new ActivityManager.TaskDescription(label, icon);
+            } else {
+                taskDescription = new ActivityManager.TaskDescription(label, R.drawable.ic_boinc);
+            }
+
+            setTaskDescription(taskDescription);
         }
 
         //initialize logging with highest verbosity, read actual value when monitor connected.
@@ -151,16 +159,10 @@ public class SplashActivity extends Activity {
         doBindService();
 
         // set long click listener to go to eventlog
-        ImageView imageView = findViewById(R.id.logo);
-        imageView.setOnLongClickListener(new OnLongClickListener() {
-
-            @Override
-            public boolean onLongClick(View v) {
-                startActivity(new Intent(activity, EventLogActivity.class));
-                return true;
-            }
+        binding.logo.setOnLongClickListener(view -> {
+            startActivity(new Intent(SplashActivity.this, EventLogActivity.class));
+            return true;
         });
-
     }
 
     @Override

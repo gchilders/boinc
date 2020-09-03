@@ -42,12 +42,6 @@ using std::string;
 void LOG_FLAGS::init() {
     static const LOG_FLAGS x;
     *this = x;
-
-    // on by default (others are off by default)
-    //
-    task = true;
-    file_xfer = true;
-    sched_ops = true;
 }
 
 // Parse log flag preferences
@@ -247,8 +241,8 @@ void CC_CONFIG::defaults() {
     no_opencl = false;
     no_priority_change = false;
     os_random_only = false;
-    process_priority = -1;
-    process_priority_special = -1;
+    process_priority = CONFIG_PRIORITY_UNSPECIFIED;
+    process_priority_special = CONFIG_PRIORITY_UNSPECIFIED;
     proxy_info.clear();
     rec_half_life = 10*86400;
 #ifdef ANDROID
@@ -397,8 +391,8 @@ int CC_CONFIG::parse_options(XML_PARSER& xp) {
         if (xp.parse_int("max_event_log_lines", max_event_log_lines)) continue;
         if (xp.parse_int("max_file_xfers", max_file_xfers)) continue;
         if (xp.parse_int("max_file_xfers_per_project", max_file_xfers_per_project)) continue;
-        if (xp.parse_int("max_stderr_file_size", max_stderr_file_size)) continue;
-        if (xp.parse_int("max_stdout_file_size", max_stdout_file_size)) continue;
+        if (xp.parse_double("max_stderr_file_size", max_stderr_file_size)) continue;
+        if (xp.parse_double("max_stdout_file_size", max_stdout_file_size)) continue;
         if (xp.parse_int("max_tasks_reported", max_tasks_reported)) continue;
         if (xp.parse_int("ncpus", ncpus)) continue;
         if (xp.parse_bool("no_alt_platform", no_alt_platform)) continue;
@@ -437,11 +431,13 @@ int CC_CONFIG::parse_options(XML_PARSER& xp) {
             ignore_tty.push_back(s);
             continue;
         }
+        if (xp.parse_string("device_name", device_name)) continue;
 
-        // The following 3 tags have been moved to nvc_config and
-        // NVC_CONFIG_FILE, but CC_CONFIG::write() in older clients 
+        // The following tags have been moved to nvc_config and NVC_CONFIG_FILE,
+        // but CC_CONFIG::write() in older clients 
         // may have written their default values to CONFIG_FILE. 
         // Silently skip them if present.
+        //
         if (xp.parse_string("client_download_url", s)) continue;
         if (xp.parse_string("client_new_version_text", s)) continue;
         if (xp.parse_string("client_version_check_url", s)) continue;
@@ -629,8 +625,8 @@ int CC_CONFIG::write(MIOFILE& out, LOG_FLAGS& log_flags) {
         "        <max_event_log_lines>%d</max_event_log_lines>\n"
         "        <max_file_xfers>%d</max_file_xfers>\n"
         "        <max_file_xfers_per_project>%d</max_file_xfers_per_project>\n"
-        "        <max_stderr_file_size>%d</max_stderr_file_size>\n"
-        "        <max_stdout_file_size>%d</max_stdout_file_size>\n"
+        "        <max_stderr_file_size>%f</max_stderr_file_size>\n"
+        "        <max_stdout_file_size>%f</max_stdout_file_size>\n"
         "        <max_tasks_reported>%d</max_tasks_reported>\n"
         "        <ncpus>%d</ncpus>\n"
         "        <no_alt_platform>%d</no_alt_platform>\n"

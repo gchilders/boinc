@@ -20,13 +20,14 @@ package edu.berkeley.boinc;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.DialogInterface;
 import android.os.Bundle;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 /**
  * Shows dialog to exit, if another BONIC based application detected on device.
  */
-public class BoincNotExclusiveDialog extends Activity {
+public class BoincNotExclusiveDialog extends AppCompatActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,10 +35,6 @@ public class BoincNotExclusiveDialog extends Activity {
         builder.setMessage(getString(R.string.nonexcl_dialog_text))
                .setCancelable(false)
                .setTitle(getString(R.string.nonexcl_dialog_header))
-               .setNeutralButton(getString(R.string.nonexcl_dialog_exit), new DialogInterface.OnClickListener() {
-                   public void onClick(DialogInterface dialog, int id) {
-                       finish();
-                   }
-               }).show();
+               .setNeutralButton(getString(R.string.nonexcl_dialog_exit), (dialog, id) -> finish()).show();
     }
 }
