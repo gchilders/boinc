@@ -1,7 +1,7 @@
 /*
   This file is part of BOINC.
   http://boinc.berkeley.edu
-  Copyright (C) 2016 University of California
+  Copyright (C) 2021 University of California
   
   BOINC is free software; you can redistribute it and/or modify it
   under the terms of the GNU Lesser General Public License
@@ -25,22 +25,17 @@ import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
-import android.util.Log;
-
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
-
-import java.util.ArrayList;
-import java.util.List;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import edu.berkeley.boinc.BOINCActivity;
 import edu.berkeley.boinc.R;
 import edu.berkeley.boinc.rpc.Notice;
 import edu.berkeley.boinc.utils.BOINCUtils;
 import edu.berkeley.boinc.utils.Logging;
+import java.util.ArrayList;
+import java.util.List;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 public class NoticeNotification {
@@ -157,7 +152,7 @@ public class NoticeNotification {
     private Notification buildSummaryNotification() {
         final int notices = currentlyNotifiedNotices.size();
         final String projectName = currentlyNotifiedNotices.get(0).getProjectName();
-        final int icon = Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ? R.mipmap.ic_launcher : R.drawable.ic_boinc;
+        final int icon = R.drawable.ic_boinc;
         final int smallIcon = Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ?
                               R.mipmap.ic_boinc_notice_white : R.drawable.ic_boinc_notice;
         // build new notification from scratch every time a notice arrives
@@ -194,7 +189,7 @@ public class NoticeNotification {
 
     private Bitmap getLargeProjectIcon(final Context context, final String projectName) {
         final Bitmap projectIconBitmap = clientStatus.getProjectIconByName(projectName);
-        final int icon = Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP ? R.mipmap.ic_launcher : R.drawable.ic_boinc;
+        final int icon = R.drawable.ic_boinc;
         try {
             return projectIconBitmap != null ?
                    Bitmap.createScaledBitmap(
@@ -206,13 +201,8 @@ public class NoticeNotification {
                    BOINCUtils.getBitmapFromVectorDrawable(context, icon);
         }
         catch(Exception e) {
-            if(Log.isLoggable(Logging.TAG, Log.DEBUG)) {
-                Log.d(
-                        Logging.TAG,
-                        e.getLocalizedMessage(),
-                        e
-                );
-            }
+            Logging.logException(Logging.Category.CLIENT, e.getLocalizedMessage(), e);
+            
             return BOINCUtils.getBitmapFromVectorDrawable(context, icon);
         }
     }

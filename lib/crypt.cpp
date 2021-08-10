@@ -37,6 +37,7 @@
 #include <openssl/engine.h>
 #include <openssl/err.h>
 #include <openssl/rsa.h>
+#include <openssl/bn.h>
 
 #ifdef _USING_FCGI_
 #include "boinc_fcgi.h"
@@ -214,7 +215,9 @@ int scan_key_hex(FILE* f, KEY* key, int size) {
     len = size - sizeof(key->bits);
     for (i=0; i<len; i++) {
         // coverity[check_return]
-        fscanf(f, "%2x", &n);
+        if (fscanf(f, "%2x", &n) != 1) {
+            return ERR_NULL;
+        }
         key->data[i] = n;
     }
     fs = fscanf(f, ".");
@@ -342,6 +345,7 @@ int check_file_signature(
     char clear_buf[MD5_LEN];
     int n, retval;
     DATA_BLOCK clear_signature;
+    clear_buf[0]=0;
 
     n = (int)strlen(md5_buf);
     clear_signature.data = (unsigned char*)clear_buf;
@@ -713,8 +717,11 @@ char *check_validity(
     int rbytes;
     unsigned char md5_md[MD5_DIGEST_LENGTH],  rbuf[2048];
 
+// OpenSSL 1.1 does initialization internally. This is default.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(HAVE_LIBRESSL)
     SSL_load_error_strings();
     SSL_library_init();
+#endif
 
     if (!is_file(origFile)) {
         return NULL;
@@ -765,7 +772,10 @@ int cert_verify_file(
         fflush(stdout);
         return false;
     }
+// OpenSSL 1.1 does initialization internally. This is default.
+#if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(HAVE_LIBRESSL)
     SSL_library_init();
+#endif
     if (!is_file(origFile)) return false;
     FILE* of = boinc_fopen(origFile, "r");
     if (!of) return false;

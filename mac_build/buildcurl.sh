@@ -37,6 +37,8 @@
 # Updated 2/22/18 to avoid APIs not available in earlier versions of OS X
 # Updated 1/23/19 use libc++ instead of libstdc++ for Xcode 10 compatibility
 # Updated 8/22/20 TO build Apple Silicon / arm64 and x86_64 Universal binary
+# Updated 12/24/20 for curl 7.73.0
+# Updated 5/18/21 for compatibility with zsh
 #
 ## This script requires OS 10.8 or later
 #
@@ -66,7 +68,7 @@ function patch_curl_config {
     cat >> /tmp/curl_config_h_diff1 << ENDOFFILE
 --- lib/curl_config.h    2018-02-22 04:21:52.000000000 -0800
 +++ lib/curl_config1.h.in    2018-02-22 04:29:56.000000000 -0800
-@@ -141,5 +141,5 @@
+@@ -165,5 +165,5 @@
 
  /* Define to 1 if you have the __builtin_available function. */
 -#define HAVE_BUILTIN_AVAILABLE 1
@@ -82,7 +84,7 @@ ENDOFFILE
     cat >> /tmp/curl_config_h_diff2 << ENDOFFILE
 --- lib/curl_config.h    2018-02-22 04:21:52.000000000 -0800
 +++ lib/curl_config2.h.in    2018-02-22 04:30:21.000000000 -0800
-@@ -144,5 +144,5 @@
+@@ -168,5 +168,5 @@
 
  /* Define to 1 if you have the clock_gettime function and monotonic timer. */
 -#define HAVE_CLOCK_GETTIME_MONOTONIC 1
@@ -133,19 +135,19 @@ fi
 GCC_can_build_x86_64="no"
 GCC_can_build_arm64="no"
 GCC_archs=`lipo -info "${GCCPATH}"`
-if [[ "${GCC_archs}" == *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
-if [[ "${GCC_archs}" == *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
+if [[ "${GCC_archs}" = *"x86_64"* ]]; then GCC_can_build_x86_64="yes"; fi
+if [[ "${GCC_archs}" = *"arm64"* ]]; then GCC_can_build_arm64="yes"; fi
 
 if [ "${doclean}" != "yes" ]; then
     if [ -f "${libPath}/libcurl.a" ]; then
         alreadyBuilt=1
 
-        if [ $GCC_can_build_x86_64 == "yes" ]; then
+        if [ $GCC_can_build_x86_64 = "yes" ]; then
             lipo "${libPath}/libcurl.a" -verify_arch x86_64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
         
-        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 == "yes" ]; then
+        if [ $alreadyBuilt -eq 1 ] && [ $GCC_can_build_arm64 = "yes" ]; then
             lipo "${libPath}/libcurl.a" -verify_arch arm64
             if [ $? -ne 0 ]; then alreadyBuilt=0; doclean="yes"; fi
         fi
@@ -213,6 +215,9 @@ else
     # Get the names of the current versions of c-ares and openssl from
     # the dependencyNames.sh file in the same directory as this script.
     myScriptPath="${BASH_SOURCE[0]}"
+    if [ -z ${myScriptPath} ]; then
+        myScriptPath="$0"   # for zsh
+    fi
     myScriptDir="${myScriptPath%/*}"
     source "${myScriptDir}/dependencyNames.sh"
     if [ $? -ne 0 ]; then return 1; fi
@@ -238,7 +243,7 @@ fi
 
 patch_curl_config
 
-if [ "${doclean}" == "yes" ]; then
+if [ "${doclean}" = "yes" ]; then
     make clean
 fi
 
@@ -252,7 +257,7 @@ fi
 
 # Now see if we can build for arm64
 # Note: Some versions of Xcode 12 don't support building for arm64
-if [ $GCC_can_build_arm64 == "yes" ]; then
+if [ $GCC_can_build_arm64 = "yes" ]; then
 
 # c-ares configure creates a different ares_build.h file for each architecture
 # for a sanity check on size of long and socklen_t. But these are  identical for

@@ -6,7 +6,7 @@ dnl not sure exactly what the minimum version is (but 2.13 wont work)
 AC_PREREQ(2.58)
 
 dnl Set the BOINC version here.  You can also use the set-version script.
-AC_INIT(BOINC, 7.17.0)
+AC_INIT(BOINC, 7.19.0)
 AC_CONFIG_MACRO_DIR([m4])
 LIBBOINC_VERSION=`echo ${PACKAGE_VERSION} | sed 's/\./:/g'`
 AC_SUBST([LIBBOINC_VERSION])
@@ -121,6 +121,12 @@ AC_ARG_ENABLE(apps,
                    [enable building the boinc example apps]),
     [enable_apps=${enableval}],
     [enable_apps=no])
+
+AC_ARG_ENABLE(vcpkg,
+    AS_HELP_STRING([--enable-vcpkg],
+                   [enable building the boinc apps that depend on vcpkg]),
+    [enable_vcpkg=${enableval}],
+    [enable_vcpkg=no])
 
 AC_ARG_ENABLE(unit-tests,
     AS_HELP_STRING([--enable-unit-tests],
@@ -367,10 +373,14 @@ OBJCFLAGS="-ObjC"
 AC_SUBST(OBJCFLAGS)
 
 dnl LT_INIT
+enable_shared_user=$enable_shared
 AC_LIBTOOL_DLOPEN
 AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AC_SUBST(PICFLAGS,${lt_prog_compiler_pic})
+if test "$enable_shared_user" != no -a "$enable_shared" = no ; then
+  AC_MSG_ERROR([Project is configured to produce shared libraries, but compiler doesn't support shared libraries creation.])
+fi
 
 SAH_OPTION_BITNESS
 
@@ -451,7 +461,7 @@ AS_IF([test "x${enable_client}" = "xyes" -o "x${enable_server}" = "xyes"],
 dnl ---------- libcurl (m4/libcurl.m4) ------------------------------
 dnl curl is needed for client
 
-AS_IF([test "x${enable_client}" = "xyes"],
+AS_IF([test "x${enable_client}" = "xyes" -o "x${enable_server}" = "xyes"],
   [
     LIBCURL_CHECK_CONFIG([yes], [7.17.1], [haveCurl=yes], [haveCurl=no])
 
@@ -554,6 +564,12 @@ dnl ---------- decide wether to build the graphical boinc-api libs or not
 dnl check for X11
 AC_PATH_X
 AC_PATH_XTRA
+
+dnl Check for CL library opencl
+AX_CHECK_CL
+if test "x$with_opencl" = "xno"; then
+  AC_MSG_WARN([OpenCL is missing, OpenClApp example is disabled])
+fi
 
 dnl check for GL library
 AX_CHECK_GL
@@ -1056,6 +1072,9 @@ AM_CONDITIONAL(OS_WIN32_MINGW, [echo $host_os | grep '^mingw' > /dev/null])
 dnl or OS2
 AM_CONDITIONAL(OS_OS2, [echo $host_os | grep '^os2' > /dev/null])
 AM_CONDITIONAL(OS_ARM_LINUX, [echo $host_alias | grep '^arm-linux' > /dev/null])
+AM_CONDITIONAL(OS_ARMV6_LINUX, [echo $host_alias | grep '^armv6-linux' > /dev/null])
+AM_CONDITIONAL(ANDROID, [test x"${ANDROID}" = xyes])
+AM_CONDITIONAL(BUILD_WITH_VCPKG, [test "${enable_vcpkg}" = yes])
 
 dnl Whether to build fcgi components
 AM_CONDITIONAL(ENABLE_FCGI,[test "${enable_fcgi}" = yes])
@@ -1072,6 +1091,7 @@ AM_CONDITIONAL(ENABLE_UNIT_TESTS, [test "${enable_unit_tests}" = yes])
 AM_CONDITIONAL(ENABLE_BOINCCRYPT, [test "x${enable_server}" = xyes  || test "x${enable_client}" = xyes ])
 AM_CONDITIONAL(INSTALL_HEADERS, [test "${enable_install_headers}" = yes])
 AM_CONDITIONAL(HAVE_CUDA_LIB, [test "${enable_client}" = yes -a -f ./coprocs/CUDA/posix/${boinc_platform}/libcudart.so])
+AM_CONDITIONAL(BUILD_OPENCL, [test "x$with_opencl" = "xyes"])
 
 dnl ======================================================================
 dnl some more vodoo required for building portable client-binary (client, clientgui)

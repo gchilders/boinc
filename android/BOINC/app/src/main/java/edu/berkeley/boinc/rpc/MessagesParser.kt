@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2020 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -18,8 +18,8 @@
  */
 package edu.berkeley.boinc.rpc
 
-import android.util.Log
 import android.util.Xml
+import edu.berkeley.boinc.utils.Logging
 import org.xml.sax.Attributes
 import org.xml.sax.SAXException
 
@@ -67,8 +67,8 @@ class MessagesParser : BaseParser() {
                     }
                 }
             }
-        } catch (e: NumberFormatException) {
-            Log.d("MessagesParser", "NumberFormatException $localName $mCurrentElement")
+        } catch (e: Exception) {
+            Logging.logException(Logging.Category.XML, "MessagesParser.endElement error: ", e)
         }
     }
 
@@ -86,7 +86,10 @@ class MessagesParser : BaseParser() {
                 val parser = MessagesParser()
                 Xml.parse(rpcResult, parser)
                 parser.messages
-            } catch (ex: SAXException) {
+            } catch (e: SAXException) {
+                Logging.logException(Logging.Category.RPC, "MessagesParser: malformed XML ", e)
+                Logging.logDebug(Logging.Category.XML, "MessagesParser: $rpcResult")
+
                 emptyList()
             }
         }

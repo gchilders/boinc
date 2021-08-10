@@ -48,14 +48,15 @@ int main(int /*argc*/, char** argv) {
     APP_INIT_DATA   aid;
     FILE            *f;
     int             retval = -1;
-    int             i;
     char            libpath[8192];
     char            newlibs[256];
     char            *projectDirName;
     const char      *screensaverLoginUser = NULL;
+#ifdef __APPLE__
+    int             i;
     bool            launching_gfx=false;
     char            current_dir[MAXPATHLEN];
-
+#endif
 
     strcpy(boinc_project_user_name, "boinc_project");
     strcpy(boinc_project_group_name, "boinc_project");
@@ -217,8 +218,8 @@ int main(int /*argc*/, char** argv) {
             snprintf(cmd, sizeof(cmd), "su -l \"%s\" -c 'launchctl remove edu.berkeley.boinc-ss_helper'", screensaverLoginUser);
             retval = callPosixSpawn(cmd);
 
-            snprintf(cmd, sizeof(cmd), "su -l \"%s\" -c 'launchctl submit -l edu.berkeley.boinc-ss_helper -- \"/Library/Screen Savers/%s.saver/Contents/Resources/boinc_ss_helper.sh\" \"%s\"", screensaverLoginUser, argv[2], argv[1]);
-            i = 2;
+	    snprintf(cmd, sizeof(cmd), "su -l \"%s\" -c 'launchctl submit -l edu.berkeley.boinc-ss_helper -- \"/Library/Screen Savers/%s.saver/Contents/Resources/boinc_ss_helper.sh\" \"%s\" \"%s\"", screensaverLoginUser, argv[2], argv[1], argv[2]);
+            i = 3;
             while(argv[i]) {
                 safe_strcat(cmd, " ");
                 safe_strcat(cmd, argv[i++]);

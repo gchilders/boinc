@@ -1,7 +1,7 @@
 /*
  * This file is part of BOINC.
  * http://boinc.berkeley.edu
- * Copyright (C) 2016 University of California
+ * Copyright (C) 2021 University of California
  *
  * BOINC is free software; you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License
@@ -24,20 +24,14 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.NetworkInfo;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.telephony.TelephonyManager;
-import android.util.Log;
-
-import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
-
-import javax.inject.Inject;
-import javax.inject.Singleton;
-
 import edu.berkeley.boinc.rpc.DeviceStatusData;
 import edu.berkeley.boinc.utils.Logging;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 @Singleton
 public class DeviceStatus {
@@ -96,8 +90,8 @@ public class DeviceStatus {
         change |= determineNetworkStatus();
         change |= determineUserActive();
 
-        if(change && Logging.DEBUG) {
-            Log.i(Logging.TAG,
+        if(change) {
+            Logging.logDebug(Logging.Category.DEVICE,
                   "change: " + " - stationary device: " + stationaryDeviceMode + " ; ac: " +
                   status.isOnACPower() + " ; level: " + status.getBatteryChargePct() +
                   " ; temperature: " + status.getBatteryTemperatureCelsius() + " ; wifi: " +
@@ -162,28 +156,14 @@ public class DeviceStatus {
      */
     private boolean determineNetworkStatus() {
         boolean change = false;
-        final boolean isWiFiOrEthernet;
-
-        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            isWiFiOrEthernet = isNetworkTypeWiFiOrEthernetOnAPI23AndHigher();
-        }
-        else {
-            int networkType = -1;
-            final NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
-            if(activeNetwork != null) {
-                networkType = activeNetwork.getType();
-            }
-            isWiFiOrEthernet = networkType == ConnectivityManager.TYPE_WIFI ||
-                               networkType == ConnectivityManager.TYPE_ETHERNET;
-        }
+        final boolean isWiFiOrEthernet = isNetworkTypeWiFiOrEthernet();
 
         if(isWiFiOrEthernet) {
             // WiFi or ethernet is online
             if(!status.isWiFiOnline()) {
                 change = true; // if different from before, set flag
-                if(Logging.ERROR) {
-                    Log.d(Logging.TAG, "Unlimited Internet connection - WiFi or ethernet - found");
-                }
+
+                Logging.logDebug(Logging.Category.DEVICE, "Unlimited Internet connection - WiFi or ethernet - found");
             }
             status.setWiFiOnline(true);
         }
@@ -198,20 +178,31 @@ public class DeviceStatus {
         return change;
     }
 
-    @RequiresApi(api = Build.VERSION_CODES.M)
-    private boolean isNetworkTypeWiFiOrEthernetOnAPI23AndHigher() {
-        final Network network = connManager.getActiveNetwork();
-
-        if (network != null) {
-            final NetworkCapabilities networkCapabilities = connManager
-                    .getNetworkCapabilities(network);
-            if (networkCapabilities != null) {
-                return networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
-                       networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+    private boolean isNetworkTypeWiFiOrEthernet() {
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            final Network network = connManager.getActiveNetwork();
+            if (network != null) {
+                final NetworkCapabilities networkCapabilities = connManager
+                        .getNetworkCapabilities(network);
+                if (networkCapabilities != null) {
+                    return networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) ||
+                           networkCapabilities.hasTransport(NetworkCapabilities.TRANSPORT_ETHERNET);
+                }
             }
+            return false;
+        } else {
+            @SuppressWarnings( "deprecation" )
+            final android.net.NetworkInfo activeNetwork = connManager.getActiveNetworkInfo();
+            if(activeNetwork == null) {
+                return false;
+            }
+            @SuppressWarnings( "deprecation" )
+            final int networkType = activeNetwork.getType();
+            @SuppressWarnings( "deprecation" )
+            final boolean result = networkType == ConnectivityManager.TYPE_WIFI ||
+                             networkType == ConnectivityManager.TYPE_ETHERNET;
+            return result;
         }
-
-        return false;
     }
 
     /**
@@ -233,9 +224,8 @@ public class DeviceStatus {
 
                 if(!stationaryDeviceMode) { // should not change during run-time. just triggered on initial read
                     change = true;
-                    if(Logging.ERROR) {
-                        Log.d(Logging.TAG, "No battery found and stationary device mode enabled in preferences -> skip battery status parsing");
-                    }
+
+                    Logging.logInfo(Logging.Category.DEVICE, "No battery found and stationary device mode enabled in preferences -> skip battery status parsing");
                 }
                 stationaryDeviceMode = true;
                 setAttributesForStationaryDevice();

@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// Copyright (C) 2019 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -15,14 +15,15 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
+// #defines and enums that are shared by more than one BOINC component
+// (e.g. client, server, Manager, etc.)
+// TODO: more enums, fewer defines
+
 #ifndef BOINC_COMMON_DEFS_H
 #define BOINC_COMMON_DEFS_H
 
 #include "miofile.h"
 #include "parse.h"
-
-// #defines or enums that are shared by more than one BOINC component
-// (e.g. client, server, Manager, etc.)
 
 #define GUI_RPC_PORT 31416
     // for TCP connection
@@ -183,7 +184,7 @@ enum BATTERY_STATE {
     // some output file permanent failure
 
 // Values of FILE_INFO::status.
-// If the status is neither of these two,
+// If the status is none of these,
 // it's an error code indicating an unrecoverable error
 // in the transfer of the file,
 // or that the file was too big and was deleted.
@@ -375,6 +376,14 @@ struct DEVICE_STATUS {
 #else
 #define DEFAULT_SS_EXECUTABLE       "boincscr"
 #endif
+
 #define LINUX_CONFIG_FILE           "/etc/boinc-client/config.properties"
+
+// Used by Manager and boinccmd to locate the data dir.
+// You can define this in "configure" if you want.
+//
+#ifndef LINUX_DEFAULT_DATA_DIR
+#define LINUX_DEFAULT_DATA_DIR      "/var/lib/boinc-client"
+#endif
 
 #endif

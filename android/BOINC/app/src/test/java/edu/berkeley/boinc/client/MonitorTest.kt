@@ -53,7 +53,7 @@ class MonitorTest {
 
     @Test
     fun `Expect default config location when getAuthFilePath() is called`() {
-        Assert.assertEquals("/data/data/edu.berkeley.boinc/client/gui_rpc_auth.cfg", monitor.authFilePath)
+        Assert.assertTrue(monitor.authFilePath.endsWith("/client/gui_rpc_auth.cfg"))
     }
 
     @Test
@@ -73,13 +73,13 @@ class MonitorTest {
         Mockito.verify(clientInterface).transferOperation(eq(emptyList<Transfer>()), eq(1))
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `Expect IllegalArgumentException to be thrown when mBinder's setGlobalPreferences() is called with a null parameter`() {
+    @Test(expected = NullPointerException::class)
+    fun `Expect NullPointerException to be thrown when mBinder's setGlobalPreferences() is called with a null parameter`() {
         monitor.mBinder.setGlobalPreferences(null)
     }
 
-    @Test(expected = IllegalArgumentException::class)
-    fun `Expect IllegalArgumentException to be thrown when mBinder's readAuthToken() is called with a null parameter`() {
+    @Test(expected = NullPointerException::class)
+    fun `Expect NullPointerException to be thrown when mBinder's readAuthToken() is called with a null parameter`() {
         monitor.mBinder.readAuthToken(null)
     }
 

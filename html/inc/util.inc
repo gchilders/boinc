@@ -704,7 +704,7 @@ function bbcode_info() {
 
 // strip slashes if magic quotes in effect
 function undo_magic_quotes($x) {
-    if (get_magic_quotes_gpc()) {
+    if (version_compare(PHP_VERSION, '5.4.0') < 0 && get_magic_quotes_gpc()) {
         return stripslashes($x);
     }
     return $x;
@@ -1175,8 +1175,8 @@ function google_search_form($url) {
         <form method=get action=\"https://google.com/search\">
         <input type=hidden name=domains value=\"$url\">
         <input type=hidden name=sitesearch value=\"$url\">
-        <input class=small name=q size=20>
-        <input class=small type=submit value=".tra("Search").">
+        <input name=q size=20>
+        <input type=submit value=".tra("Search").">
         </form>
         </nobr>
     ";
