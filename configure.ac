@@ -122,11 +122,29 @@ AC_ARG_ENABLE(apps,
     [enable_apps=${enableval}],
     [enable_apps=no])
 
-AC_ARG_ENABLE(vcpkg,
-    AS_HELP_STRING([--enable-vcpkg],
+AC_ARG_ENABLE(apps-vcpkg,
+    AS_HELP_STRING([--enable-apps-vcpkg],
                    [enable building the boinc apps that depend on vcpkg]),
-    [enable_vcpkg=${enableval}],
-    [enable_vcpkg=no])
+    [enable_apps_vcpkg=${enableval}],
+    [enable_apps_vcpkg=no])
+
+AC_ARG_ENABLE(apps-mingw,
+    AS_HELP_STRING([--enable-apps-mingw],
+                   [enable building the boinc apps with mingw]),
+    [enable_apps_mingw=${enableval}],
+    [enable_apps_mingw=no])
+
+AC_ARG_ENABLE(apps-vbox,
+    AS_HELP_STRING([--enable-apps-vbox],
+                   [enable building the boinc apps that depend on vbox]),
+    [enable_apps_vbox=${enableval}],
+    [enable_apps_vbox=no])
+
+AC_ARG_ENABLE(apps-gui,
+    AS_HELP_STRING([--enable-apps-gui],
+                   [enable building the boinc apps that depend on gui]),
+    [enable_apps_gui=${enableval}],
+    [enable_apps_gui=no])
 
 AC_ARG_ENABLE(unit-tests,
     AS_HELP_STRING([--enable-unit-tests],
@@ -1074,7 +1092,10 @@ AM_CONDITIONAL(OS_OS2, [echo $host_os | grep '^os2' > /dev/null])
 AM_CONDITIONAL(OS_ARM_LINUX, [echo $host_alias | grep '^arm-linux' > /dev/null])
 AM_CONDITIONAL(OS_ARMV6_LINUX, [echo $host_alias | grep '^armv6-linux' > /dev/null])
 AM_CONDITIONAL(ANDROID, [test x"${ANDROID}" = xyes])
-AM_CONDITIONAL(BUILD_WITH_VCPKG, [test "${enable_vcpkg}" = yes])
+AM_CONDITIONAL(BUILD_WITH_VCPKG, [test "${enable_apps_vcpkg}" = yes])
+AM_CONDITIONAL(BUILD_WITH_VBOX, [test "${enable_apps_vbox}" = yes])
+AM_CONDITIONAL(BUILD_WITH_MINGW, [test "${enable_apps_mingw}" = yes])
+AM_CONDITIONAL(BUILD_WITH_GUI, [test "${enable_apps_gui}" = yes])
 
 dnl Whether to build fcgi components
 AM_CONDITIONAL(ENABLE_FCGI,[test "${enable_fcgi}" = yes])
@@ -1091,7 +1112,7 @@ AM_CONDITIONAL(ENABLE_UNIT_TESTS, [test "${enable_unit_tests}" = yes])
 AM_CONDITIONAL(ENABLE_BOINCCRYPT, [test "x${enable_server}" = xyes  || test "x${enable_client}" = xyes ])
 AM_CONDITIONAL(INSTALL_HEADERS, [test "${enable_install_headers}" = yes])
 AM_CONDITIONAL(HAVE_CUDA_LIB, [test "${enable_client}" = yes -a -f ./coprocs/CUDA/posix/${boinc_platform}/libcudart.so])
-AM_CONDITIONAL(BUILD_OPENCL, [test "x$with_opencl" = "xyes"])
+AM_CONDITIONAL(BUILD_WITH_OPENCL, [test "x$with_opencl" = "xyes"])
 
 dnl ======================================================================
 dnl some more vodoo required for building portable client-binary (client, clientgui)
@@ -1365,6 +1386,26 @@ dnl AC_CONFIG_HEADER([config.h])
 AC_CONFIG_HEADERS([config.h])
 
 AC_OUTPUT
+
+if test "$enable_libraries" = "yes" -a "$have_glut" = yes -a "$have_jpeg" = 1; then
+  configured_to_build="${configured_to_build} libraries_graphics"
+fi
+
+if test "$enable_apps" = yes -a "$enable_apps_gui" = yes; then
+  configured_to_build="${configured_to_build} apps_gui"
+fi
+
+if test "$enable_apps" = yes -a "$enable_apps_vcpkg" = yes; then
+  configured_to_build="${configured_to_build} apps_vcpkg"
+fi
+
+if test "$enable_apps" = yes -a "$enable_apps_vbox" = yes; then
+  configured_to_build="${configured_to_build} apps_vbox"
+fi
+
+if test "$enable_apps" = yes -a "$enable_apps_mingw" = yes; then
+  configured_to_build="${configured_to_build} apps_mingw"
+fi
 
 echo "--- Configuring BOINC AC_PACKAGE_VERSION (${build_state}) ---"
 echo "--- Build Components: (${configured_to_build}) ---"

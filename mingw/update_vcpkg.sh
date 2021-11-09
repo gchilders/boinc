@@ -1,13 +1,13 @@
 #!/bin/sh
 set -e
 
-if [ ! -d "linux" ]; then
+if [ ! -d "mingw" ]; then
     echo "start this script in the source root directory"
     exit 1
 fi
 
-CACHE_DIR="$PWD/3rdParty/buildCache/linux"
-BUILD_DIR="$PWD/3rdParty/linux"
+CACHE_DIR="$PWD/3rdParty/buildCache/mingw"
+BUILD_DIR="$PWD/3rdParty/mingw"
 VCPKG_PORTS="$PWD/3rdParty/vcpkg_ports"
 VCPKG_ROOT="$BUILD_DIR/vcpkg"
 
@@ -20,5 +20,5 @@ fi
 
 git -C $VCPKG_ROOT pull
 $VCPKG_ROOT/bootstrap-vcpkg.sh
-$VCPKG_ROOT/vcpkg install rappture curl[core,openssl] opencl --clean-after-build --overlay-triplets=$VCPKG_PORTS/triplets/ci
+$VCPKG_ROOT/vcpkg install curl[core,openssl] rappture ftgl freeglut libjpeg-turbo --triplet=x64-mingw-static --clean-after-build --overlay-triplets=$VCPKG_PORTS/triplets/ci
 $VCPKG_ROOT/vcpkg upgrade --no-dry-run

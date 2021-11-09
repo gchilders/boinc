@@ -29,7 +29,7 @@ jobs:
         uses: android-actions/setup-android@v2
 
       - name: Cache dependencies
-        uses: actions/cache@v2.1.3
+        uses: actions/cache@v2
         with:
           path: |
             3rdParty/buildCache
@@ -73,10 +73,8 @@ jobs:
 
       - name: Prepare logs on failure
         if: ${{ failure() }}
-        uses: edgarrc/action-7z@v1.0.4
-        with:
-          args: 7z a -t7z -mx=9 deploy/logs.7z config.log android/BOINC/app/build/reports/ -r0 3rdParty/android/vcpkg/buildtrees/*.log
-      
+        run: 7z a -t7z -mx=9 deploy/logs.7z config.log android/BOINC/app/build/reports/ -r0 3rdParty/android/vcpkg/buildtrees/*.log
+
       - name: Upload logs on failure
         if: ${{ failure() }}
         uses: actions/upload-artifact@v2
@@ -86,17 +84,26 @@ jobs:
 
       - name: Prepare artifacts for deploy
         if: ${{ success() && ! contains(matrix.type, 'libs') }}
-        env:
-          PULL_REQUEST: ${{ github.event.number }}
-          PULL_REQUEST_SHA: ${{ github.event.pull_request.head.sha }}
-        run: ./deploy/prepare_deployment.sh android_${{ matrix.type }}
+        run: python ./deploy/prepare_deployment.py android_${{ matrix.type }}
 
-      - name: Upload artifacts
+      - name: Upload generic artifacts
         uses: actions/upload-artifact@v2
         if: ${{ ! contains(matrix.type, 'libs') }}
         with:
           name: android_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
-          path: deploy/android_${{ matrix.type }}/*.7z
+          path: deploy/android_${{ matrix.type }}.7z
+      - name: Upload xiaomi manager
+        uses: actions/upload-artifact@v2
+        if: ${{ contains(matrix.type, 'manager') }}
+        with:
+          name: android_xiaomi_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
+          path: deploy/android_${{ matrix.type }}_xiaomi.7z
+      - name: Upload armv6 only manager
+        uses: actions/upload-artifact@v2
+        if: ${{ contains(matrix.type, 'manager') }}
+        with:
+          name: android_armv6_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
+          path: deploy/android_${{ matrix.type }}_armv6.7z
 
       - name: Upload JUnit Tests Results
         uses: actions/upload-artifact@v2
@@ -106,7 +113,7 @@ jobs:
           path: android/BOINC/app/build/test-results/testDebugUnitTest/TEST-*.xml
 
       - name: Upload coverage report
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v2
         if: ${{ success() && matrix.type == 'manager' }}
         with:
           fail_ci_if_error: true

@@ -40,27 +40,35 @@ CXXFLAGS += -g \
 #
 # You may have to change the paths for your system.
 
-ifeq ($(wildcard /usr/local/lib/libglut.a),)
-	LIBGLUT = /usr/local/lib/libglut.a
-	LIBGLU = /usr/local/lib/libGLU.a
-	LIBJPEG = /usr/local/lib/libjpeg.a
-else
-# NOTE: to make your app portable you'll need the static (.a) versions
-# of libglut, libGLU, and libjpeg.
-# You may have to build these from source.
-	#LIBGLUT = /usr/lib64/libglut.a
-	#LIBGLU = /usr/lib64/libGLU.a
-	#LIBJPEG = /usr/lib64/libjpeg.a
-	LIBGLUT = -lglut
-	LIBGLU = -lGLU
-	LIBJPEG = -ljpeg
+LIBGLUT = -lglut
+LIBGLU = -lGLU
+LIBGL= -lGL
+LIBUI = -lX11 -lXmu
+LIBFTGL = -lftgl
+LIBJPEG = -ljpeg
+
+ifdef BUILD_WITH_MINGW
+  LIBGLUT = -lfreeglut_static
+  LIBGLU = -lglu32
+  LIBGL= -lopengl32
+  LIBUI = -lgdi32 -lwinmm
+  LIBFTGL = -lftgl -lfreetype -lpng -lbz2 -lbrotlidec-static -lbrotlienc-static -lbrotlicommon-static -lz
 endif
 
 PROGS = uc2 ucn
-# uc2_graphics
 # make this optional so compile doesn't break on systems without OpenGL
+GUI_PROGS = uc2_graphics slide_show
+
+ifdef BUILD_WITH_GUI
+  $(info building gui apps)
+  PROGS += $(GUI_PROGS)
+endif
+
+$(info All PROGS=$(PROGS))
 
 all: $(PROGS)
+
+gui: $(GUI_PROGS)
 
 libstdc++.a:
 	ln -s `$(CXX) -print-file-name=libstdc++.a`
@@ -71,7 +79,7 @@ ttfont.cpp:
 clean: distclean
 
 distclean:
-	/bin/rm -f $(PROGS) *.o libstdc++.a
+	/bin/rm -f $(PROGS) $(GUI_PROGS) $(addsuffix .exe, $(PROGS)) $(addsuffix .exe, $(GUI_PROGS)) *.o libstdc++.a ttfont.cpp
 
 install: uc2
 
@@ -94,13 +102,14 @@ uc2_graphics: uc2_graphics.o ttfont.o libstdc++.a $(BOINC_LIB_DIR)/libboinc.a $(
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a \
     $(LIBGLUT) $(LIBGLU) $(LIBJPEG) \
-    -lftgl -lGL -lX11 -lXmu -lm
+    $(LIBFTGL) $(LIBGL) $(LIBUI) -lm
 
 slide_show: slide_show.o libstdc++.a $(BOINC_LIB_DIR)/libboinc.a $(BOINC_API_DIR)/libboinc_graphics2.a
 	$(CXX) $(CXXFLAGS) -o slide_show slide_show.o libstdc++.a -pthread \
+	$(MINGW_ZIP_FIX) \
 	$(BOINC_API_DIR)/libboinc_graphics2.a \
 	$(BOINC_API_DIR)/libboinc_api.a \
 	$(BOINC_LIB_DIR)/libboinc.a \
 	$(BOINC_ZIP_DIR)/libboinc_zip.a \
     $(LIBGLUT) $(LIBGLU) $(LIBJPEG) \
-    -lGL -lX11 -lXmu -lm
+    $(LIBGL) $(LIBUI) -lm

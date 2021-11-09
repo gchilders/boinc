@@ -10,7 +10,7 @@
  *		Stackwalker.cpp
  *
  *	Remarks:
- *    Dumps the stack of an thread if an exepction occurs
+ *    Dumps the stack of an thread if an exception occurs
  *
  *	Author:
  *		Jochen Kalmbach, Germany
@@ -657,7 +657,7 @@ int DebuggerDisplayDiagnostics()
 // #################################################################################
 // Here the Stackwalk-Part begins.
 //   Some of the code is from an example from a book 
-//   But I couldn´t find the reference anymore... sorry...
+//   But I couldn't find the reference anymore... sorry...
 //   If someone knowns, please let me know...
 // #################################################################################
 // #################################################################################

@@ -827,7 +827,7 @@ void CSimpleFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
         // Fall through
         //
         // There isn't a need to bring up the attach wizard, the account manager will
-        // take care of ataching to projects when it completes the RPCs
+        // take care of attaching to projects when it completes the RPCs
         //
     } else if (ami.acct_mgr_url.size() && !ami.have_credentials) {
         wasShown = IsShown();
@@ -1000,10 +1000,9 @@ CSimpleGUIPanel::CSimpleGUIPanel(wxWindow* parent) :
 	mainSizer->Add( buttonsSizer, 0, wxLEFT | wxRIGHT | wxEXPAND, 2 * SIDEMARGINS );
     mainSizer->AddSpacer(ADJUSTFORYDPI(10));
 
-	SetSizer(mainSizer);
     Layout();
-    
-    mainSizer->Fit(GetParent());
+    SetSizerAndFit(mainSizer);
+    parent->SetSizerAndFit(mainSizer);
 
     SetBackgroundBitmap();   
 
@@ -1030,6 +1029,8 @@ CSimpleGUIPanel::~CSimpleGUIPanel()
     checkForNewNoticesTimer->Stop();
 	delete checkForNewNoticesTimer;
     m_bmpBg = wxNullBitmap; // Deletes old bitmap via reference counting
+    
+    GetParent()->SetSizer(NULL, false); // Avoid trying to delete mainSizer twice
     
     wxLogTrace(wxT("Function Start/End"), wxT("CSimpleGUIPanel::CSimpleGUIPanel - Destructor Function End"));
 }
