@@ -199,6 +199,8 @@ function show_status_html($x) {
     item_html("15e results completed", $j->a15e_past_24_hours);
     // item_html("16e results completed", $j->a16e_past_24_hours);
     item_html("16e v5 results completed", $j->a16ev5_past_24_hours);
+    item_html("15e small results completed", $j->a15es_past_24_hours);
+    item_html("16e small results completed", $j->a16es_past_24_hours);
     item_html("Total credit granted", $j->credit_past_24_hours);
     end_table();
 
@@ -471,8 +473,10 @@ function get_job_status() {
 
     $s->a14e_past_24_hours = BoincResult::count("appid=6 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
     $s->a15e_past_24_hours = BoincResult::count("appid=7 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
-    $s->a16e_past_24_hours = BoincResult::count("appid=8 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    // $s->a16e_past_24_hours = BoincResult::count("appid=8 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
     $s->a16ev5_past_24_hours = BoincResult::count("appid=9 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->a15es_past_24_hours = BoincResult::count("appid=10 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
+    $s->a16es_past_24_hours = BoincResult::count("appid=11 and outcome=1 and granted_credit>0 and received_time > (unix_timestamp() - 86400)");
     $s->credit_past_24_hours = BoincResult::sum("granted_credit","where outcome=1 and received_time > (unix_timestamp() - 86400)")/1;
 
     $s->db_revision = null;
