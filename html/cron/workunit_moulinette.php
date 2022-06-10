@@ -98,7 +98,7 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 		$command.="--result_template templates/la_resultz ";
 		$command.="--command_line \"$sieveside -f $q_first -c $q_interval\" ";
 		$command.="--rsc_memory_bound 500000000 ";
-		$command.="--additional_xml '<credit>36</credit>' ";
+		$command.="--credit 36 ";
 		$command.="$polyname";
 		$results=Array();
 		exec($command,$results,$retcode);
@@ -132,7 +132,7 @@ function manage_creation($number,$rerate) {
 	//--------------------
 	$query = "SELECT COUNT(*) AS count FROM result WHERE name like '{$name}_%' AND server_state=2";
 	$result = _mysql_query($query);
-	if(mysql_errno()!=0) {
+	if(_mysql_errno()!=0) {
 		return _mysql_error();
 	}
 	if(_mysql_num_rows($result)!=1) {
@@ -141,6 +141,8 @@ function manage_creation($number,$rerate) {
 	$result = _mysql_fetch_object($result);
 	$count_unsent = $result->count;
 	echo "unsent results: $count_unsent\n";
+        $min = 1000 - $count_unsent;
+        if ($min < 0) $min = 0;
 
 
 	$q_last = $number->q_last;
@@ -171,14 +173,18 @@ function manage_creation($number,$rerate) {
 			$wus_required = $results_required / RESULTS_PER_WU;
 			echo "based on the delay since last generation ($delta seconds) : $wus_required WUs required\n";
 			$wus_required = (int)$wus_required;
+			if($wus_required>$rerate) {
+				echo "work generation limited to $rerate because value is bigger than rate\n";
+				$wus_required = $rerate;
+			}
+                        if ($wus_required < $min) {
+                                echo "increasing available wu's to 1000\n";
+                                $wus_required = $min;
+                        }
 			if($wus_required > $required) {
 				echo "work generation limited to $required because time bound request is too big\n";
 				$wus_required = $required;
 			}
-			if($wus_required>$rerate) {
-				echo "work generation limited to $rerate because value is bigger than rate\n";
-				$wus_required = $rerate;
-			}	
 			echo "Final count: $wus_required WUs with $q_interval Q values/WU\n";
 			$ok = generate_work($number, $q_last, $q_interval, $wus_required); 
 			if($ok!=null) return $ok;

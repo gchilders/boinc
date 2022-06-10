@@ -48,10 +48,10 @@ function count_results($number, $field, $cond) {
 	// count workunits in the UNSENT(2) state
 	//--------------------
 	$name = trim($number->name);
-	$query = "SELECT COUNT(*) AS count FROM result WHERE name like '{$name}_%' AND $cond";
+	$query = "SELECT COUNT(*) AS count FROM result WHERE name like '{$name}\_%' AND $cond";
 //	echo "$query\n";
 	$result = _mysql_query($query);
-	if(mysql_errno()!=0) {
+	if(_mysql_errno()!=0) {
 		return _mysql_error();
 	}
 	if(_mysql_num_rows($result)!=1) {
@@ -129,7 +129,7 @@ if($err==0) {
 
 //disk space stats
 $out=array();
-$cmd = "df | grep escatter | awk 'BEGIN { FS=\" \" } ; { print $2 }'";
+$cmd = "df | grep dm | awk 'BEGIN { FS=\" \" } ; { print $2 }'";
 exec($cmd,$out,$err);
 if($err==0) {
 	$size=$out[0];
@@ -137,7 +137,7 @@ if($err==0) {
 	$size='U';
 }
 $out=array();
-$cmd = "df | grep escatter | awk 'BEGIN { FS=\" \" } ; { print $3 }'";
+$cmd = "df | grep dm | awk 'BEGIN { FS=\" \" } ; { print $3 }'";
 exec($cmd,$out,$err);
 if($err==0) {
 	$used=$out[0];

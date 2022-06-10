@@ -171,10 +171,12 @@ function manage_results($number) {
 	//--------------------
 	$results_total = ($number->q_end - $number->q_start) / Q_PER_WU;
 	$results_now = $number->results_received;
-	$fraction = $results_now / $results_total;
-	$projected_size = $number->globresult_size / $fraction;
-	$projected_rels = $number->globresult_relations / $fraction;
-	echo "fraction done: $fraction, projected : size = $projected_size, rels = $projected_rels\n";
+	if($results_now > 0) {
+		$fraction = $results_now / $results_total;
+		$projected_size = $number->globresult_size / $fraction;
+		$projected_rels = $number->globresult_relations / $fraction;
+		echo "fraction done: $fraction, projected : size = $projected_size, rels = $projected_rels\n";
+	}
 
 	//--------------------
 	// log some stats about the final file size
