@@ -36,7 +36,7 @@ require_once("./config_e.php");
 
 function generate_work($number, $q_first, $q_interval, $num_wus) {
 	$now=time();
-	$stamp=strftime("%Y%m%d%H%M%S",$now);
+	$stamp=date("YmdHis", time());
 	$boinc="/home/boincadm/projects/nfs";
 
 	$numname=$number->name;
@@ -216,7 +216,7 @@ if($res===false) {
 }
 db_init();
 $now=time();
-$stamp=strftime("%Y%m%d%H%M%S",$now);
+$stamp=date("YmdHis", time());
 set_time_limit(0);
 
 echo "$stamp: starting rsals workunits moulinette\n";

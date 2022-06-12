@@ -129,7 +129,7 @@ if($err==0) {
 
 //disk space stats
 $out=array();
-$cmd = "df | grep dm | awk 'BEGIN { FS=\" \" } ; { print $2 }'";
+$cmd = "df | grep vg | awk 'BEGIN { FS=\" \" } ; { print $2 }'";
 exec($cmd,$out,$err);
 if($err==0) {
 	$size=$out[0];
@@ -137,7 +137,7 @@ if($err==0) {
 	$size='U';
 }
 $out=array();
-$cmd = "df | grep dm | awk 'BEGIN { FS=\" \" } ; { print $3 }'";
+$cmd = "df | grep vg | awk 'BEGIN { FS=\" \" } ; { print $3 }'";
 exec($cmd,$out,$err);
 if($err==0) {
 	$used=$out[0];

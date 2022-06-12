@@ -217,7 +217,6 @@ if($res===false) {
 }
 db_init();
 $now=time();
-//$stamp=strftime("%Y%m%d%H%M%S",$now);
 $stamp=date("YmdHis", time());
 set_time_limit(0);
 
