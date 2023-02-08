@@ -35,6 +35,9 @@ typedef struct {
     HANDLE pid;
 #else
     int pid;
+#ifdef __APPLE__
+    int gfx_pid;  // Used only on Mac
+#endif
 #endif
 } RUNNING_GFX_APP;
 
@@ -248,6 +251,10 @@ public:
 #else
     void                        KillGraphicsApp(int tpid);
 #endif
+#ifdef __APPLE__
+    int                         GetGFXPIDFromForkedPID(RUNNING_GFX_APP* gfx_app);
+    int                         fix_slot_file_owners(int slot);
+#endif
 
     //
     // Work Tab
@@ -422,6 +429,7 @@ extern void remove_eols(wxString& strMessage);
 extern void https_to_http(wxString& strMessage);
 extern void color_cycle(int i, int n, wxColour& color);
 extern wxString FormatTime(double secs);
+extern wxTimeSpan convert_to_timespan(double secs);
 extern bool autoattach_in_progress();
 
 

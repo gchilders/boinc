@@ -72,10 +72,8 @@ CLIENT_STATE gstate;
 COPROCS coprocs;
 
 #ifndef SIM
-#ifdef NEW_CPU_THROTTLE
 THREAD_LOCK client_mutex;
 THREAD throttle_thread;
-#endif
 #endif
 
 CLIENT_STATE::CLIENT_STATE()
@@ -156,7 +154,7 @@ CLIENT_STATE::CLIENT_STATE()
     redirect_io = false;
     disable_graphics = false;
     cant_write_state_file = false;
-    ncpus = 1;
+    n_usable_cpus = 1;
     benchmarks_running = false;
     client_disk_usage = 0.0;
     total_disk_usage = 0.0;
@@ -202,8 +200,8 @@ void CLIENT_STATE::show_host_info() {
         "Processor: %d %s %s",
         host_info.p_ncpus, host_info.p_vendor, host_info.p_model
     );
-    if (ncpus != host_info.p_ncpus) {
-        msg_printf(NULL, MSG_INFO, "Using %d CPUs", ncpus);
+    if (n_usable_cpus != host_info.p_ncpus) {
+        msg_printf(NULL, MSG_INFO, "Using %d CPUs", n_usable_cpus);
     }
 #if 0
     if (host_info.m_cache > 0) {
@@ -626,7 +624,7 @@ int CLIENT_STATE::init() {
     //
     host_info.p_vm_extensions_disabled = false;
 
-    set_ncpus();
+    set_n_usable_cpus();
     show_host_info();
 
     // this follows parse_state_file() because that's where we read project names
@@ -849,10 +847,9 @@ int CLIENT_STATE::init() {
     //
     project_priority_init(false);
 
-#ifdef NEW_CPU_THROTTLE
     client_mutex.lock();
     throttle_thread.run(throttler, NULL);
-#endif
+
     initialized = true;
     return 0;
 }
@@ -891,9 +888,8 @@ void CLIENT_STATE::do_io_or_sleep(double max_time) {
         // otherwise do it for the remaining amount of time.
 
         double_to_timeval(have_async?0:time_remaining, tv);
-#ifdef NEW_CPU_THROTTLE
         client_mutex.unlock();
-#endif
+
         if (all_fds.max_fd == -1) {
             boinc_sleep(time_remaining);
             n = 0;
@@ -905,9 +901,7 @@ void CLIENT_STATE::do_io_or_sleep(double max_time) {
             );
         }
         //printf("select in %d out %d\n", all_fds.max_fd, n);
-#ifdef NEW_CPU_THROTTLE
         client_mutex.lock();
-#endif
 
         // Note: curl apparently likes to have curl_multi_perform()
         // (called from net_xfers->got_select())
@@ -992,6 +986,8 @@ bool CLIENT_STATE::poll_slow_events() {
 #endif
 
     if (user_active != old_user_active) {
+        set_n_usable_cpus();
+            // if niu_max_ncpus_pct pref is set, # usable CPUs may change
         request_schedule_cpus(user_active?"Not idle":"Idle");
     }
 
@@ -1202,7 +1198,8 @@ PROJECT* CLIENT_STATE::lookup_project(const char* master_url) {
     for (unsigned int i=0; i<projects.size(); i++) {
         char* q = strstr(projects[i]->master_url, "//");
         if (!q) continue;
-        if (!strcmp(p, q)) {
+        if (!strcasecmp(p, q)) {
+            // note: canonicalize_master_url() doesn't lower-case
             return projects[i];
         }
     }
@@ -1909,7 +1906,7 @@ int CLIENT_STATE::report_result_error(RESULT& res, const char* err_msg) {
     res.set_ready_to_report();
     res.completed_time = now;
 
-    sprintf(buf, "Unrecoverable error for task %s", res.name);
+    snprintf(buf, sizeof(buf), "Unrecoverable error for task %s", res.name);
 #ifndef SIM
     scheduler_op->project_rpc_backoff(res.project, buf);
 #endif
@@ -1951,7 +1948,7 @@ int CLIENT_STATE::report_result_error(RESULT& res, const char* err_msg) {
         //
         for (i=0; i<res.output_files.size(); i++) {
             if (res.output_files[i].file_info->had_failure(failnum)) {
-                sprintf(buf,
+                snprintf(buf, sizeof(buf),
                     "<upload_error>\n"
                     "    <file_name>%s</file_name>\n"
                     "    <error_code>%d</error_code>\n"
@@ -2296,7 +2293,7 @@ void CLIENT_STATE::log_show_projects() {
     for (unsigned int i=0; i<projects.size(); i++) {
         PROJECT* p = projects[i];
         if (p->hostid) {
-            sprintf(buf, "%d", p->hostid);
+            snprintf(buf, sizeof(buf), "%d", p->hostid);
         } else {
             safe_strcpy(buf, "not assigned yet");
         }

@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2020 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -122,7 +122,7 @@ static void coproc_cmdline(
             );
             k = 0;
         }
-        sprintf(buf, " --device %d", coproc->device_nums[k]);
+        snprintf(buf, sizeof(buf), " --device %d", coproc->device_nums[k]);
         strlcat(cmdline, buf, cmdline_len);
     }
 }
@@ -137,7 +137,7 @@ int ACTIVE_TASK::get_shmem_seg_name() {
 
     bool try_global = (sandbox_account_service_token != NULL);
     for (i=0; i<1024; i++) {
-        sprintf(seg_name, "%sboinc_%d", SHM_PREFIX, i);
+        snprintf(seg_name, sizeof(seg_name), "%sboinc_%d", SHM_PREFIX, i);
         shm_handle = create_shmem(
             seg_name, sizeof(SHARED_MEM), (void**)&app_client_shm.shm,
             try_global
@@ -145,7 +145,7 @@ int ACTIVE_TASK::get_shmem_seg_name() {
         if (shm_handle) break;
     }
     if (!shm_handle) return ERR_SHMGET;
-    sprintf(shmem_seg_name, "boinc_%d", i);
+    snprintf(shmem_seg_name, sizeof(shmem_seg_name), "boinc_%d", i);
 #else
     char init_data_path[MAXPATHLEN];
 #ifndef __EMX__
@@ -155,7 +155,7 @@ int ACTIVE_TASK::get_shmem_seg_name() {
         return 0;
     }
 #endif
-    sprintf(init_data_path, "%s/%s", slot_dir, INIT_DATA_FILE);
+    snprintf(init_data_path, sizeof(init_data_path), "%s/%s", slot_dir, INIT_DATA_FILE);
 
     // ftok() only works if there's a file at the given location
     //
@@ -293,7 +293,7 @@ int ACTIVE_TASK::write_app_init_file(APP_INIT_DATA& aid) {
     );
 #endif
 
-    sprintf(init_data_path, "%s/%s", slot_dir, INIT_DATA_FILE);
+    snprintf(init_data_path, sizeof(init_data_path), "%s/%s", slot_dir, INIT_DATA_FILE);
 
     // delete the file using the switcher (Unix)
     // in case it's owned by another user and we don't have write access
@@ -586,6 +586,7 @@ int ACTIVE_TASK::start(bool test) {
 
     current_cpu_time = checkpoint_cpu_time;
     elapsed_time = checkpoint_elapsed_time;
+    fraction_done = checkpoint_fraction_done;
 
     graphics_request_queue.init(result->name);        // reset message queues
     process_control_queue.init(result->name);
@@ -702,7 +703,7 @@ int ACTIVE_TASK::start(bool test) {
     char error_msg[1024];
     char error_msg2[1024];
     DWORD last_error = 0;
-    
+
     memset(&process_info, 0, sizeof(process_info));
     memset(&startup_info, 0, sizeof(startup_info));
     startup_info.cb = sizeof(startup_info);
@@ -869,7 +870,7 @@ int ACTIVE_TASK::start(bool test) {
     //
     retval = chdir(slot_dir);
     if (retval) {
-        sprintf(buf, "Can't change directory to %s: %s", slot_dir, boincerror(retval));
+        snprintf(buf, sizeof(buf), "Can't change directory to %s: %s", slot_dir, boincerror(retval));
         goto error;
     }
 

@@ -118,6 +118,9 @@ CSimpleFrame::CSimpleFrame(wxString title, wxIconBundle* icons, wxPoint position
     CreateMenus();
     dlgMsgsPtr = NULL;
     m_pBackgroundPanel = new CSimpleGUIPanel(this);
+    mainSizer = new wxBoxSizer(wxVERTICAL);
+    mainSizer->Add(m_pBackgroundPanel, 1, wxLEFT | wxRIGHT | wxEXPAND, 0);
+    SetSizerAndFit(mainSizer);
     RestoreState();
 }
 
@@ -467,6 +470,7 @@ void CSimpleFrame::OnMenuOpening( wxMenuEvent &event) {
     wxMenu* menuFile = NULL;
     wxMenu* menuHelp = NULL;
     wxMenu* menuChangeGUI = NULL;
+    wxMenu* menuSkinSelector = NULL;
 
     wxASSERT(pDoc);
 
@@ -477,10 +481,11 @@ void CSimpleFrame::OnMenuOpening( wxMenuEvent &event) {
     menu->FindItem(ID_CLOSEWINDOW, &menuFile);
     menu->FindItem(ID_HELPBOINC, &menuHelp);
     menu->FindItem(ID_CHANGEGUI, &menuChangeGUI);
+    menu->FindItem(ID_SGDEFAULTSKINSELECTOR, &menuSkinSelector);
     size_t numItems = menu->GetMenuItemCount();
     for (size_t pos = 0; pos < numItems; ++pos) {
         wxMenuItem * item = menu->FindItemByPosition(pos);
-        if ((menu == menuFile) || (menu == menuHelp) || (menu == menuChangeGUI)) {
+        if ((menu == menuFile) || (menu == menuHelp) || (menu == menuChangeGUI) || (menu == menuSkinSelector)) {
             // Always enable all items in File menu or Help menu:
             // ID_CLOSEWINDOW, wxID_EXIT, ID_HELPBOINC, ID_HELPBOINCMANAGER,
             // ID_HELPBOINCWEBSITE, wxID_ABOUT, ID_CHANGEGUI
@@ -1006,7 +1011,6 @@ CSimpleGUIPanel::CSimpleGUIPanel(wxWindow* parent) :
 
     Layout();
     SetSizerAndFit(mainSizer);
-    parent->SetSizerAndFit(mainSizer);
 
     SetBackgroundBitmap();
 
@@ -1033,8 +1037,6 @@ CSimpleGUIPanel::~CSimpleGUIPanel()
     checkForNewNoticesTimer->Stop();
 	delete checkForNewNoticesTimer;
     m_bmpBg = wxNullBitmap; // Deletes old bitmap via reference counting
-
-    GetParent()->SetSizer(NULL, false); // Avoid trying to delete mainSizer twice
 
     wxLogTrace(wxT("Function Start/End"), wxT("CSimpleGUIPanel::CSimpleGUIPanel - Destructor Function End"));
 }

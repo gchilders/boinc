@@ -161,23 +161,6 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
     global_prefs.write(mf);
     fprintf(f, "</working_global_preferences>\n");
 
-    // send master global preferences if present and not host-specific
-    //
-    if (!global_prefs.host_specific && boinc_file_exists(GLOBAL_PREFS_FILE_NAME)) {
-        FILE* fprefs = fopen(GLOBAL_PREFS_FILE_NAME, "r");
-        if (fprefs) {
-            copy_stream(fprefs, f);
-            fclose(fprefs);
-        }
-        PROJECT* pp = lookup_project(global_prefs.source_project);
-        if (pp && strlen(pp->email_hash)) {
-            fprintf(f,
-                "<global_prefs_source_email_hash>%s</global_prefs_source_email_hash>\n",
-                pp->email_hash
-            );
-        }
-    }
-
     // Of the projects with same email hash as this one,
     // send the oldest cross-project ID.
     // Use project URL as tie-breaker.
@@ -211,7 +194,7 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
     // update hardware info, and write host info
     //
     host_info.get_host_info(false);
-    set_ncpus();
+    set_n_usable_cpus();
     host_info.write(mf, !cc_config.suppress_net_info, false);
 
     // get and write disk usage
@@ -594,10 +577,9 @@ int CLIENT_STATE::handle_scheduler_reply(
 
     // compare our URL for this project with the one returned in the reply
     // (which comes from the project's config.xml).
-    // - if http -> https transition, make the change
+    // - if http -> https transition, use the https: one from now on
+    // - if https -> http transition, keep using the https: one
     // - otherwise notify the user.
-    // This means that if a project changes its master URL,
-    // its users have to detach/reattach.
     //
     if (strlen(sr.master_url)) {
         canonicalize_master_url(sr.master_url, sizeof(sr.master_url));
@@ -612,6 +594,9 @@ int CLIENT_STATE::handle_scheduler_reply(
                 msg_printf(project, MSG_INFO,
                     "Project URL changed from http:// to https://"
                 );
+            } else if (is_https_transition(reply_url.c_str(), current_url.c_str())) {
+                // project is advertising http://, but https:// works.
+                // keep using https://
             } else {
                 msg_printf(project, MSG_USER_ALERT,
                     _("This project seems to have changed its URL.  When convenient, remove the project, then add %s"),
@@ -687,7 +672,7 @@ int CLIENT_STATE::handle_scheduler_reply(
         // BAM! currently has mixed http, https; trim off
         char* p = strchr(global_prefs.source_project, '/');
         char* q = strchr(gstate.acct_mgr_info.master_url, '/');
-        if (gstate.acct_mgr_info.using_am() && p && q && !strcmp(p, q)) {
+        if (!global_prefs.override_file_present && gstate.acct_mgr_info.using_am() && p && q && !strcmp(p, q)) {
             if (log_flags.sched_op_debug) {
                 msg_printf(project, MSG_INFO,
                     "[sched_op] ignoring prefs from project; using prefs from AM"

@@ -6,15 +6,15 @@ dnl not sure exactly what the minimum version is (but 2.13 wont work)
 AC_PREREQ(2.58)
 
 dnl Set the BOINC version here.  You can also use the set-version script.
-AC_INIT(BOINC, 7.21.0)
+AC_INIT(BOINC, 7.23.0)
 AC_CONFIG_MACRO_DIR([m4])
 LIBBOINC_VERSION=`echo ${PACKAGE_VERSION} | sed 's/\./:/g'`
 AC_SUBST([LIBBOINC_VERSION])
 
-WRAPPER_RELEASE=26017
+WRAPPER_RELEASE=26018
 AC_SUBST([WRAPPER_RELEASE])
 
-VBOXWRAPPER_RELEASE=26205
+VBOXWRAPPER_RELEASE=26206
 AC_SUBST([VBOXWRAPPER_RELEASE])
 
 AC_CANONICAL_TARGET
@@ -547,8 +547,14 @@ SAH_CHECK_LIB([freetype], [fopen],
     [BOINC_EXTRA_LIBS="${BOINC_EXTRA_LIBS} ${sah_lib_last}"])
 SAH_CHECK_LIB([socket], [bind],
     [BOINC_EXTRA_LIBS="${BOINC_EXTRA_LIBS} ${sah_lib_last}"])
-SAH_CHECK_LIB([z], [gzopen],
-    [BOINC_EXTRA_LIBS="${BOINC_EXTRA_LIBS} ${sah_lib_last}"])
+SAH_CHECK_LIB([z], [gzopen], [
+      zlib_found=yes
+      BOINC_EXTRA_LIBS="${BOINC_EXTRA_LIBS} ${sah_lib_last}"])
+if test "x${zlib_found}" = "x" -a "${isWIN32}" = "no"; then
+    if test "x${enable_client}" = "xyes" -o "x${enable_server}" = "xyes" -o "x${enable_apps_vbox}" = "xyes"]; then
+        AC_MSG_ERROR([zlib is required but was not found])
+    fi
+fi
 SAH_CHECK_LIB([cups], [md5_finish],
     [BOINC_EXTRA_LIBS="${BOINC_EXTRA_LIBS} ${sah_lib_last}"])
 if test "${isWIN32}" = "yes" ; then
@@ -738,7 +744,7 @@ CXXFLAGS="${save_cxxflags} ${sse3_flags}"
 AC_CHECK_HEADERS([intrin.h x86intrin.h pmmintrin.h xmmintrin.h emmintrin.h])
 CXXFLAGS="${save_cxxflags} ${avx_flags}"
 CPPFLAGS="${save_cppflags} ${avx_flags}"
-AC_CHECK_HEADERS([immintrin.h avxintrin.h])
+AC_CHECK_HEADERS([immintrin.h])
 
 AC_CHECK_DECLS([_xgetbv, xgetbv, __xgetbv, cpuid, _cpuid, __cpuid],
     [],[],[[
@@ -747,9 +753,6 @@ AC_CHECK_DECLS([_xgetbv, xgetbv, __xgetbv, cpuid, _cpuid, __cpuid],
 #endif
 #if HAVE_IMMINTRIN_H
 # include <immintrin.h>
-#endif
-#if HAVE_AVXINTRIN_H
-# include <avxintrin.h>
 #endif
 #if HAVE_X86INTRIN_H
 # include <x86intrin.h>
@@ -1372,6 +1375,7 @@ AC_CONFIG_FILES([
                  apps/Makefile
                  clientgui/Makefile
                  clientgui/res/Makefile
+                 clientgui/skins/Makefile
                  clientscr/Makefile
                  client/Makefile
                  client/win/boinc_path_config.py:py/boinc_path_config.py.in

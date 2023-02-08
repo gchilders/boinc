@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2014 University of California
+// Copyright (C) 2022 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -36,6 +36,7 @@
 #include "work_fetch.h"
 
 using std::vector;
+using std::min;
 
 RSC_WORK_FETCH rsc_work_fetch[MAX_RSC];
 WORK_FETCH work_fetch;
@@ -111,10 +112,20 @@ RSC_REASON RSC_PROJECT_WORK_FETCH::compute_rsc_project_reason(
     if (p->rsc_pwf[rsc_type].has_deferred_job) return RSC_REASON_DEFER_SCHED;
 
     // if project has zero resource share,
-    // only fetch work if a device is idle
+    // only fetch work if an instance is close to being idle
     //
-    if (p->resource_share == 0 && rwf.saturated_time > WF_EST_FETCH_TIME) {
-        return RSC_REASON_ZERO_SHARE;
+    if (p->resource_share == 0) {
+        // if in addition min buffer is zero,
+        // don't fetch unless an instance is actually idle
+        // (for case where users compete to return tasks first)
+        //
+        double x = std::min(
+            gstate.global_prefs.work_buf_min_days * 86400,
+            (double)WF_EST_FETCH_TIME
+        );
+        if (rwf.saturated_time > x) {
+            return RSC_REASON_ZERO_SHARE;
+        }
     }
 
     // if project has excluded GPUs of this type,
@@ -1066,7 +1077,7 @@ void WORK_FETCH::set_initial_work_request(PROJECT* p) {
 // called once, at client startup
 //
 void WORK_FETCH::init() {
-    rsc_work_fetch[0].init(0, gstate.ncpus, 1);
+    rsc_work_fetch[0].init(0, gstate.n_usable_cpus, 1);
     double cpu_flops = gstate.host_info.p_fpops;
 
     // use 20% as a rough estimate of GPU efficiency
@@ -1116,7 +1127,7 @@ void CLIENT_STATE::compute_nuploading_results() {
             rp->project->nuploading_results++;
         }
     }
-    int n = gstate.ncpus;
+    int n = gstate.n_usable_cpus;
     for (int j=1; j<coprocs.n_rsc; j++) {
         if (coprocs.coprocs[j].count > n) {
             n = coprocs.coprocs[j].count;

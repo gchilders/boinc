@@ -1,11 +1,20 @@
 name: OSX
 on:
   push:
-    branches: [ master ]
+    branches: [ master, 'client_release/**' ]
   pull_request:
     branches: [ master ]
   schedule:
     - cron:  '20 12 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.S3_ACCESS_KEY }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.S3_SECRET_KEY }}
+  AWS_DEFAULT_REGION: us-west-2
 
 jobs:
   build:
@@ -18,15 +27,25 @@ jobs:
     steps:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: '12.5.1'
+          xcode-version: '14.2.0'
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         with:
           path: 3rdParty/buildCache
           key: osx-${{ matrix.type }}-${{ hashFiles('3rdParty/*Mac*.sh', 'mac_build/setupForBOINC.sh', 'mac_build/dependencyNames.sh', 'mac_build/[bB]uild*.sh', '.github/workflows/osx.yml') }}
+
+      - name: Check if build is running from origin repo
+        if: ${{ success() && env.AWS_ACCESS_KEY_ID != 0 && env.AWS_SECRET_ACCESS_KEY != 0 }}
+        run: |
+          echo "VCPKG_BINARY_SOURCES=clear;x-aws,s3://vcpkg.cache.boinc/,readwrite" >> $GITHUB_ENV
+
+      - name: Check if build is running from fork
+        if: ${{ success() && (env.AWS_ACCESS_KEY_ID == 0 || env.AWS_SECRET_ACCESS_KEY == 0) }}
+        run: |
+          echo "VCPKG_BINARY_SOURCES=clear;x-aws-config,no-sign-request;x-aws,s3://vcpkg.cache.boinc/,read" >> $GITHUB_ENV
 
       - name: install dependencies
         if: ${{! contains(matrix.type, 'cmake')}}
@@ -39,6 +58,17 @@ jobs:
       - name: libs cmake
         if: matrix.type == 'libs-cmake'
         run: osx/ci_build_libs_cmake.sh
+
+      - name: Prepare logs on failure
+        if: ${{ failure() }}
+        run: python3 ./deploy/prepare_deployment.py logs
+
+      - name: Upload logs on failure
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@v3
+        with:
+          name: osx_logs_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
+          path: deploy/logs.7z
 
       - name: deploy
         if: success() && ! contains(matrix.type, 'libs')
