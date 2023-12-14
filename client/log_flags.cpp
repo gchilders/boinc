@@ -96,6 +96,7 @@ void LOG_FLAGS::show() {
     show_flag(buf, sizeof(buf), sched_op_debug, "sched_op_debug");
     show_flag(buf, sizeof(buf), scrsave_debug, "scrsave_debug");
     show_flag(buf, sizeof(buf), slot_debug, "slot_debug");
+    show_flag(buf, sizeof(buf), sporadic_debug, "sporadic_debug");
     show_flag(buf, sizeof(buf), state_debug, "state_debug");
     show_flag(buf, sizeof(buf), statefile_debug, "statefile_debug");
     show_flag(buf, sizeof(buf), task_debug, "task_debug");
@@ -469,8 +470,8 @@ int CC_CONFIG::parse_options_client(XML_PARSER& xp) {
         if (xp.parse_string("device_name", device_name)) continue;
 
         // The following tags have been moved to nvc_config and NVC_CONFIG_FILE,
-        // but CC_CONFIG::write() in older clients 
-        // may have written their default values to CONFIG_FILE. 
+        // but CC_CONFIG::write() in older clients
+        // may have written their default values to CONFIG_FILE.
         // Silently skip them if present.
         //
         if (xp.parse_string("client_download_url", s)) continue;

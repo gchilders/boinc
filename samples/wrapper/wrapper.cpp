@@ -16,7 +16,7 @@
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
 // BOINC wrapper - lets you use non-BOINC apps with BOINC
-// See https://boinc.berkeley.edu/trac/wiki/WrapperApp
+// See https://github.com/BOINC/boinc/wiki/WrapperApp
 //
 // cmdline options:
 // --device N       macro-substitute N for $GPU_DEVICE_NUM
@@ -75,7 +75,6 @@
 #include "app_ipc.h"
 #include "graphics2.h"
 #include "boinc_zip.h"
-#include "diagnostics.h"
 #include "error_numbers.h"
 #include "filesys.h"
 #include "parse.h"
@@ -120,7 +119,7 @@ struct TASK {
         // optional execution directory;
         // macro-substituted
     vector<string> vsetenv;
-        // vector of strings for environment variables 
+        // vector of strings for environment variables
         // macro-substituted
     string stdin_filename;
     string stdout_filename;
@@ -449,7 +448,7 @@ int TASK::parse(XML_PARSER& xp) {
         else if (xp.parse_string("application", application)) continue;
         else if (xp.parse_str("exec_dir", buf, sizeof(buf))) {
             exec_dir = buf;
-            continue;  
+            continue;
         }
         else if (xp.parse_str("setenv", buf, sizeof(buf))) {
             vsetenv.push_back(buf);
@@ -778,6 +777,7 @@ int TASK::run(int argct, char** argvt) {
         boinc_resolve_filename_s(stdout_filename.c_str(), stdout_path);
         startup_info.hStdOutput = win_fopen(stdout_path.c_str(), "a");
     } else {
+        // Redirecting child stdout to wrapper stderr here is not a typo
         startup_info.hStdOutput = (HANDLE)_get_osfhandle(_fileno(stderr));
     }
     if (stdin_filename != "") {
@@ -836,6 +836,7 @@ int TASK::run(int argct, char** argvt) {
     if (env_vars) delete [] env_vars;
     pid_handle = process_info.hProcess;
     pid = process_info.dwProcessId;
+    CloseHandle(process_info.hThread);
 #else
     int retval;
     char* argv[256];
@@ -921,6 +922,11 @@ int TASK::run(int argct, char** argvt) {
         exit(ERR_EXEC);
     }  // pid = 0 i.e. child proc of the fork
 #endif
+
+    fprintf(stderr, "%s wrapper: created child process %d\n",
+        boinc_msg_prefix(buf, sizeof(buf)), (int)pid
+    );
+
     suspended = false;
     elapsed_time = 0;
     return 0;
@@ -951,6 +957,7 @@ bool TASK::poll(int& status) {
                 boinc_msg_prefix(buf, sizeof(buf)),
                 application.c_str(), final_cpu_time
             );
+            CloseHandle(pid_handle);
             return true;
         }
     }
@@ -1153,6 +1160,18 @@ void check_executables() {
     check_execs(daemons);
 }
 
+void usage() {
+    fprintf(stderr,
+        "Options:\n"
+        "   --nthreads N\n"
+        "   --device N\n"
+        "   --sporadic\n"
+        "   --trickle X\n"
+        "   --version\n"
+    );
+    boinc_finish(EXIT_INIT_FAILURE);
+}
+
 int main(int argc, char** argv) {
     BOINC_OPTIONS options;
     int retval, ntasks_completed;
@@ -1161,6 +1180,7 @@ int main(int argc, char** argv) {
     double checkpoint_cpu_time;
         // total CPU time at last checkpoint
     char buf[256];
+    bool is_sporadic = false;
 
     // Log banner
     //
@@ -1178,6 +1198,8 @@ int main(int argc, char** argv) {
             nthreads = atoi(argv[++j]);
         } else if (!strcmp(argv[j], "--device")) {
             gpu_device_num = atoi(argv[++j]);
+        } else if (!strcmp(argv[j], "--sporadic")) {
+            is_sporadic = true;
         } else if (!strcmp(argv[j], "--trickle")) {
             trickle_period = atof(argv[++j]);
 #if !(defined(_WIN32) || defined(__APPLE__))
@@ -1185,8 +1207,10 @@ int main(int argc, char** argv) {
             fprintf(stderr, "%s\n", SVN_VERSION);
             boinc_finish(0);
 #endif
+        } else {
+            fprintf(stderr, "Unrecognized option %s\n", argv[j]);
+            usage();
         }
-
     }
 
     retval = parse_job_file();
@@ -1219,14 +1243,6 @@ int main(int argc, char** argv) {
     options.handle_process_control = true;
 
     boinc_init_options(&options);
-    fprintf(stderr,
-        "%s wrapper (%d.%d.%d): starting\n",
-        boinc_msg_prefix(buf, sizeof(buf)),
-        BOINC_MAJOR_VERSION,
-        BOINC_MINOR_VERSION,
-        WRAPPER_RELEASE
-    );
-
     boinc_get_init_data(aid);
 
 #ifdef CHECK_EXECUTABLES
@@ -1245,6 +1261,14 @@ int main(int argc, char** argv) {
         total_weight += tasks[i].weight;
         // need to substitute macros after boinc_init_options() and boinc_get_init_data()
         tasks[i].substitute_macros();
+    }
+
+    if (is_sporadic) {
+        retval = boinc_sporadic_dir(".");
+        if (retval) {
+            fprintf(stderr, "can't create sporadic files\n");
+            boinc_finish(retval);
+        }
     }
 
     retval = start_daemons(argc, argv);

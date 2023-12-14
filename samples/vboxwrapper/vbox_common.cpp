@@ -61,8 +61,7 @@ using std::string;
 #include "floppyio.h"
 #include "vboxlogging.h"
 #include "vboxwrapper.h"
-#include "vbox_common.h"
-
+#include "vbox_vboxmanage.h"
 
 bool is_boinc_client_version_newer(APP_INIT_DATA& aid, int maj, int min, int rel) {
     if (maj < aid.major_version) return true;
@@ -147,7 +146,7 @@ VBOX_BASE::~VBOX_BASE() {
 #endif
 }
 
-int VBOX_BASE::run(bool do_restore_snapshot) {
+int VBOX_VM::run(bool do_restore_snapshot) {
     int retval;
 
     retval = is_registered();
@@ -160,7 +159,7 @@ int VBOX_BASE::run(bool do_restore_snapshot) {
 
         if (is_vm_machine_configuration_available()) {
             retval = register_vm();
-          
+
             if (retval){
 
                 vboxlog_msg("Could not register");
@@ -172,7 +171,7 @@ int VBOX_BASE::run(bool do_restore_snapshot) {
                 // was already initialized for the current slot directory but aborted
                 // while the task was suspended and unloaded from memory.
                 retval = deregister_stale_vm();
-              
+
                 if (retval){
 
                     vboxlog_msg("Could not deregister stale VM");
@@ -244,7 +243,7 @@ int VBOX_BASE::run(bool do_restore_snapshot) {
     return 0;
 }
 
-void VBOX_BASE::cleanup() {
+void VBOX_VM::cleanup() {
     poweroff();
     deregister_vm(true);
 
@@ -252,7 +251,7 @@ void VBOX_BASE::cleanup() {
     boinc_sleep(5.0);
 }
 
-void VBOX_BASE::dump_hypervisor_logs(bool include_error_logs) {
+void VBOX_VM::dump_hypervisor_logs(bool include_error_logs) {
     string local_system_log;
     string local_vm_log;
     string local_startup_log;
@@ -295,7 +294,7 @@ void VBOX_BASE::dump_hypervisor_logs(bool include_error_logs) {
     }
 }
 
-void VBOX_BASE::report_clean(
+void VBOX_VM::report_clean(
     bool unrecoverable_error,
     bool skip_cleanup,
     bool do_dump_hypervisor_logs,
@@ -1040,7 +1039,7 @@ int VBOX_BASE::launch_vboxvm() {
     // Execute command
     if (!CreateProcess(
 
-                NULL, 
+                NULL,
                 cmdline,
                 NULL,
                 NULL,
@@ -1230,8 +1229,8 @@ int VBOX_BASE::vbm_popen(string& command, string& output, const char* item, bool
 
             // Retry?
 
-            if (!retry_failures && 
-                    (VBOX_E_INVALID_OBJECT_STATE != (unsigned int)retval) && 
+            if (!retry_failures &&
+                    (VBOX_E_INVALID_OBJECT_STATE != (unsigned int)retval) &&
                     (CO_E_SERVER_EXEC_FAILURE != (unsigned int)retval)
                ) {
                 break;
@@ -1322,7 +1321,7 @@ int VBOX_BASE::vbm_popen_raw(
     // Execute command
     if (!CreateProcess(
 
-                NULL, 
+                NULL,
 
                 (LPTSTR)command.c_str(),
                 NULL,
@@ -1472,25 +1471,12 @@ void VBOX_BASE::vbm_trace(string& command, string& output, int retval) {
 
     FILE* f = fopen(TRACELOG_FILENAME, "a");
     if (f) {
-        fprintf(
-                f,
-                "%s (%d): ",
-                buf,
-                pid
-               );
-        fprintf(
-                f,
-                "\nCommand: %s\nExit Code: %d\nOutput:\n%s\n",
-                command.c_str(),
-                retval,
-                output.c_str()
-               );
+        fprintf(f, "%s (%d): ", buf, pid);
+        fprintf(f, "\nCommand: %s\nExit Code: %d\nOutput:\n%s\n",
+            command.c_str(),
+            retval,
+            output.c_str()
+        );
         fclose(f);
     }
-}
-
-VBOX_VM::VBOX_VM() {
-}
-
-VBOX_VM::~VBOX_VM() {
 }

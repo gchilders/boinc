@@ -88,6 +88,7 @@ int LOG_FLAGS::parse(XML_PARSER& xp) {
         if (xp.parse_bool("sched_op_debug", sched_op_debug)) continue;
         if (xp.parse_bool("scrsave_debug", scrsave_debug)) continue;
         if (xp.parse_bool("slot_debug", slot_debug)) continue;
+        if (xp.parse_bool("sporadic_debug", sporadic_debug)) continue;
         if (xp.parse_bool("state_debug", state_debug)) continue;
         if (xp.parse_bool("statefile_debug", statefile_debug)) continue;
         if (xp.parse_bool("suspend_debug", suspend_debug)) continue;
@@ -138,6 +139,7 @@ int LOG_FLAGS::write(MIOFILE& out) {
         "        <sched_op_debug>%d</sched_op_debug>\n"
         "        <scrsave_debug>%d</scrsave_debug>\n"
         "        <slot_debug>%d</slot_debug>\n"
+        "        <sporadic_debug>%d</sporadic_debug>\n"
         "        <state_debug>%d</state_debug>\n"
         "        <statefile_debug>%d</statefile_debug>\n"
         "        <suspend_debug>%d</suspend_debug>\n"
@@ -181,6 +183,7 @@ int LOG_FLAGS::write(MIOFILE& out) {
         sched_op_debug ? 1 : 0,
         scrsave_debug ? 1 : 0,
         slot_debug ? 1 : 0,
+        sporadic_debug ? 1 : 0,
         state_debug ? 1 : 0,
         statefile_debug ? 1 : 0,
         suspend_debug ? 1 : 0,
@@ -439,8 +442,8 @@ int CC_CONFIG::parse_options(XML_PARSER& xp) {
         if (xp.parse_string("device_name", device_name)) continue;
 
         // The following tags have been moved to nvc_config and NVC_CONFIG_FILE,
-        // but CC_CONFIG::write() in older clients 
-        // may have written their default values to CONFIG_FILE. 
+        // but CC_CONFIG::write() in older clients
+        // may have written their default values to CONFIG_FILE.
         // Silently skip them if present.
         //
         if (xp.parse_string("client_download_url", s)) continue;
@@ -639,7 +642,7 @@ int CC_CONFIG::write(MIOFILE& out, LOG_FLAGS& log_flags) {
         "        <no_info_fetch>%d</no_info_fetch>\n"
         "        <no_opencl>%d</no_opencl>\n"
         "        <no_priority_change>%d</no_priority_change>\n"
-        "        <no_rpd_check>%d</no_rpd_check>\n"
+        "        <no_rdp_check>%d</no_rdp_check>\n"
         "        <os_random_only>%d</os_random_only>\n"
         "        <process_priority>%d</process_priority>\n"
         "        <process_priority_special>%d</process_priority_special>\n",

@@ -161,27 +161,15 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
     global_prefs.write(mf);
     fprintf(f, "</working_global_preferences>\n");
 
-    // Of the projects with same email hash as this one,
-    // send the oldest cross-project ID.
-    // Use project URL as tie-breaker.
+    // send the oldest CPID with email hash
     //
-    PROJECT* winner = p;
-    for (i=0; i<projects.size(); i++ ) {
-        PROJECT* project = projects[i];
-        if (project == p) continue;
-        if (strcmp(project->email_hash, p->email_hash)) continue;
-        if (project->cpid_time < winner->cpid_time) {
-            winner = project;
-        } else if (project->cpid_time == winner->cpid_time) {
-            if (strcmp(project->master_url, winner->master_url) < 0) {
-                winner = project;
-            }
-        }
+    USER_CPID* ucp = user_cpids.lookup(p->email_hash);
+    if (ucp) {
+        fprintf(f,
+            "<cross_project_id>%s</cross_project_id>\n",
+            ucp->cpid
+        );
     }
-    fprintf(f,
-        "<cross_project_id>%s</cross_project_id>\n",
-        winner->cross_project_id
-    );
 
     time_stats.write(mf, true);
     net_stats.write(mf);
@@ -627,6 +615,24 @@ int CLIENT_STATE::handle_scheduler_reply(
         );
     }
 
+    // update user CPID list
+    //
+    if (strlen(project->cross_project_id) && strlen(project->email_hash)) {
+        USER_CPID *ucp = user_cpids.lookup(project->email_hash);
+        if (ucp) {
+            if (project->cpid_time < ucp->time) {
+                strcpy(ucp->cpid, project->cross_project_id);
+                ucp->time = project->cpid_time;
+            }
+        } else {
+            USER_CPID uc;
+            strcpy(uc.email_hash, project->email_hash);
+            strcpy(uc.cpid, project->cross_project_id);
+            uc.time = project->cpid_time;
+            user_cpids.cpids.push_back(uc);
+        }
+    }
+
     // show messages from server
     //
     bool got_notice = false;
@@ -667,7 +673,8 @@ int CLIENT_STATE::handle_scheduler_reply(
     // if the scheduler reply includes global preferences,
     // insert extra elements, write to disk, and parse
     //
-    if (sr.global_prefs_xml) {
+    double mod_time = sr.global_prefs_xml?GLOBAL_PREFS::parse_mod_time(sr.global_prefs_xml):0;
+    if (sr.global_prefs_xml && mod_time > gstate.global_prefs.mod_time) {
         // ignore prefs if we're using prefs from account mgr
         // BAM! currently has mixed http, https; trim off
         char* p = strchr(global_prefs.source_project, '/');
@@ -793,6 +800,7 @@ int CLIENT_STATE::handle_scheduler_reply(
             //
             safe_strcpy(app->user_friendly_name, checked_app.user_friendly_name);
             app->non_cpu_intensive = checked_app.non_cpu_intensive;
+            app->sporadic = checked_app.sporadic;
             app->fraction_done_exact = checked_app.fraction_done_exact;
         } else {
             app = new APP;

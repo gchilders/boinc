@@ -187,7 +187,6 @@ function show_user_stats_private($user) {
         }
         $x .= ' &middot; <a href="cert_all.php">'.tra("Cross-project").'</a>';
         row2(tra("Certificate"), $x);
-        row2(tra("Stats on your cell phone"), url_base()."userw.php?id=$user->id");
     }
 }
 
@@ -205,6 +204,16 @@ function notify_description($notify) {
     return null;
 }
 
+// a string that can be used to authenticate some operations,
+// but can't be used to log in to the account
+// (e.g. can't be used to change email addr or passwd)
+//
+// this is a function of
+// - authenticator (never changes)
+// - user ID (never changes)
+// - password
+// - email addr
+//
 function weak_auth($user) {
     $x = md5($user->authenticator.$user->passwd_hash);
     return "{$user->id}_$x";
@@ -280,7 +289,7 @@ function show_user_info_private($user) {
             tra("Account keys"),
             "<a href=\"weak_auth.php\">".tra("View")."</a>"
         );
-        
+
         require_once("../inc/account_ownership.inc");
         if (file_exists($account_ownership_private_key_file_path)) {
           // If the server has keys configured show the account ownership form

@@ -66,7 +66,7 @@ namespace boinc {
 #ifdef _USING_FCGI_
         int i=FCGI_vfprintf(fp,format,va);
 #else
-        int i=::fprintf(fp,format,va);
+        int i=::vfprintf(fp,format,va);
 #endif
         va_end(va);
         return i;
@@ -76,7 +76,11 @@ namespace boinc {
 #ifdef _USING_FCGI_
         return FCGI_fileno(f);
 #else
+#ifdef _WIN32
+        return ::_fileno(f);
+#else
         return ::fileno(f);
+#endif
 #endif
     }
 
@@ -179,7 +183,6 @@ namespace boinc {
     inline int fscanf(FILE *fp, const char *format, ...) {
         char buf[BUFSIZ];
         boinc::fgets(buf,BUFSIZ,fp);
-        buf[strlen(buf)-1]=0;
         va_list va;
         va_start(va, format);
         int i=::vsscanf(buf,format,va);

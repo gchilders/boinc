@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2022 University of California
+// Copyright (C) 2023 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -77,7 +77,7 @@ enum SaverState {
     SaverState_CoreClientRunning,
     SaverState_RelaunchCoreClient,
     SaverState_ConnectedToCoreClient,
-    
+
     SaverState_CantLaunchCoreClient,
     SaverState_ControlPanelTestMode,
     SaverState_UnrecoverableError
@@ -106,9 +106,14 @@ static pthread_mutexattr_t saver_mutex_attr;
 pthread_mutex_t saver_mutex;
 static char passwd_buf[256];
 char gUserName[64];
-bool gIsHighSierra = false;  // OS 10.13 or later
+bool gIsHighSierra = false; // OS 10.13 or later
 bool gIsMojave = false;     // OS 10.14 or later
 bool gIsCatalina = false;   // OS 10.15 or later
+bool gIsSonoma = false;     // OS 14.0 or later
+
+// As of MacOS 14.0, the legacyScreenSave sandbox
+// prevents using IOSurfaceLookupFromMachPort.
+bool gCant_Use_Shared_Offscreen_Buffer = false;
 
 const char *  CantLaunchCCMsg = "Unable to launch BOINC application.";
 const char *  LaunchingCCMsg = "Launching BOINC application.";
@@ -123,12 +128,13 @@ const char *  DefaultGFXAppCrashedMsg = "Default screensaver module had an unrec
 const char *  RunningOnBatteryMsg = "Computing and screensaver disabled while running on battery power.";
 const char *  IncompatibleMsg = "Could not connect to screensaver ";
 const char *  CCNotRunningMsg = "BOINC is not running.";
+const char *  NoScreenSaverGraphicsThisMacOS = "BOINC can't show screensaver graphics on this version of MacOS";
 
 //const char *  BOINCExitedSaverMode = "BOINC is no longer in screensaver mode.";
 
 
-// If there are multiple displays, this may get called 
-// multiple times (once for each display), so we need to guard 
+// If there are multiple displays, this may get called
+// multiple times (once for each display), so we need to guard
 // against any problems that may cause.
 void initBOINCSaver() {
     diagnostics_init(
@@ -182,8 +188,15 @@ void drawPreview(CGContextRef myContext) {
 };
 
 
-// If there are multiple displays, this may get called 
-// multiple times (once for each display), so we need to guard 
+void stopAllGFXApps() {
+    if (gspScreensaver) {
+        gspScreensaver->Shared_Offscreen_Buffer_Unavailable();
+    }
+}
+
+
+// If there are multiple displays, this may get called
+// multiple times (once for each display), so we need to guard
 // against any problems that may cause.
 void closeBOINCSaver() {
     if (gspScreensaver) {
@@ -201,16 +214,16 @@ void incompatibleGfxApp(char * appPath, pid_t pid, int slot){
     int retval;
     bool gotAppName = false;
     int exitStatus;
-    
+
     if (gspScreensaver) {
         if (msgstartTime == 0.0) {
             msgstartTime = getDTime();
             buf[0] = '\0';
-            
+
             if (gspScreensaver->HasProcessExited(pid, exitStatus)) {
                 return;
             }
-            
+
             retval = gspScreensaver->rpc->get_state(gspScreensaver->state);
             if (!retval) {
                 strlcpy(buf, IncompatibleMsg, sizeof(buf));
@@ -227,7 +240,7 @@ void incompatibleGfxApp(char * appPath, pid_t pid, int slot){
                     }
                 }
             } // if (!retval)
-            
+
             if (!gotAppName) {
                 p = strrchr(appPath, '/');
                 if (!p) p = appPath;
@@ -243,7 +256,7 @@ void incompatibleGfxApp(char * appPath, pid_t pid, int slot){
             gspScreensaver->markAsIncompatible(appPath);
             launchedGfxApp("", 0, -1);
             msgstartTime = 0.0;
-            gspScreensaver->terminate_v6_screensaver(pid, graphics_app_result_ptr);
+            gspScreensaver->terminate_v6_screensaver(pid);
         }
     }
 }
@@ -308,7 +321,7 @@ CScreensaver::CScreensaver() {
     struct ss_periods periods;
     char saved_dir[MAXPATHLEN];
     std::string msg;
-    
+
     m_dwBlankScreen = 0;
     m_dwBlankTime = 0;
     m_bErrorMode = false;
@@ -322,7 +335,7 @@ CScreensaver::CScreensaver() {
     m_CurrentBannerMessage = 0;
     m_bQuitDataManagementProc = false;
     m_bDataManagementProcStopped = false;
-    
+
     m_hDataManagementThread = NULL;
     m_hGraphicsApplication = NULL;
     m_bResetCoreState = true;
@@ -330,15 +343,15 @@ CScreensaver::CScreensaver() {
     m_bConnected = false;
     m_gfx_Cleanup_IPC = NULL;
     safe_strcpy(passwd_buf, "");
-   
+
     getcwd(saved_dir, sizeof(saved_dir));
     chdir("/Library/Application Support/BOINC Data");
     read_gui_rpc_password(passwd_buf, msg);
     chdir(saved_dir);
-    
+
     CFStringRef cf_gUserName = SCDynamicStoreCopyConsoleUser(NULL, NULL, NULL);
     CFStringGetCString(cf_gUserName, gUserName, sizeof(gUserName), kCFStringEncodingUTF8);
-    
+
     // Get project-defined default values for GFXDefaultPeriod, GFXSciencePeriod, GFXChangePeriod
     GetDefaultDisplayPeriods(periods);
     m_bShow_default_ss_first = periods.Show_default_ss_first;
@@ -360,17 +373,17 @@ CScreensaver::CScreensaver() {
 
 int CScreensaver::Create() {
         // Ugly workaround for a problem with the System Preferences app
-    // For an unknown reason, when this screensaver is run using the 
-    // Test button in the System Prefs Screensaver control panel, the 
-    // control panel calls our stopAnimation function as soon as the 
-    // science application opens a GLUT window.  This problem does not 
-    // occur when the screensaver is run normally (from the screensaver 
-    // engine.)  So we just display a message and don't access the core 
+    // For an unknown reason, when this screensaver is run using the
+    // Test button in the System Prefs Screensaver control panel, the
+    // control panel calls our stopAnimation function as soon as the
+    // science application opens a GLUT window.  This problem does not
+    // occur when the screensaver is run normally (from the screensaver
+    // engine.)  So we just display a message and don't access the core
     // client.
-    // With V6 graphics when using gfx_switcher, the graphics application 
-    // fails to run and stderr shows the message: 
-    // "The process has forked and you cannot use this CoreFoundation 
-    // functionality safely. You MUST exec()" 
+    // With V6 graphics when using gfx_switcher, the graphics application
+    // fails to run and stderr shows the message:
+    // "The process has forked and you cannot use this CoreFoundation
+    // functionality safely. You MUST exec()"
     pid_t SystemPrefsPID = getPidIfRunning("com.apple.systempreferences");
     if (SystemPrefsPID == getpid()) {
         saverState = SaverState_ControlPanelTestMode;
@@ -385,33 +398,33 @@ int CScreensaver::Create() {
     if (!ScreenSaverStartTime) {
         ScreenSaverStartTime = time(0);
     }
-    
+
     m_dwBlankScreen = gGoToBlank;
     if (gGoToBlank && (gBlankingTime > 0))
         m_dwBlankTime = ScreenSaverStartTime + (gBlankingTime * 60);
     else
         m_dwBlankTime = 0;
-    
-    // If there are multiple displays, initBOINCSaver may get called 
-    // multiple times (once for each display), so we need to guard 
+
+    // If there are multiple displays, initBOINCSaver may get called
+    // multiple times (once for each display), so we need to guard
     // against launching multiple instances of the core client
     if (saverState == SaverState_Idle) {
         CFStringGetCString(gPathToBundleResources, m_gfx_Switcher_Path, sizeof(m_gfx_Switcher_Path), kCFStringEncodingMacRoman);
         strlcpy(m_gfx_Cleanup_Path, "\"", sizeof(m_gfx_Cleanup_Path));
         strlcat(m_gfx_Cleanup_Path, m_gfx_Switcher_Path, sizeof(m_gfx_Cleanup_Path));
         strlcat(m_gfx_Switcher_Path, "/gfx_switcher", sizeof(m_gfx_Switcher_Path));
-        strlcat(m_gfx_Cleanup_Path, "/gfx_cleanup\"", sizeof(m_gfx_Switcher_Path));
+        strlcat(m_gfx_Cleanup_Path, "/gfx_cleanup\"", sizeof(m_gfx_Cleanup_Path));
 
         // Launch helper app to work around a bug in OS 10.15 Catalina to
-        // kill current graphics app if ScreensaverEngine exits without 
+        // kill current graphics app if ScreensaverEngine exits without
         // first calling [ScreenSaverView stopAnimation]
         //TODO: Should we use this on OS 10.13+ ?
         m_gfx_Cleanup_IPC = popen(m_gfx_Cleanup_Path, "w");
-        
+
         initBOINCApp();
 
         CGDisplayHideCursor(kCGNullDirectDisplay);
-    
+
         if (saverState == SaverState_LaunchingCoreClient)
         {
             SetError(FALSE, 0);
@@ -422,7 +435,7 @@ int CScreensaver::Create() {
             }
         }
     }
-    
+
     if (!IsDualGPUMacbook) {
         SetDiscreteGPU(false);
         if (IsDualGPUMacbook && (GPUSelectConnect != IO_OBJECT_NULL)) {
@@ -430,14 +443,14 @@ int CScreensaver::Create() {
             GPUSelectConnect = IO_OBJECT_NULL;
         }
     }
-    
+
     return TEXTLOGOFREQUENCY;
 }
 
 
 OSStatus CScreensaver::initBOINCApp() {
     saverState = SaverState_CantLaunchCoreClient;
-    
+
     m_CoreClientPID = getClientPID();
     if (m_CoreClientPID) {
         m_wasAlreadyRunning = true;
@@ -445,9 +458,9 @@ OSStatus CScreensaver::initBOINCApp() {
         retryCount = 0;
         return noErr;
     }
-    
+
     m_wasAlreadyRunning = false;
-    
+
     return noErr;   // Screensavers can't launch setuid /setgid processes as of Catalina
 }
 
@@ -459,33 +472,38 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
     *coveredFreq = 0;
     pid_t myPid;
     CC_STATE ccstate;
-    
+
     if (ScreenIsBlanked) {
         setSSMessageText(0);   // No text message
         *theMessage = m_MessageText;
         return NOTEXTLOGOFREQUENCY;
     }
-    
+
+    if (gCant_Use_Shared_Offscreen_Buffer) {
+        gspScreensaver->setSSMessageText(NoScreenSaverGraphicsThisMacOS);
+        goto msgIsSet;
+    }
+
     CheckDualGPUPowerSource();
-    
+
     switch (saverState) {
     case SaverState_RelaunchCoreClient:
         initBOINCApp();
         break;
-    
+
     case  SaverState_LaunchingCoreClient:
         if (m_wasAlreadyRunning) {
             setSSMessageText(ConnectingCCMsg);
         } else {
             setSSMessageText(LaunchingCCMsg);
         }
-            
+
         myPid = getClientPID();
         if (myPid) {
             saverState = SaverState_CoreClientRunning;
             if (!rpc->init(NULL)) {     // Initialize communications with Core Client
                 m_bConnected = true;
-                
+
                 if (strlen(passwd_buf)) {
                     retval = rpc->authorize(passwd_buf);
                     if (retval) {
@@ -502,7 +520,7 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
                     } else {
                         OKToRunOnBatteries = false;
                     }
-                    
+
                     if (OKToRunOnBatteries) {
                         SetDiscreteGPU(true);
                     }
@@ -523,15 +541,15 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
             setSSMessageText(RunningOnBatteryMsg);
             break;
         }
-            
+
         // RPC called in DataManagementProc()
         setSSMessageText(ConnectingCCMsg);
-        
+
         if (! m_bResetCoreState) {
             saverState = SaverState_ConnectedToCoreClient;
         }
     break;
-    
+
     case SaverState_ConnectedToCoreClient:
         if (IsDualGPUMacbook && RunningOnBattery && !OKToRunOnBatteries) {
             setSSMessageText(RunningOnBatteryMsg);
@@ -575,26 +593,26 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
         default:
             // m_bErrorMode is TRUE if we should display moving logo (no graphics app is running)
             // m_bErrorMode is FALSE if a graphics app was launched and has not exit
-            if (! m_bErrorMode) { 
-                // NOTE: My tests seem to confirm that the top window is always the first 
-                // window returned by NSWindowList under OS 10.5 and the second window 
-                // returned by NSWindowList under OS 10.3.9 and OS 10.4.  However, Apple's 
-                // documentation is unclear whether we can depend on this.  So I have 
+            if (! m_bErrorMode) {
+                // NOTE: My tests seem to confirm that the top window is always the first
+                // window returned by NSWindowList under OS 10.5 and the second window
+                // returned by NSWindowList under OS 10.3.9 and OS 10.4.  However, Apple's
+                // documentation is unclear whether we can depend on this.  So I have
                 // added some safety by doing two things:
-                // [1] Only use the NSWindowList test when we have started project or default 
+                // [1] Only use the NSWindowList test when we have started project or default
                 //      graphics.
-                // [2] Assume that our window is covered 45 seconds after starting project 
+                // [2] Assume that our window is covered 45 seconds after starting project
                 //     graphics even if the NSWindowList test did not indicate that is so.
                 //
-                // The -animateOneFrame method in Mac_SaverModuleView.m does the NSWindowList test 
+                // The -animateOneFrame method in Mac_SaverModuleView.m does the NSWindowList test
                 // only if we return a non-zero value for coveredFreq.
                 //
-                // Tell the calling routine to set the frame rate to NOTEXTLOGOFREQUENCY if 
+                // Tell the calling routine to set the frame rate to NOTEXTLOGOFREQUENCY if
                 // NSWindowList indicates that science app graphics window has covered our window.
                 *coveredFreq = NOTEXTLOGOFREQUENCY;
-                
+
                 if (m_iGraphicsStartingMsgCounter > 0) {
-                    // Show ScreenSaverAppStartingMsg for GFX_STARTING_MSG_DURATION seconds or until 
+                    // Show ScreenSaverAppStartingMsg for GFX_STARTING_MSG_DURATION seconds or until
                     // NSWindowList indicates that science app graphics window has covered our window
                     setSSMessageText(ScreenSaverAppStartingMsg);
                     m_iGraphicsStartingMsgCounter--;
@@ -604,7 +622,7 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
                 }
             }           // End if (! m_bErrorMode)
             break;      // End default case of switch (m_hrError)
-            
+
         }       // end switch (m_hrError)
         break;  // End case SaverState_ConnectedToCoreClient of switch (saverState)
 
@@ -621,7 +639,7 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
             setSSMessageText(RunningOnBatteryMsg);
             break;
         }
-        
+
         setSSMessageText(CCNotRunningMsg);
         break;
 
@@ -635,13 +653,14 @@ int CScreensaver::getSSMessage(char **theMessage, int* coveredFreq) {
             ScreenIsBlanked = true;
         }
     }
-    
+
+msgIsSet:
     if (m_MessageText[0]) {
         newFrequency = TEXTLOGOFREQUENCY;
     } else {
         newFrequency = NOTEXTLOGOFREQUENCY;
     }
-    
+
     *theMessage = m_MessageText;
     return newFrequency;
 }
@@ -657,16 +676,21 @@ void CScreensaver::drawPreview(CGContextRef myContext) {
 }
 
 
+void CScreensaver::Shared_Offscreen_Buffer_Unavailable() {
+    DestroyDataManagementThread();  // Kills current GFX app
+}
+
+
 void CScreensaver::ShutdownSaver() {
     DestroyDataManagementThread();
-    
+
     if (rpc) {
 #if 0       // OS X calls closeBOINCSaver() when energy saver puts display
             // to sleep, but we want to keep crunching.  So don't kill it.
             // Code in core client now quits on user activity if screen
             // saver launched it (2/28/07).
-            // Also, under sandbox security, screensaver doesn't have access 
-            // to rpc password in gui_rpc_auth.cfg file, so core client won't 
+            // Also, under sandbox security, screensaver doesn't have access
+            // to rpc password in gui_rpc_auth.cfg file, so core client won't
             // accept rpc->quit from screensaver.
         if (m_CoreClientPID && (!m_wasAlreadyRunning)) {
             rpc->quit();    // Kill core client if we launched it
@@ -689,6 +713,14 @@ void CScreensaver::ShutdownSaver() {
         fflush(m_gfx_Cleanup_IPC);
         pclose(m_gfx_Cleanup_IPC);
     }
+
+    // Under MacOS 14.0 Sonoma, screensavers continue to run and "draw" invisibly
+    // after they are dismissed by user activity, to allow them to be used as
+    // wallpaper. Since we don't want the BOINC screensaver to be used as wallpaper,
+    // this would waste system resources.
+    if (gIsSonoma) {
+        KillScreenSaver();
+    }
 }
 
 
@@ -702,22 +734,22 @@ void * CScreensaver::DataManagementProcStub(void* param) {
 
 void CScreensaver::HandleRPCError() {
     int retval;
-   
+
     // Attempt to restart BOINC Client if needed, reinitialize the RPC client and state
     rpc->close();
     m_bConnected = false;
-    
+
     if (saverState == SaverState_CantLaunchCoreClient) {
         return;   // Screensavers can't launch setuid /setgid processes as of Catalina
     }
-    
-    // If Core Client is hung, it might cause RPCs to hang, preventing us from 
-    // shutting down the Data Management Thread, so don't reinitialize the RPC 
+
+    // If Core Client is hung, it might cause RPCs to hang, preventing us from
+    // shutting down the Data Management Thread, so don't reinitialize the RPC
     // client if we have told the Data Management Thread to exit.
     if (m_bQuitDataManagementProc) {
         return;
     }
-    
+
     // Otherwise just reinitialize the RPC client and state and keep trying
     if (!rpc->init(NULL)) {
         m_bConnected = true;
@@ -733,16 +765,16 @@ void CScreensaver::HandleRPCError() {
 
 bool CScreensaver::CreateDataManagementThread() {
     int retval;
-    
+
     // On dual-GPU Macbook Pros, our OpenGL scrensaver
-    // applications trigger a switch to the power-hungry 
+    // applications trigger a switch to the power-hungry
     // discrete GPU. To extend battery life, don't run
     // them when on battery power.
     if (IsDualGPUMacbook) {
         if (RunningOnBattery && !OKToRunOnBatteries) return true;
         if (GPUSelectConnect == IO_OBJECT_NULL) return true;
     }
-    
+
     m_bQuitDataManagementProc = false;
     m_bDataManagementProcStopped = false;
 
@@ -761,7 +793,7 @@ bool CScreensaver::CreateDataManagementThread() {
 bool CScreensaver::DestroyDataManagementThread() {
     if (!m_hDataManagementThread) return true;
     m_bQuitDataManagementProc = true;  // Tell DataManagementProc thread to exit
-    
+
     int maxWait = IsDualGPUMacbook ? 50 : 10;
     for (int i=0; i<maxWait; i++) {  // Wait up to 1 second or 5 seconds for DataManagementProc thread to exit
         if (m_bDataManagementProcStopped) {
@@ -774,7 +806,7 @@ bool CScreensaver::DestroyDataManagementThread() {
     m_hDataManagementThread = NULL; // Don't delay more if this routine is called again.
 
     if (m_hGraphicsApplication) {
-        terminate_v6_screensaver(m_hGraphicsApplication, graphics_app_result_ptr);
+        terminate_v6_screensaver(m_hGraphicsApplication);
         m_hGraphicsApplication = 0;
     }
 
@@ -792,7 +824,7 @@ bool CScreensaver::SetError(bool bErrorMode, unsigned int hrError) {
     m_hrError = hrError;
 
     if (bErrorMode) {
-        // Reset our timer for showing ScreenSaverAppStartingMsg to 
+        // Reset our timer for showing ScreenSaverAppStartingMsg to
         // GFX_STARTING_MSG_DURATION seconds
         m_iGraphicsStartingMsgCounter = GFX_STARTING_MSG_DURATION * TEXTLOGOFREQUENCY;
     }
@@ -802,7 +834,7 @@ bool CScreensaver::SetError(bool bErrorMode, unsigned int hrError) {
 void CScreensaver::setSSMessageText(const char * msg) {
     if (msg == 0)
         m_MessageText[0] = 0;
-    
+
     if (m_CurrentBannerMessage != msg)
         updateSSMessageText((char *)msg);
 }
@@ -810,7 +842,7 @@ void CScreensaver::setSSMessageText(const char * msg) {
 
 void CScreensaver::updateSSMessageText(char *msg) {
     char *p, *s;
-    
+
     m_CurrentBannerMessage = msg;
 
    if (msg) {
@@ -826,7 +858,7 @@ void CScreensaver::updateSSMessageText(char *msg) {
                 s = p + 5;  // s = p + strlen("BOINC");
             }
         } while (p);
-        
+
     }
 }
 
@@ -838,11 +870,11 @@ int CScreensaver::GetBrandID()
     OSErr err;
 
     iBrandId = 0;   // Default value
-    
+
     // The installer put a copy of Branding file in the BOINC Data Directory
     FILE *f = fopen("/Library/Application Support/BOINC Data/Branding", "r");
     if (f == NULL) {
-       // If we couldn't find our Branding file in the BOINC Data Directory,  
+       // If we couldn't find our Branding file in the BOINC Data Directory,
        // look in our application bundle
         err = GetPathToAppFromID('BNC!', CFSTR("edu.berkeley.boinc"),  buf, sizeof(buf));
         if (err == noErr) {
@@ -879,7 +911,7 @@ pid_t CScreensaver::getClientPID() {
         close(fd);
         return 0;   // fcntl failed (should never happen)
     }
-    
+
     close(fd);
     return fl.l_pid;
 }
@@ -922,13 +954,13 @@ bool CScreensaver::Host_is_running_on_batteries() {
 
     CFRelease(blob);
     CFRelease(list);
-        
+
     return retval;
 #endif  // NOT SIMULATE_AC_BATTERY_SWITCHING
 }
 
 
-// On Dual-GPU Macbook Pros, Apple's Screensaver Engine 
+// On Dual-GPU Macbook Pros, Apple's Screensaver Engine
 // will detect any GPU change and call stopAnimation,
 // then initWithFrame and startAnimation.
 //
@@ -982,17 +1014,17 @@ void CScreensaver::CheckDualGPUPowerSource() {
     static double lastBatteryCheckTime = 0;
     double currentTime;
     bool nowOnBattery;
-    
+
     if (!IsDualGPUMacbook) return;
     if (OKToRunOnBatteries && (GPUSelectConnect != IO_OBJECT_NULL)) return;
-    
+
     currentTime = dtime();
     if (currentTime < lastBatteryCheckTime + BATTERY_CHECK_INTERVAL) return;
     lastBatteryCheckTime = currentTime;
-    
+
     nowOnBattery = Host_is_running_on_batteries();
     if (nowOnBattery == RunningOnBattery) return;
-    
+
     RunningOnBattery = nowOnBattery;
     if (nowOnBattery) {
         if (GPUSelectConnect != IO_OBJECT_NULL) {
@@ -1014,9 +1046,8 @@ void print_to_log_file(const char *format, ...) {
     char buf[256];
     time_t t;
 #if USE_SPECIAL_LOG_FILE
-    safe_strcpy(buf, "/Users/");
-    safe_strcat(buf, getlogin());
-    safe_strcat(buf, "/Documents/test_log.txt");
+    safe_strcat(buf, getenv("HOME"));
+    safe_strcat(buf, "/Documents/ss_test_log.txt");
     FILE *f;
     f = fopen(buf, "a");
     if (!f) return;
@@ -1036,7 +1067,7 @@ void print_to_log_file(const char *format, ...) {
     va_start(args, format);
     vfprintf(f, format, args);
     va_end(args);
-    
+
     fputs("\n", f);
 #if USE_SPECIAL_LOG_FILE
     fflush(f);

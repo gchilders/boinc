@@ -16,7 +16,7 @@
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
 // The BOINC file upload handler.
-// See http://boinc.berkeley.edu/trac/wiki/FileUpload for protocol spec.
+// See https://github.com/BOINC/boinc/wiki/FileUpload for protocol spec.
 //
 
 #include "config.h"
@@ -316,6 +316,9 @@ int handle_file_upload(FILE* in, R_RSA_PUBLIC_KEY& key) {
     strcpy(name, "");
     strcpy(xml_signature, "");
     bool found_data = false;
+
+    // TODO: use XML parser
+
     while (boinc::fgets(buf, 256, in)) {
         log_messages.printf(MSG_DETAIL, "got:%s\n", buf);
         if (match_tag(buf, "<file_info>")) continue;

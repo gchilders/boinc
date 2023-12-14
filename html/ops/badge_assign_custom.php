@@ -17,8 +17,14 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// Assign badges based on RAC percentile.
-// Customize this to grant other types of badges
+// Assign badges based on project total and per subproject credit.
+// This code is mostly generic.
+// You'll need to:
+// - define your subproject in project/project.inc
+// - use the <credit_by_app/> option in config.xml
+// - supply your own project themed badge images
+//  that have to follow a naming scheme (see below)
+// See: https://github.com/BOINC/boinc/wiki/PerAppCredit
 
 require_once("../inc/util_ops.inc");
 

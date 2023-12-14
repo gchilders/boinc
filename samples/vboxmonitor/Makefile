@@ -11,8 +11,8 @@ ifdef ANDROID
   BOINC_LIB_DIR = $(TCINCLUDES)/lib
   BOINC_ZIP_DIR = $(TCINCLUDES)/lib
 
-  MAKEFILE_LDFLAGS = 
-  MAKEFILE_STDLIB  = 
+  MAKEFILE_LDFLAGS =
+  MAKEFILE_STDLIB  =
 else
   BOINC_API_DIR = $(BOINC_SOURCE_API_DIR)
   BOINC_LIB_DIR = $(BOINC_SOURCE_LIB_DIR)
@@ -36,7 +36,7 @@ PROGS = vboxmonitor
 all: $(PROGS)
 
 libstdc++.a:
-	ln -s `$(CXX) -print-file-name=libstdc++.a`
+	ln -s `$(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a`
 
 clean: distclean
 

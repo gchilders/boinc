@@ -102,6 +102,7 @@ struct LOG_FLAGS {
     bool scrsave_debug;
     bool slot_debug;
         // allocation of slots
+    bool sporadic_debug;
     bool state_debug;
         // print textual summary of CLIENT_STATE initially
         // and after each scheduler RPC and garbage collect
@@ -119,7 +120,7 @@ struct LOG_FLAGS {
     bool unparsed_xml;
         // show unparsed XML lines
     bool work_fetch_debug;
-        // work fetch policy 
+        // work fetch policy
 
     LOG_FLAGS() {
         task = true;

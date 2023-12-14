@@ -146,7 +146,7 @@ major=`echo $version | sed 's/\([0-9]*\)[.].*/\1/' `;
 
 if [ "$major" -lt "11" ]; then
     echo "ERROR: Building BOINC requires System 10.7 or later.  For details, see build instructions at"
-    echo "boinc/mac_build/HowToBuildBOINC_XCode.rtf or https://boinc.berkeley.edu/trac/wiki/MacBuild"
+    echo "boinc/mac_build/HowToBuildBOINC_XCode.rtf or https://github.com/BOINC/boinc/wiki/MacBuild"
     return 1
 fi
 
@@ -224,7 +224,7 @@ if [ $result -eq 0 ]; then
     if [ "${buildall}" = "1" ] || [ "${buildlibs}" = "1" ] || [ "${buildzipapps}" = "1" ]; then
         buildzip=1
     fi
-    
+
     if [ "${buildzip}" = "1" ]; then
         eval "xcodebuild -project ../zip/boinc_zip.xcodeproj -target boinc_zip -configuration ${style} -sdk \"${SDKPATH}\" ${doclean} build  ${uselibcplusplus} ${theSettings}"
         result=$?

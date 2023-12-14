@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2022 University of California
+// Copyright (C) 2023 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -20,7 +20,7 @@
 // Used by screensaver to work around a bug in OS 10.15 Catalina
 // - Detects when ScreensaverEngine exits without calling [ScreenSaverView stopAnimation]
 // - If that happens, it sends RPC to BOINC client to kill current graphics app.
-// Note: this can rarely happen in earlier versions, but is of main concern under 
+// Note: this can rarely happen in earlier versions, but is of main concern under
 // OS 10.13 and later, where it can cause an ugly white full-screen display
 //
 // Called by CScreensaver via popen(path, "w")
@@ -74,11 +74,11 @@ void killGfxApp(pid_t thePID) {
     RPC_CLIENT *rpc;
     int retval;
     std::string msg;
-    
+
     chdir("/Library/Application Support/BOINC Data");
     safe_strcpy(buf, "");
     read_gui_rpc_password(buf, msg);
-    
+
     rpc = new RPC_CLIENT;
     if (rpc->init(NULL)) {     // Initialize communications with Core Client
         fprintf(stderr, "in gfx_cleanup: killGfxApp(): rpc->init(NULL) failed");
@@ -97,7 +97,7 @@ void killGfxApp(pid_t thePID) {
     CFStringGetCString(cf_gUserName, userName, sizeof(userName), kCFStringEncodingUTF8);
 
     retval = rpc->run_graphics_app("stop", thePID, userName);
-    print_to_log_file("in gfx_cleanup: killGfxApp(): rpc->run_graphics_app(stop) returned retval=%d", retval);   
+    print_to_log_file("in gfx_cleanup: killGfxApp(): rpc->run_graphics_app(stop) returned retval=%d", retval);
 
     // Wait until graphics app has exited before closing our own black fullscreen
     // window to prevent an ugly white flash [see comment in main() below].
@@ -110,11 +110,11 @@ void killGfxApp(pid_t thePID) {
         retval = rpc->run_graphics_app("test", p, userName);
         if (retval || (p==0)) break;
     }
- print_to_log_file("in gfx_cleanup: killGfxApp(%d): rpc->run_graphics_app(test) returned pid %d, retval %d when i = %d", thePID, p, retval, i);   
+ print_to_log_file("in gfx_cleanup: killGfxApp(%d): rpc->run_graphics_app(test) returned pid %d, retval %d when i = %d", thePID, p, retval, i);
 
-    // Graphics apps called by screensaver or Manager (via Show 
+    // Graphics apps called by screensaver or Manager (via Show
     // Graphics button) now write files in their slot directory as
-    // the logged in user, not boinc_master. This ugly hack tells 
+    // the logged in user, not boinc_master. This ugly hack tells
     // BOINC client to fix all ownerships in this slot directory
     char shmem_name[MAXPATHLEN];
     snprintf(shmem_name, sizeof(shmem_name), "/tmp/boinc_ss_%s", userName);
@@ -123,7 +123,7 @@ void killGfxApp(pid_t thePID) {
         rpc->run_graphics_app("stop", ss_shmem->gfx_slot, "");
         ss_shmem->gfx_slot = -1;
     }
-    
+
     rpc->close();
 #endif
     return;
@@ -191,12 +191,12 @@ NSWindow* myWindow;
     if (GFX_PidFromScreensaver) {
         killGfxApp(GFX_PidFromScreensaver);
     }
-    
+
     quit_MonitorParentThread = true;
-    
+
 //    [NSApp stop:self];
     exit(0);
-    
+
 }
 @end
 
@@ -207,16 +207,22 @@ int main(int argc, char* argv[]) {
 #endif
     parentPid = getppid();
 
-    bool cover_gfx_window = (compareOSVersionTo(10, 13) >= 0);
+    // Under MacOS 14.0, the legacyScreenSaver continues to run after the
+    // screensaver is dismissed. Our code elsewhere now kills it, but if
+    // that were to fail this black cover would block the user from
+    // accessing the desktop, so don't use the cover in MacOS 14 for now.
+
+    bool cover_gfx_window = (compareOSVersionTo(10, 13) >= 0) &&
+                                (compareOSVersionTo(10, 14) < 0);
 
     // Create shared app instance
     [NSApplication sharedApplication];
 
-    // Because prpject graphics applications under OS 10.13+ draw to an IOSurface, 
-    // the application's own window is white, but is normally covered by the 
+    // Because prpject graphics applications under OS 10.13+ draw to an IOSurface,
+    // the application's own window is white, but is normally covered by the
     // ScreensaverEngine's window. If the ScreensaverEngine exits without first
-    // calling [ScreenSaverView stopAnimation], the white fullscreen window will 
-    // briefly be visible until we kill the graphics app, causing an ugly and 
+    // calling [ScreenSaverView stopAnimation], the white fullscreen window will
+    // briefly be visible until we kill the graphics app, causing an ugly and
     // annoying white flash. So we hide that with our own black fullscreen window
     // to prevent the white flash.
    if (cover_gfx_window) {
@@ -232,9 +238,9 @@ int main(int argc, char* argv[]) {
         [myWindow orderFrontRegardless];
     }
 
-    AppDelegate *myDelegate = [[AppDelegate alloc] init]; 
+    AppDelegate *myDelegate = [[AppDelegate alloc] init];
     [ NSApp setDelegate:myDelegate];
-    
+
     [NSApp run];
 
     print_to_log_file("exiting gfx_cleanup after handling %d",GFX_PidFromScreensaver);
@@ -291,7 +297,7 @@ void print_to_log_file(const char *format, ...) {
     va_start(args, format);
     vfprintf(f, format, args);
     va_end(args);
-    
+
     fputs("\n", f);
 
     fclose(f);

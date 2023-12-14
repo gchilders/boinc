@@ -21,7 +21,11 @@ import sys
 
 linux_client_list = [
     './client/boinc',
-    './client/boinccmd'
+    './client/boinccmd',
+    './client/scripts/boinc-client.service',
+    './client/scripts/boinc-client',
+    './client/scripts/boinc.bash',
+    './client/scripts/boinc-client.conf'
 ]
 
 linux_apps_list = [
@@ -38,12 +42,14 @@ linux_apps_list = [
     './samples/wrapper/wrapper',
     './samples/openclapp/openclapp',
     './samples/wrappture/wrappture_example',
-    './samples/wrappture/fermi'
+    './samples/wrappture/fermi',
+    './samples/sporadic/sporadic'
 ]
 
 linux_manager_list = [
     './clientgui/boincmgr',
     './clientgui/skins',
+    './clientgui/res/boinc.desktop',
     'locale/*/*.mo',
 ]
 
@@ -62,7 +68,8 @@ mingw_apps_vcpkg_list = [
     './samples/worker/worker.exe',
     './samples/wrapper/wrapper.exe',
     './samples/wrappture/wrappture_example.exe',
-    './samples/wrappture/fermi.exe'
+    './samples/wrappture/fermi.exe',
+    './samples/sporadic/sporadic.exe'
 ]
 
 android_manager_generic_list = [
@@ -134,7 +141,13 @@ android_apps_list = [
     './samples/wrappture/android_arm_fermi',
     './samples/wrappture/android_arm64_fermi',
     './samples/wrappture/android_x86_fermi',
-    './samples/wrappture/android_x86_64_fermi'
+    './samples/wrappture/android_x86_64_fermi',
+    # sporadic
+    './samples/sporadic/android_armv6_sporadic',
+    './samples/sporadic/android_arm_sporadic',
+    './samples/sporadic/android_arm64_sporadic',
+    './samples/sporadic/android_x86_sporadic',
+    './samples/sporadic/android_x86_64_sporadic'
 ]
 
 windows_apps_list = [
@@ -248,6 +261,9 @@ def prepare_linux_apps_arm64(target_directory):
 def prepare_linux_apps_vcpkg(target_directory):
     prepare_7z_archive('linux_apps-vcpkg', target_directory, linux_apps_list)
 
+def prepare_linux_manager(target_directory):
+    prepare_7z_archive('linux_manager', target_directory, linux_manager_list)
+
 def prepare_linux_manager_with_webview(target_directory):
     prepare_7z_archive('linux_manager-with-webview', target_directory, linux_manager_list)
 
@@ -306,6 +322,7 @@ boinc_types = {
     'linux_apps': prepare_linux_apps,
     'linux_apps-arm64': prepare_linux_apps_arm64,
     'linux_apps-vcpkg': prepare_linux_apps_vcpkg,
+    'linux_manager': prepare_linux_manager,
     'linux_manager-with-webview': prepare_linux_manager_with_webview,
     'linux_manager-with-webview-vcpkg': prepare_linux_manager_with_webview_vcpkg,
     'linux_manager-without-webview': prepare_linux_manager_without_webview,
