@@ -100,8 +100,8 @@ input[type="button"],
 input[type="submit"],
 .btn,
 a.btn {
-#background: #d0f8d0;
-    background: #EDEDED url(img/white_grad.png) repeat-x scroll left top;
+background: #d0f8d0;
+#    background: #EDEDED url(img/white_grad.png) repeat-x scroll left top;
 	color: black;
 	border-color: #ccc;
 }
