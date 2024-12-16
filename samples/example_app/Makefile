@@ -47,7 +47,7 @@ LIBUI = -lX11 -lXmu
 LIBFTGL = -lftgl
 LIBJPEG = -ljpeg
 
-ifdef BUILD_WITH_VCPKG
+ifdef BUILD_APPS_WITH_VCPKG
   BUILD_DIR     = $(BOINC_DIR)/3rdParty/linux
   VCPKG_DIR     ?= $(BUILD_DIR)/vcpkg/installed/x64-linux
 
@@ -93,7 +93,7 @@ clean: distclean
 distclean:
 	/bin/rm -f $(PROGS) $(GUI_PROGS) $(addsuffix .exe, $(PROGS)) $(addsuffix .exe, $(GUI_PROGS)) *.o libstdc++.a ttfont.cpp
 
-install: uc2
+install: all
 
 # specify library paths explicitly (rather than -l)
 # because otherwise you might get a version in /usr/lib etc.

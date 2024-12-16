@@ -1,6 +1,6 @@
 # This file is part of BOINC.
 # http://boinc.berkeley.edu
-# Copyright (C) 2023 University of California
+# Copyright (C) 2024 University of California
 #
 # BOINC is free software; you can redistribute it and/or modify it
 # under the terms of the GNU Lesser General Public License
@@ -25,7 +25,11 @@ linux_client_list = [
     './client/scripts/boinc-client.service',
     './client/scripts/boinc-client',
     './client/scripts/boinc.bash',
-    './client/scripts/boinc-client.conf'
+    './client/scripts/boinc-client.conf',
+    './packages/deb/*',
+    './packages/generic/36x11-common_xhost-boinc',
+    'locale/*/*.mo',
+    './win_build/installerv2/redist/all_projects_list.xml'
 ]
 
 linux_apps_list = [
@@ -43,13 +47,16 @@ linux_apps_list = [
     './samples/openclapp/openclapp',
     './samples/wrappture/wrappture_example',
     './samples/wrappture/fermi',
-    './samples/sporadic/sporadic'
+    './samples/sporadic/sporadic',
+    './samples/docker_wrapper/docker_wrapper',
 ]
 
 linux_manager_list = [
     './clientgui/boincmgr',
     './clientgui/skins',
     './clientgui/res/boinc.desktop',
+    './clientgui/res/boinc.png',
+    './clientgui/res/boinc.svg',
     'locale/*/*.mo',
 ]
 
@@ -69,7 +76,9 @@ mingw_apps_vcpkg_list = [
     './samples/wrapper/wrapper*.exe',
     './samples/wrappture/wrappture_example.exe',
     './samples/wrappture/fermi.exe',
-    './samples/sporadic/sporadic.exe'
+    './samples/sporadic/sporadic.exe',
+    './samples/wsl_wrapper/wsl_wrapper.exe',
+    './samples/docker_wrapper/docker_wrapper.exe',
 ]
 
 android_manager_generic_list = [
@@ -164,6 +173,8 @@ windows_apps_list = [
     './win_build/Build/x64/Release/test*.exe',
     './win_build/Build/x64/Release/wrappture*.exe',
     './win_build/Build/x64/Release/crypt_prog.exe',
+    './win_build/Build/x64/Release/wsl_wrapper.exe',
+    './win_build/Build/x64/Release/docker_wrapper.exe',
     './win_build/Build/ARM64/Release/htmlgfx*.exe',
     './win_build/Build/ARM64/Release/wrapper*.exe',
     './win_build/Build/ARM64/Release/vboxwrapper*.exe',
@@ -176,7 +187,9 @@ windows_apps_list = [
     './win_build/Build/ARM64/Release/multi_thread*.exe',
     './win_build/Build/ARM64/Release/test*.exe',
     './win_build/Build/ARM64/Release/wrappture*.exe',
-    './win_build/Build/ARM64/Release/crypt_prog.exe'
+    './win_build/Build/ARM64/Release/crypt_prog.exe',
+    './win_build/Build/ARM64/Release/wsl_wrapper.exe',
+    './win_build/Build/ARM64/Release/docker_wrapper.exe',
 ]
 
 windows_client_list = [
@@ -202,6 +215,19 @@ windows_manager_list = [
     'locale/*/*.mo',
 ]
 
+windows_installer_list = [
+    './win_build/Build/x64/Release/boinccas.dll',
+    './win_build/Build/ARM64/Release/boinccas.dll',
+    './win_build/Build/x64/Release/installer_icon.exe',
+    './win_build/Build/ARM64/Release/installer_icon.exe',
+    './win_build/Build/x64/Release/installer.exe',
+    './win_build/Build/ARM64/Release/installer.exe',
+    './win_build/Build/x64/Release/boinc.msi',
+    './win_build/Build/ARM64/Release/boinc.msi',
+    './win_build/Build/x64/Release/installer_setup.exe',
+    './win_build/Build/ARM64/Release/installer_setup.exe',
+]
+
 wasm_client_list = [
     './client/boinc_client.wasm',
     './client/boinc_client.js',
@@ -223,6 +249,60 @@ snap_list = [
     './boinc_*.snap',
 ]
 
+macos_manager_list = [
+    'mac_build/build/Deployment/AddRemoveUser',
+    'mac_build/build/Deployment/BOINC\ Installer.app',
+    'mac_build/build/Deployment/BOINCManager.app',
+    'mac_build/build/Deployment/BOINCSaver.saver',
+    'mac_build/build/Deployment/BOINC_Finish_Install.app',
+    'mac_build/build/Deployment/PostInstall.app',
+    'mac_build/build/Deployment/SetUpSecurity',
+    'mac_build/build/Deployment/SetVersion',
+    'mac_build/build/Deployment/Uninstall\ BOINC.app',
+    'mac_build/build/Deployment/boinc',
+    'mac_build/build/Deployment/boinccmd',
+    'mac_build/build/Deployment/boincscr',
+    'mac_build/build/Deployment/gfx_cleanup',
+    'mac_build/build/Deployment/gfx_switcher',
+    'mac_build/build/Deployment/setprojectgrp',
+    'mac_build/build/Deployment/switcher',
+    'mac_build/build/Deployment/detect_rosetta_cpu',
+]
+
+macos_apps_list = [
+    'zip/build/Deployment/boinc_zip_test',
+    'zip/build/Deployment/testzlibconflict',
+    'samples/mac_build/build/Deployment/UC2-apple-darwin',
+    'samples/mac_build/build/Deployment/UC2_graphics-apple-darwin',
+    'samples/mac_build/build/Deployment/slide_show-apple-darwin',
+    'samples/vboxwrapper/build/Deployment/vboxwrapper',
+]
+
+macos_makefile_apps_list = [
+    'samples/wrapper/wrapper',
+    'samples/vboxwrapper/vboxwrapper',
+]
+
+macos_apps_x86_64_list = [
+    'samples/example_app/x86_64/uc2',
+    'samples/example_app/uc2_x86_64',
+    'samples/example_app/x86_64/uc2_graphics',
+    'samples/example_app/uc2_graphics_x86_64',
+    'samples/example_app/x86_64/slide_show',
+    'samples/example_app/slide_show_x86_64',
+    'samples/openclapp/openclapp_x86_64',
+]
+
+macos_apps_arm64_list = [
+    'samples/example_app/arm64/uc2',
+    'samples/example_app/uc2_arm64',
+    'samples/example_app/arm64/uc2_graphics',
+    'samples/example_app/uc2_graphics_arm64',
+    'samples/example_app/arm64/slide_show',
+    'samples/example_app/slide_show_arm64',
+    'samples/openclapp/openclapp_arm64',
+]
+
 logs_list = [
     'config.log',
     '3rdParty/wasm/vcpkg/buildtrees/*.log',
@@ -234,12 +314,13 @@ logs_list = [
     'parts/boinc/build/3rdParty/linux/vcpkg/buildtrees/*.log',
     'android/BOINC/app/build/reports/',
     'mac_build/xcodebuild_*.log',
+    'build/*.log',
 ]
 
 def prepare_7z_archive(archive_name, target_directory, files_list):
     os.makedirs(target_directory, exist_ok=True)
     archive_path = os.path.join(target_directory, archive_name + '.7z')
-    command = '7z a -t7z -r -mx=9 ' + archive_path + ' ' + " ".join(files_list)
+    command = '7z a -t7z -r -mx=9 -xr!*.dSYM -xr!Makefile -xr!Makefile.* ' + archive_path + ' ' + " ".join(files_list)
     os.system(command)
 
 def help():
@@ -304,6 +385,9 @@ def prepare_win_client(target_directory):
 def prepare_win_manager(target_directory):
     prepare_7z_archive('win_manager', target_directory, windows_manager_list)
 
+def prepare_win_installer(target_directory):
+    prepare_7z_archive('win_installer', target_directory, windows_installer_list)
+
 def prepare_wasm_client(target_directory):
     prepare_7z_archive('wasm_client', target_directory, wasm_client_list)
 
@@ -312,6 +396,15 @@ def prepare_wasm_client_debug(target_directory):
 
 def prepare_linux_snap(target_directory):
     prepare_7z_archive('linux_snap', target_directory, snap_list)
+
+def prepare_macos_apps(target_directory):
+    prepare_7z_archive('macos_manager', target_directory, macos_manager_list)
+    prepare_7z_archive('macos_apps', target_directory, macos_apps_list)
+
+def prepare_macos_makefile_apps(target_directory):
+    prepare_7z_archive('macos_apps', target_directory, macos_makefile_apps_list)
+    prepare_7z_archive('macos_apps_x86_64', target_directory, macos_apps_x86_64_list)
+    prepare_7z_archive('macos_apps_arm64', target_directory, macos_apps_arm64_list)
 
 def prepare_logs(target_directory):
     prepare_7z_archive('logs', target_directory, logs_list)
@@ -335,9 +428,12 @@ boinc_types = {
     'win_apps': prepare_win_apps,
     'win_client': prepare_win_client,
     'win_manager': prepare_win_manager,
+    'win_installer': prepare_win_installer,
     'wasm_client': prepare_wasm_client,
     'wasm_client-debug': prepare_wasm_client_debug,
     'linux_snap': prepare_linux_snap,
+    'macos_manager': prepare_macos_apps,
+    'macos_samples-makefile': prepare_macos_makefile_apps,
     'logs': prepare_logs,
 }
 

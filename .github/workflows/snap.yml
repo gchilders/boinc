@@ -47,7 +47,7 @@ jobs:
           snap_file: boinc_amd64.snap
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
 
     - name: Install dependencies
       run: |
@@ -66,7 +66,7 @@ jobs:
 
     - name: Configure docker qemu
       if: success()
-      uses: docker/setup-qemu-action@v2
+      uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf
 
     - name: Build boinc snap
       if: success()
@@ -98,12 +98,12 @@ jobs:
           --workdir /root \
           --platform "${{ matrix.architecture }}" \
           diddledani/snapcraft:core22 \
-          "snap install --devmode ${{ matrix.snap_file }} && boinc --version && boinc.client --version"
+          "snap install --dangerous ${{ matrix.snap_file }} && boinc --version && boinc.client --version"
 
     - name: Install and test snap boinc x64
       if: success() && matrix.type == 'x64'
       run: |
-        sudo snap install --devmode ${{ matrix.snap_file }}
+        sudo snap install --dangerous ${{ matrix.snap_file }}
         boinc --version
         boinc.client --version
 
@@ -115,7 +115,7 @@ jobs:
 
     - name: Upload logs on failure
       if: ${{ failure() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
       with:
         name: snap_logs_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
         path: deploy/logs.7z
@@ -125,7 +125,7 @@ jobs:
       run: python ./deploy/prepare_deployment.py linux_snap
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
       if: success()
       with:
         name: linux_snap_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}

@@ -141,6 +141,9 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
         g_use_sandbox?1:0,
         p->dont_request_more_work?1:0
     );
+    if (cc_config.dont_use_docker) {
+        fprintf(f, "    <dont_use_docker/>\n");
+    }
     work_fetch.write_request(f, p);
 
     // write client capabilities
@@ -302,22 +305,22 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
             double x = rp->estimated_runtime_remaining();
             if (x == 0) continue;
             safe_strcpy(buf, "");
-            int rt = rp->avp->gpu_usage.rsc_type;
+            int rt = rp->resource_usage.rsc_type;
             if (rt) {
                 if (rt == rsc_index(GPU_TYPE_NVIDIA)) {
                     snprintf(buf, sizeof(buf),
                         "        <ncudas>%f</ncudas>\n",
-                        rp->avp->gpu_usage.usage
+                        rp->resource_usage.coproc_usage
                     );
                 } else if (rt == rsc_index(GPU_TYPE_ATI)) {
                     snprintf(buf, sizeof(buf),
                         "        <natis>%f</natis>\n",
-                        rp->avp->gpu_usage.usage
+                        rp->resource_usage.coproc_usage
                     );
                 } else if (rt == rsc_index(GPU_TYPE_INTEL)) {
                     snprintf(buf, sizeof(buf),
                         "        <nintel_gpus>%f</nintel_gpus>\n",
-                        rp->avp->gpu_usage.usage
+                        rp->resource_usage.coproc_usage
                     );
                 }
             }
@@ -332,7 +335,7 @@ int CLIENT_STATE::make_scheduler_request(PROJECT* p) {
                 rp->name,
                 rp->report_deadline,
                 x,
-                rp->avp->avg_ncpus,
+                rp->resource_usage.avg_ncpus,
                 buf
             );
         }
@@ -567,7 +570,9 @@ int CLIENT_STATE::handle_scheduler_reply(
     // (which comes from the project's config.xml).
     // - if http -> https transition, use the https: one from now on
     // - if https -> http transition, keep using the https: one
-    // - otherwise notify the user.
+    // - otherwise switch to the new master URL:
+    //      rename and rewrite account file
+    //      rename project dir
     //
     if (strlen(sr.master_url)) {
         canonicalize_master_url(sr.master_url, sizeof(sr.master_url));
@@ -587,9 +592,48 @@ int CLIENT_STATE::handle_scheduler_reply(
                 // keep using https://
             } else {
                 msg_printf(project, MSG_USER_ALERT,
-                    _("This project seems to have changed its URL.  When convenient, remove the project, then add %s"),
-                    sr.master_url
+                    _("Master URL changed from %s to %s"),
+                    current_url.c_str(), reply_url.c_str()
                 );
+                char path[MAXPATHLEN], path2[MAXPATHLEN], old_project_dir[MAXPATHLEN];
+
+                // rename statistics file
+                //
+                get_statistics_filename(
+                    (char*)current_url.c_str(), path, sizeof(path)
+                );
+                get_statistics_filename(
+                    (char*)reply_url.c_str(), path2, sizeof(path2)
+                );
+                boinc_rename(path, path2);
+
+                strcpy(old_project_dir, project->project_dir());
+
+                // delete account file and write new one
+                //
+                get_account_filename(project->master_url, path, sizeof(path));
+                boinc_delete_file(path);
+                strcpy(project->master_url, reply_url.c_str());
+                project->write_account_file();
+
+                // rename project dir
+                //
+                strcpy(project->_project_dir, "");
+                strcpy(path2, project->project_dir());
+                retval = boinc_rename(old_project_dir, path2);
+                if (retval) {
+                    msg_printf(project, MSG_USER_ALERT,
+                        "Can't rename project dir from %s to %s",
+                        old_project_dir, path2
+                    );
+                    return retval;
+                }
+
+                // reset the project (clear jobs etc.).
+                // If any jobs are running, their soft links
+                // point to the old project dir
+                //
+                reset_project(project, false);
             }
         }
     }
@@ -679,7 +723,7 @@ int CLIENT_STATE::handle_scheduler_reply(
         // BAM! currently has mixed http, https; trim off
         char* p = strchr(global_prefs.source_project, '/');
         char* q = strchr(gstate.acct_mgr_info.master_url, '/');
-        if (!global_prefs.override_file_present && gstate.acct_mgr_info.using_am() && p && q && !strcmp(p, q)) {
+        if (gstate.acct_mgr_info.using_am() && p && q && !strcmp(p, q)) {
             if (log_flags.sched_op_debug) {
                 msg_printf(project, MSG_INFO,
                     "[sched_op] ignoring prefs from project; using prefs from AM"
@@ -868,10 +912,10 @@ int CLIENT_STATE::handle_scheduler_reply(
                 continue;
             }
         }
-        if (avpp.missing_coproc) {
+        if (avpp.resource_usage.missing_coproc) {
             msg_printf(project, MSG_INTERNAL_ERROR,
                 "App version uses non-existent %s GPU",
-                avpp.missing_coproc_name
+                avpp.resource_usage.missing_coproc_name
             );
         }
         APP* app = lookup_app(project, avpp.app_name);
@@ -887,10 +931,7 @@ int CLIENT_STATE::handle_scheduler_reply(
         if (avp) {
             // update app version attributes in case they changed on server
             //
-            avp->avg_ncpus = avpp.avg_ncpus;
-            avp->flops = avpp.flops;
-            safe_strcpy(avp->cmdline, avpp.cmdline);
-            avp->gpu_usage = avpp.gpu_usage;
+            avp->resource_usage = avpp.resource_usage;
             strlcpy(avp->api_version, avpp.api_version, sizeof(avp->api_version));
             avp->dont_throttle = avpp.dont_throttle;
             avp->needs_network = avpp.needs_network;
@@ -972,7 +1013,8 @@ int CLIENT_STATE::handle_scheduler_reply(
             delete rp;
             continue;
         }
-        if (rp->avp->missing_coproc) {
+        rp->init_resource_usage();
+        if (rp->resource_usage.missing_coproc) {
             msg_printf(project, MSG_INTERNAL_ERROR,
                 "Missing coprocessor for task %s; aborting", rp->name
             );
@@ -980,7 +1022,7 @@ int CLIENT_STATE::handle_scheduler_reply(
         } else {
             rp->set_state(RESULT_NEW, "handle_scheduler_reply");
             got_work_for_rsc[0] = true;
-            int rt = rp->avp->gpu_usage.rsc_type;
+            int rt = rp->resource_usage.rsc_type;
             if (rt > 0) {
                 est_rsc_runtime[rt] += rp->estimated_runtime();
                 got_work_for_rsc[rt] = true;

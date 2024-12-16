@@ -41,17 +41,17 @@ jobs:
     strategy:
       matrix:
         type: [libs-cmake, msbuild]
-        platform: [x64, ARM64]
+        platform: [x64, arm64]
         configuration: [Release]
       fail-fast: false
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 2
 
       - name: Download OpenCppCoverage
-        uses: suisei-cn/actions-download-file@v1
+        uses: suisei-cn/actions-download-file@818d6b7dc8fe73f2f924b6241f2b1134ca1377d9
         if: success() && matrix.platform == 'x64'
         id: DownloadOpenCppCoverage
         with:
@@ -60,13 +60,13 @@ jobs:
 
       - name: Unzip OpenCppCoverage
         if: success() && matrix.platform == 'x64'
-        uses: DuckSoft/extract-7z-action@v1.0
+        uses: DuckSoft/extract-7z-action@6eaaa506b410f047eaa9b22498696aad1e19a834
         with:
           pathSource: ${{github.workspace}}\temp\OpenCppCoverage-0.9.7.1.vsix
           pathTarget: ${{github.workspace}}\temp\OpenCppCoverage
 
       - name: Setup msbuild
-        uses: microsoft/setup-msbuild@v1
+        uses: microsoft/setup-msbuild@6fb02220983dee41ce7ae257b6f4d8f9bf5ed4ce
 
       - name: Check if build is running from origin repo
         if: ${{success() && env.AWS_ACCESS_KEY_ID != 0 && env.AWS_SECRET_ACCESS_KEY != 0}}
@@ -82,7 +82,7 @@ jobs:
         run: vcpkg.exe integrate remove
 
       - name: Cache dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@1bd1e32a3bdc45362d1e726936510720a7c30a57
         with:
           path: |
             ${{github.workspace}}\3rdParty\Windows\cuda\
@@ -96,10 +96,19 @@ jobs:
         if: success() && matrix.type == 'libs-cmake'
         run: windows\ci_build_libs_cmake.bat ${{matrix.platform}} ${{matrix.configuration}}
 
-      - name: Run tests
+      - name: Run unit tests
         if: success() && matrix.platform == 'x64' && matrix.type == 'msbuild'
         working-directory: win_build\Build\${{matrix.platform}}\${{matrix.configuration}}
         run: ${{github.workspace}}\temp\OpenCppCoverage\OpenCppCoverage-x64\OpenCppCoverage.exe --cover_children --optimized_build --sources ${{github.workspace}} --export_type=cobertura:cobertura.xml -- unittests.exe --gtest_output=xml:gtest.xml
+
+      - name: Run installation
+        if: success() && matrix.platform == 'x64' && matrix.type == 'msbuild'
+        shell: powershell
+        run: Start-Process "msiexec.exe" -ArgumentList "/i ${{github.workspace}}\win_build\Build\x64\${{matrix.configuration}}\boinc.msi /quiet /qn /l*v ${{github.workspace}}\win_build\Build\x64\${{matrix.configuration}}\install.log" -Wait
+
+      - name: Run installation tests
+        if: success() && matrix.platform == 'x64' && matrix.type == 'msbuild'
+        run: python ./tests/windows_installer_integration_tests.py
 
       - name: Prepare logs on failure
         if: ${{failure()}}
@@ -108,7 +117,7 @@ jobs:
 
       - name: Upload logs on failure
         if: ${{failure()}}
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: windows_logs_${{matrix.type}}_${{github.event.pull_request.head.sha}}
           path: deploy/logs.7z
@@ -120,45 +129,52 @@ jobs:
           python deploy\prepare_deployment.py win_apps
           python deploy\prepare_deployment.py win_client
           python deploy\prepare_deployment.py win_manager
+          python deploy\prepare_deployment.py win_installer
 
       - name: Upload apps
         if: success() && matrix.type == 'msbuild'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: win_apps_${{matrix.platform}}_${{github.event.pull_request.head.sha}}
           path: deploy/win_apps.7z
 
       - name: Upload client
         if: success() && matrix.type == 'msbuild'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: win_client_${{matrix.platform}}_${{github.event.pull_request.head.sha}}
           path: deploy/win_client.7z
 
       - name: Upload manager
         if: success() && matrix.type == 'msbuild'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: win_manager_${{matrix.platform}}_${{github.event.pull_request.head.sha}}
           path: deploy/win_manager.7z
 
+      - name: Upload installer files
+        if: success() && matrix.type == 'msbuild'
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        with:
+          name: win_installer_${{matrix.platform}}_${{github.event.pull_request.head.sha}}
+          path: deploy/win_installer.7z
+
       - name: Upload symbol files
         if: success() && matrix.type == 'msbuild'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: win_pdb_${{matrix.platform}}_${{github.event.pull_request.head.sha}}
           path: win_build/Build/${{matrix.platform}}/${{matrix.configuration}}/*.pdb
 
       - name: Upload Google Tests Results
         if: always() && matrix.platform == 'x64' && matrix.type == 'msbuild'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
         with:
           name: Windows_tests_results
           path: "win_build/Build/${{matrix.platform}}/${{matrix.configuration}}/**/gtest.xml"
 
       - name: Upload coverage report
         if: success() && matrix.platform == 'x64' && matrix.type == 'msbuild'
-        uses: codecov/codecov-action@v3
-        with:
-          fail_ci_if_error: true
-          verbose: false
+        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

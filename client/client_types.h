@@ -101,7 +101,7 @@ struct URL_LIST {
 };
 
 struct FILE_INFO {
-    char name[256];
+    char name[256];         // physical name
     char md5_cksum[MD5_LEN];
     double max_nbytes;
     double nbytes;
@@ -177,7 +177,7 @@ struct FILE_INFO {
 //
 struct FILE_REF {
     char file_name[256];
-        // physical name
+        // physical name; should match file_info->name
     char open_name[256];
         // logical name
     bool main_program;
@@ -187,6 +187,15 @@ struct FILE_REF {
     bool optional;
         // for output files: app may not generate file;
         // don't treat as error if file is missing.
+    inline void clear() {
+        safe_strcpy(file_name, "");
+        safe_strcpy(open_name, "");
+        main_program = false;
+        file_info = NULL;
+        copy_file = false;
+        optional = false;
+    }
+    FILE_REF() {clear();}
     int parse(XML_PARSER&);
     int write(MIOFILE&);
 };
@@ -236,9 +245,9 @@ struct DAILY_STATS {
     double host_expavg_credit;
     double day;
 
-    DAILY_STATS(int){}
+    DAILY_STATS(DUMMY_TYPE){}
     void clear() {
-        static const DAILY_STATS x(0);
+        static const DAILY_STATS x(DUMMY);
         *this = x;
     }
     DAILY_STATS() {
@@ -290,9 +299,9 @@ struct APP {
     bool ignore;
 #endif
 
-    APP(int){}
+    APP(DUMMY_TYPE){}
     void clear() {
-        static const APP x(0);
+        static const APP x(DUMMY);
         *this = x;
     }
     APP(){
@@ -302,9 +311,26 @@ struct APP {
     int write(MIOFILE&);
 };
 
-struct GPU_USAGE {
+// items returned by a plan class function
+//
+struct RESOURCE_USAGE {
+    double avg_ncpus;
     int rsc_type;   // index into COPROCS array
-    double usage;
+    double coproc_usage;
+    double gpu_ram;
+    double flops;
+    char cmdline[256];
+        // additional cmdline args
+
+    // an app version or WU may refer to a missing GPU
+    // e.g. the GPU board was plugged in before but was removed.
+    // We don't discard them, since the board may be plugged in later.
+    // Instead we flag it as missing, and don't run those jobs
+    bool missing_coproc;
+    char missing_coproc_name[256];
+
+    void clear();
+    void check_gpu(char* plan_class);
 };
 
 // if you add anything, initialize it in init()
@@ -315,16 +341,14 @@ struct APP_VERSION {
     char platform[256];
     char plan_class[64];
     char api_version[16];
-    double avg_ncpus;
-    GPU_USAGE gpu_usage;    // can only use 1 GPU type
-    double gpu_ram;
-    double flops;
-    char cmdline[256];
-        // additional cmdline args
+    RESOURCE_USAGE resource_usage;
     char file_prefix[256];
         // prepend this to input/output file logical names
         // (e.g. "share" for VM apps)
     bool needs_network;
+    bool dont_throttle;
+        // jobs with this app version are exempt from CPU throttling
+        // Set for coprocessor apps and wrapper apps
 
     APP* app;
     PROJECT* project;
@@ -344,12 +368,6 @@ struct APP_VERSION {
         // to use this much RAM,
         // so that we don't run a long sequence of jobs,
         // each of which turns out not to fit in available RAM
-    bool missing_coproc;
-    double missing_coproc_usage;
-    char missing_coproc_name[256];
-    bool dont_throttle;
-        // jobs of this app version are exempt from CPU throttling
-        // Set for coprocessor apps
     bool is_vm_app;
         // currently this set if plan class includes "vbox" (kludge)
     bool is_wrapper;
@@ -372,11 +390,11 @@ struct APP_VERSION {
     void clear_errors();
     bool api_version_at_least(int major, int minor);
     inline bool uses_coproc(int rt) {
-        return (gpu_usage.rsc_type == rt);
+        return (resource_usage.rsc_type == rt);
     }
-    inline int rsc_type() {
-        return gpu_usage.rsc_type;
-    }
+    //inline int rsc_type() {
+    //    return resource_usage.rsc_type;
+    //}
     inline bool is_opencl() {
         return (strstr(plan_class, "opencl") != NULL);
     }
@@ -389,6 +407,9 @@ struct WORKUNIT {
     int version_num;
         // Deprecated, but need to keep around to let people revert
         // to versions before multi-platform support
+    bool has_resource_usage;
+    char plan_class[256];
+    RESOURCE_USAGE resource_usage;
     std::string command_line;
     std::vector<FILE_REF> input_files;
     PROJECT* project;
@@ -404,6 +425,9 @@ struct WORKUNIT {
         safe_strcpy(name, "");
         safe_strcpy(app_name, "");
         version_num = 0;
+        has_resource_usage = false;
+        plan_class[0] = 0;
+        resource_usage.clear();
         command_line.clear();
         input_files.clear();
         job_keyword_ids.clear();

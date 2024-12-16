@@ -11,7 +11,7 @@ CI="${CI:-no}"
 NPROC_USER="${NPROC_USER:-1}"
 RELEASE="${RELEASE:-no}"
 
-export CURL_VERSION=7.84.0
+export CURL_VERSION=8.5.0
 export BUILD_DIR=${BUILD_DIR:-$PWD/3rdParty/linux-arm64}
 export CURL="$BUILD_DIR/curl-$CURL_VERSION" #CURL sources, required by BOINC
 export CURL_FLAGFILE=$BUILD_DIR/curl-$CURL_VERSION.flagfile
@@ -25,7 +25,7 @@ export CC=aarch64-linux-gnu-gcc
 export CXX=aarch64-linux-gnu-g++
 export LD=aarch64-linux-gnu-ld
 export CFLAGS="--sysroot=$TCSYSROOT -I$TCINCLUDES/include -march=armv8-a -O3"
-export CXXFLAGS="--sysroot=$TCSYSROOT -I$TCINCLUDES/include -march=armv8-a -O3"
+export CXXFLAGS="--sysroot=$TCSYSROOT -I$TCINCLUDES/include -march=armv8-a -O3 -std=c++11"
 export LDFLAGS="-L$TCSYSROOT/usr/lib -L$TCINCLUDES/lib -march=armv8-a -latomic -static-libstdc++"
 
 MAKE_FLAGS=""

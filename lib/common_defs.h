@@ -282,6 +282,14 @@ enum SPORADIC_AC_STATE {
 #define CREDIT_TYPE_NETWORK         2
 #define CREDIT_TYPE_PROJECT         3
 
+// An arg type for the 'dummy constructors' used to zero out structs.
+// Something that won't occur naturally, so that
+// COPROC c = 0;
+// will give a compile error, rather than creating a COPROC
+// using a dummy COPROC(int) constructor
+//
+typedef enum DUMMY_ENUM{DUMMY=0} DUMMY_TYPE;
+
 struct TIME_STATS {
     double now;
         // the client's current time of day
@@ -326,7 +334,6 @@ struct TIME_STATS {
     double total_gpu_active_duration;
         // time GPU computation allowed
 
-    void write(MIOFILE&);
     int parse(XML_PARSER&);
     void print();
     TIME_STATS() {
@@ -387,7 +394,7 @@ struct DEVICE_STATUS {
         battery_temperature_celsius = 0;
         wifi_online = false;
         user_active = false;
-        strcpy(device_name, "");
+        strncpy(device_name, "", sizeof(device_name));
     }
 };
 
@@ -412,7 +419,10 @@ struct DEVICE_STATUS {
 // You can define this in "configure" if you want.
 //
 #ifndef LINUX_DEFAULT_DATA_DIR
-#define LINUX_DEFAULT_DATA_DIR      "/var/lib/boinc-client"
+#define LINUX_DEFAULT_DATA_DIR      "/var/lib/boinc"
 #endif
+
+// impementations of Docker
+enum DOCKER_TYPE {NONE, DOCKER, PODMAN};
 
 #endif

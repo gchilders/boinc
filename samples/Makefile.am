@@ -14,8 +14,8 @@ if BUILD_WITH_GUI
     export BUILD_WITH_GUI="yes"
 endif
 
-if BUILD_WITH_VCPKG
-    export BUILD_WITH_VCPKG="yes"
+if BUILD_APPS_WITH_VCPKG
+    export BUILD_APPS_WITH_VCPKG="yes"
 endif
 
 ## list the apps that should be build
@@ -26,13 +26,17 @@ if BUILD_WITH_VBOX
     SUBDIRS += vboxmonitor vboxwrapper
 endif
 
-if BUILD_WITH_VCPKG
+if BUILD_APPS_WITH_VCPKG
     SUBDIRS += wrappture
 endif
 
 ## build openclapp if you have opencl on your device
 if BUILD_WITH_OPENCL
     SUBDIRS += openclapp
+endif
+
+if ! ANDROID
+    SUBDIRS += docker_wrapper
 endif
 
 maintainer-clean:

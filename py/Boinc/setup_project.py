@@ -435,17 +435,20 @@ sys.path.insert(0, os.path.join('{dest_dir}', 'py'))
             'cancel_jobs',
             'create_work',
             'dbcheck_files_exist',
-            'demo_query',
-            'demo_submit',
             'dir_hier_move',
             'dir_hier_path',
             'grep_logs',
             'manage_privileges',
             'parse_config',
+            'query_job',
             'run_in_ops',
+            'sample_assimilate.py',
             'sign_executable',
             'stage_file',
             'stage_file_native',
+            'submit_batch',
+            'submit_buda',
+            'submit_job',
             'update_versions',
             'xadd',
         ]
@@ -595,8 +598,8 @@ class Project:
             install(srcdir('test/uc_wu_nodelete'), self.dest('templates/uc_wu'))
 
         content = '''
-<!-- <scheduler>{url}</scheduler> -->"
-<link rel=\"boinc_scheduler\" href=\"{url}"\">
+<!-- <scheduler>{url}</scheduler> -->
+<link rel="boinc_scheduler" href="{url}">
         '''.format(url=self.scheduler_url.strip())
         f = open(self.dest('html/user', 'schedulers.txt'), 'w')
         f.write(content)

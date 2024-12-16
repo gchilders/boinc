@@ -110,6 +110,7 @@ ACTIVE_TASK::ACTIVE_TASK() {
     peak_disk_usage = 0;
     once_ran_edf = false;
 
+    wss_from_app = 0;
     fraction_done = 0;
     fraction_done_elapsed_time = 0;
     first_fraction_done = 0;
@@ -284,7 +285,7 @@ int ACTIVE_TASK::init(RESULT* rp) {
     result = rp;
     wup = rp->wup;
     app_version = rp->avp;
-    max_elapsed_time = rp->wup->rsc_fpops_bound/rp->avp->flops;
+    max_elapsed_time = rp->wup->rsc_fpops_bound/rp->resource_usage.flops;
     if (max_elapsed_time < MIN_TIME_BOUND) {
         msg_printf(wup->project, MSG_INFO,
             "Elapsed time limit %f < %f; setting to %f",
@@ -363,7 +364,7 @@ void ACTIVE_TASK_SET::get_memory_usage() {
     int retval;
     static bool first = true;
     double diff=0;
-    bool using_vbox = false;
+    bool vbox_app_running = false;
 
     if (!first) {
         diff = gstate.now - last_mem_time;
@@ -415,11 +416,13 @@ void ACTIVE_TASK_SET::get_memory_usage() {
         }
         procinfo_app(pi, v, pm, atp->app_version->graphics_exec_file);
         if (atp->app_version->is_vm_app) {
-            using_vbox = true;
+            vbox_app_running = true;
             // the memory of virtual machine apps is not reported correctly,
             // at least on Windows.  Use the VM size instead.
             //
             pi.working_set_size_smoothed = atp->wup->rsc_memory_bound;
+        } else if (atp->wss_from_app > 0) {
+            pi.working_set_size_smoothed = .5*(pi.working_set_size_smoothed + atp->wss_from_app);
         } else {
             pi.working_set_size_smoothed = .5*(pi.working_set_size_smoothed + pi.working_set_size);
         }
@@ -540,7 +543,7 @@ void ACTIVE_TASK_SET::get_memory_usage() {
     static double last_nbrc=0;
     double total_cpu_time_now = total_cpu_time();
     if (total_cpu_time_now != 0.0) {    // total_cpu_time() returns 0.0 on error
-        double nbrc = total_cpu_time_now - boinc_related_cpu_time(pm, using_vbox);
+        double nbrc = total_cpu_time_now - boinc_related_cpu_time(pm, vbox_app_running);
         double delta_nbrc = nbrc - last_nbrc;
         if (delta_nbrc < 0) delta_nbrc = 0;
         last_nbrc = nbrc;
@@ -787,7 +790,7 @@ int ACTIVE_TASK::write_gui(MIOFILE& fout) {
     //
     double fd = fraction_done;
     if (((fd<=0)||(fd>1)) && elapsed_time > 60) {
-        double est_time = wup->rsc_fpops_est/app_version->flops;
+        double est_time = wup->rsc_fpops_est/result->resource_usage.flops;
         double x = elapsed_time/est_time;
         fd = 1 - exp(-x);
     }
@@ -1114,19 +1117,34 @@ bool MSG_QUEUE::timeout(double diff) {
 
 #endif
 
+// Report overdue jobs.
+// if CC_CONFIG.max_overdue_days is set, abort jobs overdue by more than that.
+// Called at startup and every day after that.
+//
 void ACTIVE_TASK_SET::report_overdue() {
+#ifndef SIM
     unsigned int i;
     ACTIVE_TASK* atp;
+    double mod = cc_config.max_overdue_days;
 
     for (i=0; i<active_tasks.size(); i++) {
         atp = active_tasks[i];
         double diff = (gstate.now - atp->result->report_deadline)/86400;
-        if (diff > 0) {
+        if (diff <= 0) continue;
+        if (mod>=0 && diff > mod) {
             msg_printf(atp->result->project, MSG_INFO,
-                "Task %s is %.2f days overdue; you may not get credit for it.  Consider aborting it.", atp->result->name, diff
+                "Task %s is %.2f days overdue; aborting it.",
+                atp->result->name, diff
+            );
+            atp->abort_task(EXIT_OVERDUE_EXCEEDED, "Overdue limit exceeded");
+        } else {
+            msg_printf(atp->result->project, MSG_INFO,
+                "Task %s is %.2f days overdue; you may not get credit for it.  Consider aborting it.",
+                atp->result->name, diff
             );
         }
     }
+#endif
 }
 
 // scan the slot directory, looking for files with names

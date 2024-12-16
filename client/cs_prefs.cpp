@@ -177,8 +177,8 @@ void CLIENT_STATE::get_disk_shares() {
     double greedy_allowed = allowed - non_greedy_ddu;
     if (log_flags.disk_usage_debug) {
         msg_printf(0, MSG_INFO,
-            "[disk_usage] allowed %.2fMB used %.2fMB",
-            allowed/MEGA, total_disk_usage/MEGA
+            "[disk_usage] allowed %.2fGB used %.2fGB",
+            allowed/GIGA, total_disk_usage/GIGA
         );
     }
     for (i=0; i<projects.size(); i++) {
@@ -191,8 +191,8 @@ void CLIENT_STATE::get_disk_shares() {
         }
         if (log_flags.disk_usage_debug) {
             msg_printf(p, MSG_INFO,
-                "[disk_usage] usage %.2fMB share %.2fMB",
-                p->disk_usage/MEGA, p->disk_share/MEGA
+                "[disk_usage] usage %.2fGB share %.2fGB",
+                p->disk_usage/GIGA, p->disk_share/GIGA
             );
         }
     }
@@ -513,12 +513,12 @@ void CLIENT_STATE::show_global_prefs_source(bool found_venue) {
     PROJECT* pp = global_prefs_source_project();
     if (pp) {
         msg_printf(pp, MSG_INFO,
-            "General prefs: from %s (last modified %s)",
+            "Computing prefs: from %s (last modified %s)",
             pp->get_project_name(), time_to_string(global_prefs.mod_time)
         );
     } else {
         msg_printf(NULL, MSG_INFO,
-            "General prefs: from %s (last modified %s)",
+            "Computing prefs: from %s (last modified %s)",
             global_prefs.source_project,
             time_to_string(global_prefs.mod_time)
         );
@@ -527,17 +527,16 @@ void CLIENT_STATE::show_global_prefs_source(bool found_venue) {
         msg_printf(pp, MSG_INFO, "Computer location: %s", main_host_venue);
         if (found_venue) {
             msg_printf(NULL, MSG_INFO,
-                "General prefs: using separate prefs for %s", main_host_venue
+                "Computing prefs: using separate prefs for %s", main_host_venue
             );
         } else {
             msg_printf(pp, MSG_INFO,
-                "General prefs: no separate prefs for %s; using your defaults",
+                "Computing prefs: no separate prefs for %s; using default location",
                 main_host_venue
             );
         }
     } else {
-        msg_printf(pp, MSG_INFO, "Host location: none");
-        msg_printf(pp, MSG_INFO, "General prefs: using your defaults");
+        msg_printf(pp, MSG_INFO, "Computing prefs: computer location unspecified; using default");
     }
 }
 
@@ -676,6 +675,9 @@ void CLIENT_STATE::read_global_prefs(
     file_xfers->set_bandwidth_limits(true);
     file_xfers->set_bandwidth_limits(false);
 #endif
+
+    bool have_gpu = coprocs.n_rsc > 1;
+    global_prefs.need_idle_state = global_prefs.get_need_idle_state(have_gpu);
     print_global_prefs();
     request_schedule_cpus("Prefs update");
     request_work_fetch("Prefs update");
@@ -685,9 +687,9 @@ void CLIENT_STATE::read_global_prefs(
 }
 
 void CLIENT_STATE::print_global_prefs() {
-    msg_printf(NULL, MSG_INFO, "Preferences:");
+    msg_printf(NULL, MSG_INFO, "Computing preferences:");
 
-    // in use
+    // in-use prefs
     //
     msg_printf(NULL, MSG_INFO, "-  When computer is in use");
     msg_printf(NULL, MSG_INFO,
@@ -724,7 +726,7 @@ void CLIENT_STATE::print_global_prefs() {
         (host_info.m_nbytes*global_prefs.ram_max_used_busy_frac)/GIGA
     );
 
-    // not in use
+    // not-in-use prefs
     //
     msg_printf(NULL, MSG_INFO,
         "-  When computer is not in use"
@@ -756,8 +758,12 @@ void CLIENT_STATE::print_global_prefs() {
             global_prefs.suspend_if_no_recent_input
         );
     }
-    // It is possible that computing (CPU or GPU) could be suspended indefinitely if the idle time required before continuing computing
-    // is longer than the time required to suspend computing when the computer is idle.  In this case an alert message will be sent.
+
+    // Computing (CPU or GPU) could be suspended indefinitely
+    // if the idle time required before continuing computing
+    // is longer than the time required to suspend computing
+    // when the computer is idle.
+    // In this case show an alert message.
     //
     if ((!global_prefs.run_if_user_active || !global_prefs.run_gpu_if_user_active) && (global_prefs.suspend_if_no_recent_input > 0) &&
         ((global_prefs.idle_time_to_run - global_prefs.suspend_if_no_recent_input) >= 0)) {
@@ -767,7 +773,7 @@ void CLIENT_STATE::print_global_prefs() {
         );
     }
 
-    // general
+    // other prefs
     //
 
     if (!global_prefs.run_on_batteries) {
@@ -812,8 +818,13 @@ void CLIENT_STATE::print_global_prefs() {
         allowed_disk_usage(total_disk_usage)/GIGA
     );
 #endif
+    if (!global_prefs.need_idle_state) {
+        msg_printf(NULL, MSG_INFO,
+            "-  Preferences don't depend on whether computer is in use"
+        );
+    }
     msg_printf(NULL, MSG_INFO,
-        "-  (to change preferences, visit a project web site or select Preferences in the Manager)"
+        "-  (to change preferences, visit a project web site or select 'Options / Computing preferences...' in the Manager)"
     );
 }
 

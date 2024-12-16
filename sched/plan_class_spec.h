@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -32,6 +32,8 @@ struct PLAN_CLASS_SPEC {
     bool cal;
     bool opencl;
     bool virtualbox;
+    bool wsl;
+    bool docker;
     bool is64bit;
     std::vector<std::string> cpu_features;
     double min_ncpus;
@@ -52,6 +54,7 @@ struct PLAN_CLASS_SPEC {
     int min_android_version;
     int max_android_version;
     int min_libc_version;
+        // if WSL: applies to WSL distro
     char project_prefs_tag[256];
     bool have_project_prefs_regex;
     regex_t project_prefs_regex;
@@ -62,6 +65,7 @@ struct PLAN_CLASS_SPEC {
         // for non-compute-intensive, or override for GPU apps
     bool have_host_summary_regex;
     regex_t host_summary_regex;
+        // matched against host.serialnum
     int user_id;
     double infeasible_random;
     long min_wu_id;
@@ -110,6 +114,9 @@ struct PLAN_CLASS_SPEC {
     int min_opencl_driver_revision;
     int max_opencl_driver_revision;
     bool double_precision_fp;
+
+    // Apple GPU
+    int min_metal_support;
 
     // VirtualBox apps
     //

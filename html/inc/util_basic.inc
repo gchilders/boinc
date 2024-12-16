@@ -16,13 +16,31 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-// minimal set of utility functions, usable outside a BOINC project.
-// Doesn't pull in translation.inc etc.
+// PHP utility functions for cmdline tools and RPC handlers
+// as well as web pages.
+// Doesn't contain web-specific stuff like translation.inc
 
 require_once("../inc/random_compat/random.inc");
 
+// show PHP errors in output (e.g. web pages).
+// Call this from your project.inc if you want.
+// Not recommended for production projects;
+// check the Apache error log instead.
+//
+function display_errors() {
+    error_reporting(E_ALL);
+    ini_set('display_errors', true);
+    ini_set('display_startup_errors', true);
+}
+
+// always log errors
+ini_set('log_errors', true);
+
+// set to true in RPC handlers.
+// Suppresses output that would invalidate the XML
 $generating_xml = false;
 
+// get project dir, assuming we're running in html/user or html/ops
 function project_dir() {
     $d = dirname(__FILE__);
     return "$d/../..";
@@ -36,14 +54,6 @@ function web_stopped() {
 function sched_stopped() {
     $d = project_dir();
     return file_exists("$d/stop_sched");
-}
-
-function show_page($x, $y) {
-    echo "
-        <title>$x</title>
-        <h1>$x</h1>
-        $y
-    ";
 }
 
 function xml_error($num=-1, $msg=null, $file=null, $line=null) {
@@ -145,17 +155,20 @@ function parse_config($config, $tag) {
     return $element;
 }
 
+// uniform 0..1
+//
 function drand() {
     return ((double)rand())/getrandmax();
 }
 
-// kludge
+// does the plan class use a GPU?
 //
 function is_gpu($plan_class) {
     if (strstr($plan_class, "ati")) return true;
     if (strstr($plan_class, "cuda")) return true;
     if (strstr($plan_class, "nvidia")) return true;
     if (strstr($plan_class, "intel_gpu")) return true;
+    if (strstr($plan_class, "apple_gpu")) return true;
     return false;
 }
 
@@ -172,7 +185,6 @@ function url_get_contents($url) {
     return $content;
 }
 
-
 // return hard-to-guess string of 32 random hex chars
 //
 function random_string() {
@@ -183,6 +195,13 @@ function random_string() {
 //
 function dtime() {
     return microtime(true);
+}
+
+// is $x a valid file (or dir) name?
+//
+function is_valid_filename($x) {
+    if (strstr($x, '/')) return false;
+    return true;
 }
 
 ?>

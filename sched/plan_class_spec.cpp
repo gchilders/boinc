@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -157,6 +157,8 @@ static bool wu_is_infeasible_for_plan_class(
     return false;
 }
 
+// parse plan_class_spec.xml
+//
 int PLAN_CLASS_SPECS::parse_file(const char* path) {
     FILE* f = boinc::fopen(path, "r");
     if (!f) return ERR_FOPEN;
@@ -543,6 +545,65 @@ bool PLAN_CLASS_SPEC::check(
         }
     }
 
+    if (wsl) {
+        if (sreq.dont_use_wsl) {
+            add_no_work_message("Client config does not allow using WSL");
+            return false;
+        }
+        if (sreq.host.wsl_distros.distros.empty()) {
+            add_no_work_message("No WSL distros found");
+            return false;
+        }
+        bool found = false;
+        for (WSL_DISTRO &wd: sreq.host.wsl_distros.distros) {
+            if (wd.disallowed) continue;
+            if (min_libc_version) {
+                if (wd.libc_version_int() < min_libc_version) continue;
+            }
+            found = true;
+        }
+        if (!found) {
+            add_no_work_message("No usable WSL distros found");
+            return false;
+        }
+    }
+
+    // Docker apps: check that:
+    // - Docker is allowed
+    // - Win:
+    //      - WSL is allowed
+    //      - There's an allowed WSL distro containing Docker
+    // - Unix:
+    //      - Docker is present
+    if (docker) {
+        if (sreq.dont_use_docker) {
+            add_no_work_message("Client config does not allow using Docker");
+            return false;
+        }
+        if (strstr(sreq.host.os_name, "Windows")) {
+            if (sreq.dont_use_wsl) {
+                add_no_work_message("Client config does not allow using WSL");
+                return false;
+            }
+            bool found = false;
+            for (WSL_DISTRO &wd: sreq.host.wsl_distros.distros) {
+                if (wd.disallowed) continue;
+                if (wd.docker_version.empty()) continue;
+                found = true;
+                break;
+            }
+            if (!found) {
+                add_no_work_message("No usable WSL distros found");
+                return false;
+            }
+        } else {
+            if (strlen(sreq.host.docker_version) == 0) {
+                add_no_work_message("Docker not present");
+                return false;
+            }
+        }
+    }
+
     // project-specific preference
     //
     if (have_project_prefs_regex && strlen(project_prefs_tag)) {
@@ -783,6 +844,33 @@ bool PLAN_CLASS_SPEC::check(
             log_messages.printf(MSG_NORMAL, "%s\n", msg.c_str());
         }
 
+    // Apple GPU
+
+    } else if (!strcmp(gpu_type, "apple_cpu")) {
+        COPROC& cp = sreq.coprocs.apple_gpu;
+        cpp = &cp;
+
+        if (!cp.count) {
+            if (config.debug_version_select) {
+                log_messages.printf(MSG_NORMAL,
+                    "[version] plan_class_spec: No Apple GPUs found\n"
+                );
+            }
+            return false;
+        }
+        if (min_gpu_ram_mb) {
+            gpu_requirements[PROC_TYPE_APPLE_GPU].update(0, min_gpu_ram_mb * MEGA);
+        }
+        if (cp.bad_gpu_peak_flops("Apple GPU", msg)) {
+            log_messages.printf(MSG_NORMAL, "%s\n", msg.c_str());
+        }
+
+        if (min_metal_support) {
+            if (sreq.coprocs.apple_gpu.metal_support < min_metal_support) {
+                return false;
+            }
+        }
+
     // custom GPU type
     //
     } else if (strlen(gpu_type)) {
@@ -944,8 +1032,8 @@ bool PLAN_CLASS_SPEC::check(
         } else if (strstr(gpu_type, "intel")==gpu_type) {
             hu.proc_type = PROC_TYPE_INTEL_GPU;
             hu.gpu_usage = gpu_usage;
-        } else if (!strcmp(gpu_type, "miner_asic")) {
-            hu.proc_type = PROC_TYPE_MINER_ASIC;
+        } else if (strstr(gpu_type, "apple_gpu")==gpu_type) {
+            hu.proc_type = PROC_TYPE_APPLE_GPU;
             hu.gpu_usage = gpu_usage;
         } else {
             if (config.debug_version_select) {
@@ -1072,6 +1160,7 @@ int PLAN_CLASS_SPEC::parse(XML_PARSER& xp) {
         if (xp.parse_bool("cal", cal)) continue;
         if (xp.parse_bool("opencl", opencl)) continue;
         if (xp.parse_bool("virtualbox", virtualbox)) continue;
+        if (xp.parse_bool("wsl", wsl)) continue;
         if (xp.parse_bool("is64bit", is64bit)) continue;
         if (xp.parse_str("cpu_feature", buf, sizeof(buf))) {
             cpu_features.push_back(" " + (string)buf + " ");
@@ -1174,6 +1263,8 @@ int PLAN_CLASS_SPEC::parse(XML_PARSER& xp) {
         if (xp.parse_int("max_opencl_driver_revision", max_opencl_driver_revision)) continue;
         if (xp.parse_bool("double_precision_fp", double_precision_fp)) continue;
 
+        if (xp.parse_int("min_metal_support", min_metal_support)) continue;
+
         if (xp.parse_int("min_vbox_version", min_vbox_version)) continue;
         if (xp.parse_int("max_vbox_version", max_vbox_version)) continue;
         if (xp.parse_int("exclude_vbox_version", i)) {
@@ -1208,7 +1299,6 @@ int PLAN_CLASS_SPECS::parse_specs(FILE* f) {
     return ERR_XML_PARSE;
 }
 
-
 PLAN_CLASS_SPEC::PLAN_CLASS_SPEC() {
     strcpy(name, "");
     strcpy(gpu_type, "");
@@ -1216,6 +1306,7 @@ PLAN_CLASS_SPEC::PLAN_CLASS_SPEC() {
     cal = false;
     opencl = false;
     virtualbox = false;
+    wsl = false;
     is64bit = false;
     min_ncpus = 0;
     max_threads = 1;

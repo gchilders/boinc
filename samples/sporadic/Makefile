@@ -30,7 +30,7 @@ CXXFLAGS += -g \
     -L$(BOINC_LIB_DIR) \
     -L.
 
-ifdef BUILD_WITH_VCPKG
+ifdef BUILD_APPS_WITH_VCPKG
   BUILD_DIR     = $(BOINC_DIR)/3rdParty/linux
   VCPKG_DIR     ?= $(BUILD_DIR)/vcpkg/installed/x64-linux
 
@@ -49,7 +49,7 @@ clean: distclean
 distclean:
 	/bin/rm -f sporadic $(addsuffix .exe, sporadic) *.o libstdc++.a
 
-install: sporadic
+install: all
 
 sporadic: sporadic.o $(MAKEFILE_STDLIB) $(BOINC_API_DIR)/libboinc_api.a $(BOINC_LIB_DIR)/libboinc.a
 	$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(LDFLAGS) -o sporadic sporadic.o \

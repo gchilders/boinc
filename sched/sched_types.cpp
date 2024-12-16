@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -217,6 +217,9 @@ void PROJECT_PREFS::parse() {
     if (parse_bool(buf,"no_intel_gpu", flag)) {
         dont_use_proc_type[PROC_TYPE_INTEL_GPU] = flag;
     }
+    if (parse_bool(buf,"no_apple_gpu", flag)) {
+        dont_use_proc_type[PROC_TYPE_APPLE_GPU] = flag;
+    }
     if (parse_int(buf, "<max_cpus>", temp_int)) {
         max_cpus = temp_int;
     }
@@ -261,6 +264,8 @@ void SCHEDULER_REQUEST::clear() {
     strcpy(working_global_prefs_xml, "");
     strcpy(code_sign_key, "");
     dont_send_work = false;
+    dont_use_wsl = false;
+    dont_use_docker = false;
     strcpy(client_brand, "");
     global_prefs.defaults();
     strcpy(global_prefs_source_email_hash, "");
@@ -398,6 +403,8 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
         if (xp.parse_double("estimated_delay", cpu_estimated_delay)) continue;
         if (xp.parse_double("duration_correction_factor", host.duration_correction_factor)) continue;
         if (xp.parse_bool("dont_send_work", dont_send_work)) continue;
+        if (xp.parse_bool("dont_use_docker", dont_use_docker)) continue;
+        if (xp.parse_bool("dont_use_wsl", dont_use_wsl)) continue;
         if (xp.match_tag("global_preferences")) {
             safe_strcpy(global_prefs_xml, "<global_preferences>\n");
             char buf[BLOB_SIZE];
@@ -1027,6 +1034,10 @@ int SCHEDULER_REPLY::write(FILE* fout, SCHEDULER_REQUEST& sreq) {
         boinc::fprintf(fout, "<non_cpu_intensive/>\n");
     }
 
+    if (config.strict_memory_bound) {
+        boinc::fprintf(fout, "<strict_memory_bound/>\n");
+    }
+
     if (config.verify_files_on_app_start) {
         boinc::fprintf(fout, "<verify_files_on_app_start/>\n");
     }
@@ -1394,6 +1405,10 @@ int HOST::parse(XML_PARSER& xp) {
         if (xp.parse_double("n_bwup", n_bwup)) continue;
         if (xp.parse_double("n_bwdown", n_bwdown)) continue;
         if (xp.parse_str("p_features", p_features, sizeof(p_features))) continue;
+        if (xp.parse_bool("docker_available", docker_available)) continue;
+        if (xp.parse_bool("docker_compose_available", docker_compose_available)) continue;
+        if (xp.parse_str("docker_version", docker_version, sizeof(docker_version))) continue;
+        if (xp.parse_str("docker_compose_version", docker_compose_version, sizeof(docker_compose_version))) continue;
         if (xp.parse_str("virtualbox_version", virtualbox_version, sizeof(virtualbox_version))) continue;
         if (xp.parse_bool("p_vm_extensions_disabled", p_vm_extensions_disabled)) continue;
         if (xp.match_tag("opencl_cpu_prop")) {
@@ -1401,9 +1416,8 @@ int HOST::parse(XML_PARSER& xp) {
             if (!retval) num_opencl_cpu_platforms++;
             continue;
         }
-        if (xp.parse_bool("wsl_available", wsl_available)) continue;
         if (xp.match_tag("wsl")) {
-            wsls.parse(xp);
+            wsl_distros.parse(xp);
             continue;
         }
 

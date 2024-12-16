@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2008 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -14,6 +14,10 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
+
+// Functions for doing scheduler RPCs,
+// including creating requests and parsing replies.
+// The reply handler is in cs_scheduler.cpp
 
 #include "cpp.h"
 
@@ -590,7 +594,7 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
     MIOFILE mf;
     XML_PARSER xp(&mf);
     string delete_file_name;
-    bool ended = false;
+    bool ended = false, strict_memory_bound = false, non_cpu_intensive = false;
 
     mf.init_file(in);
     bool found_start_tag = false, btemp;
@@ -652,6 +656,8 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
             // If the scheduler reply didn't specify them, they're not set.
             //
             project->ended = ended;
+            project->non_cpu_intensive = non_cpu_intensive;
+            project->strict_memory_bound = strict_memory_bound;
             return 0;
         }
         else if (xp.parse_str("project_name", project->project_name, sizeof(project->project_name))) {
@@ -883,6 +889,10 @@ int SCHEDULER_REPLY::parse(FILE* in, PROJECT* project) {
         } else if (xp.parse_bool("send_full_workload", send_full_workload)) {
             continue;
         } else if (xp.parse_bool("dont_use_dcf", dont_use_dcf)) {
+            continue;
+        } else if (xp.parse_bool("non_cpu_intensive", non_cpu_intensive)) {
+            continue;
+        } else if (xp.parse_bool("strict_memory_bound", strict_memory_bound)) {
             continue;
         } else if (xp.parse_int("send_time_stats_log", send_time_stats_log)){
             continue;

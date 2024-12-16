@@ -98,12 +98,12 @@ struct SHARED_MEM {
 struct MSG_QUEUE {
     std::vector<std::string> msgs;
     char name[256];
-	double last_block;	// last time we found message channel full
-	void init(char*);
+    double last_block;	// last time we found message channel full
+    void init(char*);
     void msg_queue_send(const char*, MSG_CHANNEL& channel);
     void msg_queue_poll(MSG_CHANNEL& channel);
-	int msg_queue_purge(const char*);
-	bool timeout(double);
+    int msg_queue_purge(const char*);
+    bool timeout(double);
 };
 
 #define DEFAULT_CHECKPOINT_PERIOD               300
@@ -127,7 +127,10 @@ public:
 #endif
 
 // parsed version of main init file
-// If you add anything here, update copy()
+// If you add anything here, update
+// APP_INIT_DATA::clear(), copy(),
+// write_init_data_file(), parse_init_data_file()
+// ACTIVE_TASK::init_app_init_data()
 //
 struct APP_INIT_DATA {
     int major_version;          // BOINC client version info
@@ -135,6 +138,7 @@ struct APP_INIT_DATA {
     int release;
     int app_version;
     char app_name[256];
+    char plan_class[256];
     char symstore[256];         // symstore URL (Windows)
     char acct_mgr_url[256];
         // if client is using account manager, its URL
@@ -229,8 +233,6 @@ typedef struct GRAPHICS_INFO GRAPHICS_INFO;
 
 int write_init_data_file(FILE* f, APP_INIT_DATA&);
 int parse_init_data_file(FILE* f, APP_INIT_DATA&);
-int write_graphics_file(FILE* f, GRAPHICS_INFO* gi);
-int parse_graphics_file(FILE* f, GRAPHICS_INFO* gi);
 
 // filenames used in the slot directory
 //
@@ -247,7 +249,6 @@ int parse_graphics_file(FILE* f, GRAPHICS_INFO* gi);
 // other filenames
 #define PROJECT_DIR "projects"
 
-extern int boinc_link(const char* phys_name, const char* logical_name);
 extern int boinc_resolve_filename_s(const char*, std::string&);
 extern std::string resolve_soft_link(const char* project_dir, const char* file);
 extern void url_to_project_dir(char* url, char* dir, int dirsize);

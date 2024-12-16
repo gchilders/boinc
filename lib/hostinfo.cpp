@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -24,6 +24,7 @@
 #include "config.h"
 #include <cstdio>
 #include <cstring>
+#include <string.h>
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -36,6 +37,8 @@
 #include "str_replace.h"
 
 #include "hostinfo.h"
+
+using std::string;
 
 HOST_INFO::HOST_INFO() {
     clear_host_info();
@@ -71,9 +74,11 @@ void HOST_INFO::clear_host_info() {
     safe_strcpy(os_name, "");
     safe_strcpy(os_version, "");
 
-    wsl_available = false;
 #ifdef _WIN64
-    wsls.clear();
+    wsl_distros.clear();
+#else
+    safe_strcpy(docker_version, "");
+    safe_strcpy(docker_compose_version, "");
 #endif
 
     safe_strcpy(product_name, "");
@@ -133,11 +138,14 @@ int HOST_INFO::parse(XML_PARSER& xp, bool static_items_only) {
         if (xp.parse_str("os_name", os_name, sizeof(os_name))) continue;
         if (xp.parse_str("os_version", os_version, sizeof(os_version))) continue;
 #ifdef _WIN64
-        if (xp.parse_bool("os_wsl_enabled", wsl_available)) continue;
         if (xp.match_tag("wsl")) {
-            this->wsls.parse(xp);
+            this->wsl_distros.parse(xp);
             continue;
         }
+#else
+        if (xp.parse_str("docker_version", docker_version, sizeof(docker_version))) continue;
+        if (xp.parse_str("docker_compose_version", docker_compose_version, sizeof(docker_compose_version))) continue;
+        if (xp.parse_str("docker_version", docker_version, sizeof(docker_version))) continue;
 #endif
         if (xp.parse_str("product_name", product_name, sizeof(product_name))) continue;
         if (xp.parse_str("virtualbox_version", virtualbox_version, sizeof(virtualbox_version))) continue;
@@ -206,8 +214,7 @@ int HOST_INFO::write(
         "    <d_free>%f</d_free>\n"
         "    <os_name>%s</os_name>\n"
         "    <os_version>%s</os_version>\n"
-        "    <n_usable_coprocs>%d</n_usable_coprocs>\n"
-        "    <wsl_available>%d</wsl_available>\n",
+        "    <n_usable_coprocs>%d</n_usable_coprocs>\n",
         host_cpid,
         p_ncpus,
         pv,
@@ -225,16 +232,26 @@ int HOST_INFO::write(
         d_free,
         osn,
         osv,
-        coprocs.ndevs(),
-#ifdef _WIN64
-        wsl_available ? 1 : 0
-#else
-        0
-#endif
+        coprocs.ndevs()
     );
 #ifdef _WIN64
-    if (wsl_available) {
-        wsls.write_xml(out);
+    wsl_distros.write_xml(out);
+#else
+    if (strlen(docker_version)) {
+        out.printf(
+            "    <docker_version>%s</docker_version>\n"
+            "    <docker_type>%d</docker_type>\n",
+            docker_version,
+            docker_type
+        );
+    }
+    if (strlen(docker_compose_version)) {
+        out.printf(
+            "    <docker_compose_version>%s</docker_compose_version>\n"
+            "    <docker_compose_type>%d</docker_compose_type>\n",
+            docker_compose_version,
+            docker_compose_type
+        );
     }
 #endif
     if (strlen(product_name)) {
@@ -316,4 +333,80 @@ int HOST_INFO::write_cpu_benchmarks(FILE* out) {
         m_cache
     );
     return 0;
+}
+
+// name of CLI program
+//
+const char* docker_cli_prog(DOCKER_TYPE type) {
+    switch (type) {
+    case DOCKER: return "docker";
+    case PODMAN: return "podman";
+    default: break;
+    }
+    return "unknown";
+}
+
+// display name
+//
+const char* docker_type_str(DOCKER_TYPE type) {
+    switch (type) {
+    case DOCKER: return "Docker";
+    case PODMAN: return "podman";
+    default: break;
+    }
+    return "unknown";
+}
+
+bool HOST_INFO::get_docker_version_string(
+    DOCKER_TYPE type, const char* raw, string &version
+) {
+    char *p, *q;
+    const char *prefix;
+    switch (type) {
+    case DOCKER:
+        // Docker version 24.0.7, build 24.0.7-0ubuntu2~22.04.1
+        prefix = "Docker version ";
+        p = (char*)strstr(raw, prefix);
+        if (!p) return false;
+        p += strlen(prefix);
+        q = (char*)strstr(p, ",");
+        if (!q) return false;
+        *q = 0;
+        version = p;
+        return true;
+    case PODMAN:
+        // podman version 4.9.3
+        prefix = "podman version ";
+        p = (char*)strstr(raw, prefix);
+        if (!p) return false;
+        p += strlen(prefix);
+        q = (char*)strstr(p, "\n");
+        if (q) *q = 0;
+        version = p;
+        return true;
+    default: break;
+    }
+    return false;
+}
+
+bool HOST_INFO::get_docker_compose_version_string(
+    DOCKER_TYPE type, const char *raw, string& version
+) {
+    char *p, *q;
+    const char* prefix;
+    switch (type) {
+    case DOCKER:
+        // Docker Compose version v2.17.3
+        prefix = "Docker Compose version v";
+        p = (char*)strstr(raw, prefix);
+        if (!p) return false;
+        p += strlen(prefix);
+        q = (char*)strstr(p, "\n");
+        if (q) *q = 0;
+        version = p;
+        return true;
+    // not sure about podman case
+    default: break;
+    }
+    return false;
 }

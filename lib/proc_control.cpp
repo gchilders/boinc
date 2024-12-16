@@ -46,9 +46,9 @@
 
 using std::vector;
 
-//#define DEBUG
+//#define DEBUG_PROC_CONTROL
 
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
 #include <stdio.h>
 #endif
 
@@ -74,7 +74,7 @@ void get_descendants(int pid, vector<int>& pids) {
     retval = procinfo_setup(pm);
     if (retval) return;
     get_descendants_aux(pm, pid, pids);
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
     fprintf(stderr, "descendants of %d:\n", pid);
     for (unsigned int i=0; i<pids.size(); i++) {
         fprintf(stderr, "   %d\n", pids[i]);
@@ -107,7 +107,7 @@ int suspend_or_resume_threads(
     DWORD n;
     static vector<DWORD> suspended_threads;
 
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
     fprintf(stderr, "start: check_exempt %d %s\n", check_exempt, precision_time_to_string(dtime()));
     fprintf(stderr, "%s processes", resume?"resume":"suspend");
     for (unsigned int i=0; i<pids.size(); i++) {
@@ -135,12 +135,12 @@ int suspend_or_resume_threads(
 
     do {
         if (check_exempt && !diagnostics_is_thread_exempt_suspend(te.th32ThreadID)) {
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
             fprintf(stderr, "thread is exempt\n");
 #endif
             continue;
         }
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
         fprintf(stderr, "thread %d PID %d %s\n",
             te.th32ThreadID, te.th32OwnerProcessID,
             precision_time_to_string(dtime())
@@ -157,7 +157,7 @@ int suspend_or_resume_threads(
                 te.th32ThreadID
             ) != suspended_threads.end()) {
                 n = ResumeThread(thread);
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
                 fprintf(stderr, "ResumeThread returns %d\n", n);
 #endif
             } else {
@@ -166,7 +166,7 @@ int suspend_or_resume_threads(
         } else {
             n = SuspendThread(thread);
             suspended_threads.push_back(te.th32ThreadID);
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
             fprintf(stderr, "SuspendThread returns %d\n", n);
 #endif
         }
@@ -175,7 +175,7 @@ int suspend_or_resume_threads(
     } while (Thread32Next(threads, &te));
 
     CloseHandle (threads);
-#ifdef DEBUG
+#ifdef DEBUG_PROC_CONTROL
     fprintf(stderr, "end: %s\n", precision_time_to_string(dtime()));
 #endif
     return retval;
@@ -234,7 +234,7 @@ void kill_descendants(int child_pid) {
             if (!any_process_exists(descendants)) {
                 return;
             }
-            sleep(1);
+            boinc_sleep(1);
         }
         kill_all(descendants);
         // kill any processes that might have been created
@@ -245,35 +245,45 @@ void kill_descendants(int child_pid) {
 }
 #endif
 
-// suspend/resume the descendants of the calling process
-// (or if pid==0, the calling process)
+// suspend/resume the descendants of the calling process.
+// Unix version lets you choose the stop signal:
+// SIGSTOP (the default) can't be caught.
+// SIGTSTP can be caught, but it has no effect for processes without a TTY.
+// So it's useful only for programs that are wrappers of some sort;
+// they must catch and handle it.
 //
+#ifdef _WIN32
 void suspend_or_resume_descendants(bool resume) {
     vector<int> descendants;
-#ifdef _WIN32
     int pid = GetCurrentProcessId();
     get_descendants(pid, descendants);
     suspend_or_resume_threads(descendants, 0, resume, false);
+}
 #else
+void suspend_or_resume_descendants(bool resume, bool use_tstp) {
+    vector<int> descendants;
     int pid = getpid();
     get_descendants(pid, descendants);
     for (unsigned int i=0; i<descendants.size(); i++) {
-        kill(descendants[i], resume?SIGCONT:SIGTSTP);
+        kill(descendants[i], resume?SIGCONT:(use_tstp?SIGTSTP:SIGSTOP));
     }
-#endif
 }
+#endif
 
-// used by the wrapper
+// Suspend/resume the given process; used by the wrapper.
+// See signal comment above.
 //
-void suspend_or_resume_process(int pid, bool resume) {
 #ifdef _WIN32
+void suspend_or_resume_process(int pid, bool resume) {
     vector<int> pids;
     pids.push_back(pid);
     suspend_or_resume_threads(pids, 0, resume, false);
-#else
-    ::kill(pid, resume?SIGCONT:SIGTSTP);
-#endif
 }
+#else
+void suspend_or_resume_process(int pid, bool resume, bool use_tstp) {
+    ::kill(pid, resume?SIGCONT:(use_tstp?SIGTSTP:SIGSTOP));
+}
+#endif
 
 // return OS-specific value associated with priority code
 //

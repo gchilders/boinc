@@ -18,13 +18,11 @@
 
 // utility functions for admin web pages
 
-error_reporting(E_ALL);
-ini_set('display_errors', true);
-ini_set('display_startup_errors', true);
-
 require_once("../inc/db_ops.inc");
 require_once("../inc/util.inc");
 require_once("../project/project.inc");
+
+display_errors();
 
 function admin_page_head($title) {
     echo "<!DOCTYPE html PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\" \"http://www.w3.org/TR/html4/loose.dtd\">";
@@ -239,19 +237,32 @@ function current_versions($avs) {
 // - set the CANCELLED bit in workunit.error_mask
 //
 function cancel_wus($wuid1, $wuid2) {
-    $retval = BoincResult::update_aux("server_state=5, outcome=5 where server_state=2 and $wuid1<=workunitid and workunitid<=$wuid2");
+    $retval = BoincResult::update_aux(
+        sprintf(
+            'server_state=%d, outcome=%d where server_state=%d and workunitid>=%d and workunitid<=%d',
+            RESULT_SERVER_STATE_OVER,
+            RESULT_OUTCOME_DIDNT_NEED,
+            RESULT_SERVER_STATE_UNSENT,
+            $wuid1, $wuid2
+        )
+    );
     if (!$retval) {
         error_page("Result update failed");
     }
-    $retval = BoincWorkunit::update_aux("error_mask=error_mask|16 where $wuid1<=id and id<=$wuid2");
+
+    // mark WUs as cancelled and trigger the transitioner
+    //
+    $retval = BoincWorkunit::update_aux(
+        sprintf(
+            'error_mask=error_mask|%d, transition_time=%d where id>=%d and id<=%d',
+            WU_ERROR_CANCELLED,
+            time(),
+            $wuid1, $wuid2
+        )
+    );
     if (!$retval) {
         error_page("Workunit update failed");
     }
-
-    // trigger the transitioner (it will set file_delete_state)
-
-    $now = time();
-    $retval = BoincWorkunit::update_aux("transition_time=$now where $wuid1<=id and id<=$wuid2");
     return 0;
 }
 
@@ -261,9 +272,21 @@ function cancel_wus($wuid1, $wuid2) {
 function cancel_wus_if_unsent($id1, $id2) {
     $wus = BoincWorkunit::enum("id >= $id1 and id <= $id2");
     foreach ($wus as $wu) {
-        $results = BoincResult::enum("workunitid=$wu->id and server_state > 2");
+        $results = BoincResult::enum(
+            sprintf(
+                'workunitid=%d and server_state > %d',
+                $wu->id, RESULT_SERVER_STATE_UNSENT
+            )
+        );
         if (count($results)) continue;
-        $retval = BoincResult::update_aux("server_state=5, outcome=5 where workunitid=$wu->id");
+        $retval = BoincResult::update_aux(
+            sprintf(
+                'server_state=%d, outcome=%d where workunitid=%d',
+                RESULT_SERVER_STATE_OVER,
+                RESULT_OUTCOME_DIDNT_NEED,
+                $wu->id
+            )
+        );
         if (!$retval) {
             error_page("result update failed");
         }
@@ -284,8 +307,10 @@ function app_version_desc($avid) {
         return "Anonymous platform: NVIDIA GPU";
     case ANON_PLATFORM_ATI:
         return "Anonymous platform: AMD GPU";
-    case ANON_PLATFORM_INTEL:
+    case ANON_PLATFORM_INTEL_GPU:
         return "Anonymous platform: Intel GPU";
+    case ANON_PLATFORM_APPLE_GPU:
+        return "Anonymous platform: Apple GPU";
     }
     if ($avid <= 0) {
         return "unknown: $avid";

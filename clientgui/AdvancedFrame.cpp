@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -289,6 +289,12 @@ CAdvancedFrame::~CAdvancedFrame() {
     if (m_pNotebook) {
         wxCHECK_RET(DeleteNotebook(), _T("Failed to delete notebook."));
     }
+
+#ifdef __WXGTK__
+    if (wxGetApp().GetEventLog()) {
+        wxGetApp().GetEventLog()->Close();
+    }
+#endif
 
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::~CAdvancedFrame - Function End"));
 }
@@ -1134,7 +1140,11 @@ void CAdvancedFrame::OnMenuOpening( wxMenuEvent &event) {
     // File->Shutdown connected client...
     wxMenuItem* shutClientItem = menu->FindChildItem(ID_SHUTDOWNCORECLIENT, NULL);
     if (shutClientItem) {
+#ifdef __WXGTK__
+        shutClientItem->Enable(isConnected && (pDoc->m_pClientManager->WasBOINCStartedByManager() || !pDoc->m_pClientManager->IsBOINCConfiguredAsDaemon()));
+#else
         shutClientItem->Enable(isConnected);
+#endif
     }
 
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::OnMenuOpening - Function End"));
@@ -1327,7 +1337,6 @@ void CAdvancedFrame::OnClientShutdown(wxCommandEvent& WXUNUSED(event)) {
     CSkinAdvanced*     pSkinAdvanced = wxGetApp().GetSkinManager()->GetAdvanced();
     int                showDialog = wxGetApp().GetBOINCMGRDisplayShutdownConnectedClientMessage();
     int                doShutdownClient = 0;
-    CDlgGenericMessage dlg(this);
     wxString           strDialogTitle = wxEmptyString;
     wxString           strDialogMessage = wxEmptyString;
 
@@ -1358,13 +1367,13 @@ void CAdvancedFrame::OnClientShutdown(wxCommandEvent& WXUNUSED(event)) {
             pSkinAdvanced->GetApplicationName().c_str()
         );
 
-        dlg.SetTitle(strDialogTitle);
-        dlg.m_DialogMessage->SetLabel(strDialogMessage);
-        dlg.Fit();
-        dlg.Centre();
+        CDlgGenericMessageParameters dlgParams;
+        dlgParams.caption = strDialogTitle;
+        dlgParams.message = strDialogMessage;
+        CDlgGenericMessage dlg(this, &dlgParams);
 
         if (wxID_OK == dlg.ShowModal()) {
-            wxGetApp().SetBOINCMGRDisplayShutdownConnectedClientMessage(!dlg.m_DialogDisableMessage->GetValue());
+            wxGetApp().SetBOINCMGRDisplayShutdownConnectedClientMessage(!dlg.GetDisableMessageValue());
             doShutdownClient = 1;
         }
     }

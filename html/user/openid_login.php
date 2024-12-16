@@ -104,7 +104,7 @@ try {
         }
         $new_email_addr = $data['contact/email'];
         $new_email_addr = strtolower($new_email_addr);
-        if (!is_valid_email_addr($new_email_addr)) {
+        if (!is_valid_email_syntax($new_email_addr)) {
             show_error("Invalid email address:
                 you must enter a valid address of the form
                 name@domain"
@@ -146,7 +146,7 @@ try {
         if ($next_url) {
             Header("Location: ".url_base()."$next_url");
         } else {
-            Header("Location: ".url_base().USER_HOME);
+            Header("Location: ".url_base().HOME_PAGE);
             send_cookie('init', "1", true);
             send_cookie('via_web', "1", true);
         }

@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2018 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -200,6 +200,9 @@
 #ifndef PRODUCT_IOTENTERPRISES
 #define PRODUCT_IOTENTERPRISES                      0x000000BF
 #endif
+#ifndef PRODUCT_IOTENTERPRISESK
+#define PRODUCT_IOTENTERPRISESK                     0x000000CD
+#endif
 #ifndef PRODUCT_AZURESTACKHCI_SERVER_CORE
 #define PRODUCT_AZURESTACKHCI_SERVER_CORE           0x00000196
 #endif
@@ -382,7 +385,9 @@ int get_os_information(
                         strlcat(os_name, "Windows 10", os_name_size);
                     }
                 } else {
-                    if (osvi.dwBuildNumber >= 25398) {
+                    if  (osvi.dwBuildNumber >= 26100) {
+			            strlcat(os_name, "Windows Server 2025", os_name_size);
+		            } else if (osvi.dwBuildNumber >= 25398) {
                         strlcat(os_name, "Windows Server 23H2", os_name_size);
                     } else if (osvi.dwBuildNumber >= 20348) {
                         strlcat(os_name, "Windows Server 2022", os_name_size);
@@ -582,6 +587,9 @@ int get_os_information(
                             case PRODUCT_IOTENTERPRISES:
                                 safe_strcat(szSKU, "IoT Enterprise LTSC ");
                                 break;
+                            case PRODUCT_IOTENTERPRISESK:
+                                safe_strcat(szSKU, "IoT Enterprise Subscription LTSC ");
+                                break;
                             case PRODUCT_IOTUAP:
                                 safe_strcat(szSKU, "Internet of Things ");
                                 break;
@@ -714,7 +722,7 @@ int get_os_information(
                                 safe_strcat(szSKU, "Datacenter (core installation) ");
                                 break;
                             case PRODUCT_DATACENTER_SERVER_CORE_AZURE_EDITION:
-                                safe_strcat(szSKU, "Datacenter Azuure (core installation) ");
+                                safe_strcat(szSKU, "Datacenter Azure (core installation) ");
                                 break;
                             case PRODUCT_DATACENTER_SERVER_CORE_V:
                                 safe_strcat(szSKU, "Datacenter (core installation without Hyper-V) ");
@@ -1542,7 +1550,6 @@ int get_network_usage_totals(unsigned int& total_received, unsigned int& total_s
     return iRetVal;
 }
 
-
 // see if Virtualbox is installed
 //
 int HOST_INFO::get_virtualbox_version() {
@@ -1659,16 +1666,19 @@ int HOST_INFO::get_host_info(bool init) {
         os_name, sizeof(os_name), os_version, sizeof(os_version)
     );
 #ifdef _WIN64
-    if (!cc_config.dont_use_wsl) {
-        OSVERSIONINFOEX osvi;
-        if (get_OSVERSIONINFO(osvi) && osvi.dwMajorVersion >= 10) {
-            get_wsl_information(wsl_available, wsls);
+    OSVERSIONINFOEX osvi;
+    if (get_OSVERSIONINFO(osvi) && osvi.dwMajorVersion >= 10) {
+        retval = get_wsl_information(wsl_distros);
+        if (retval) {
+            msg_printf(0, MSG_INTERNAL_ERROR,
+                "get_wsl_information(): %s", boincerror(retval)
+            );
         }
     }
 #endif
-    if (!cc_config.dont_use_vbox) {
-        get_virtualbox_version();
-    }
+
+    get_virtualbox_version();
+
     get_processor_info(
         p_vendor, sizeof(p_vendor),
         p_model, sizeof(p_model),

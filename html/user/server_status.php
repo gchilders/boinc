@@ -281,10 +281,12 @@ function show_status_xml($x) {
         item_xml("name", $app->name);
         item_xml("unsent", $app->unsent);
         item_xml("in_progress", $app->in_progress);
-        item_xml("avg_runtime", $app->info->avg);
-        item_xml("min_runtime", $app->info->min);
-        item_xml("max_runtime", $app->info->max);
-        item_xml("users", $app->info->users);
+        if ($app->info) {
+            item_xml("avg_runtime", $app->info->avg);
+            item_xml("min_runtime", $app->info->min);
+            item_xml("max_runtime", $app->info->max);
+            item_xml("users", $app->info->users);
+        }
         echo "</app>\n";
     }
     echo "</tasks_by_app>
@@ -379,17 +381,13 @@ function get_daemon_status() {
         $have_remote = true;
     }
 
-    // Scheduler is a daemon too
-    //
-    if ($sched_host == $main_host) {
-        $y = new StdClass;
-        $y->cmd = "Scheduler";
-        $y->host = $sched_host;
-        $y->status = !file_exists("../../stop_sched");;
-        $local_daemons[] = $y;
-    } else {
-        $have_remote = true;
-    }
+    // the scheduler is a CGI program, not a daemon;
+    // it doesn't have a PID.
+    $y = new StdClass;
+    $y->cmd = "Scheduler";
+    $y->host = $sched_host;
+    $y->status = !file_exists("../../stop_sched");;
+    $local_daemons[] = $y;
 
     foreach ($daemons->daemon as $d) {
         if ((int)$d->disabled != 0) {

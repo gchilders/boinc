@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2022 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2024 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -14,6 +14,8 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
+
+// client initialization and main loop
 
 #ifdef _WIN32
 #include "boinc_win.h"
@@ -121,7 +123,6 @@ CLIENT_STATE::CLIENT_STATE()
     app_started = 0;
     cmdline_dir = false;
     exit_before_upload = false;
-    run_test_app = false;
 #ifndef _WIN32
     boinc_project_gid = 0;
 #endif
@@ -193,7 +194,7 @@ void CLIENT_STATE::show_host_info() {
     char buf[256], buf2[256];
 
     msg_printf(NULL, MSG_INFO,
-        "Host name: %s",
+        "Computer name: %s",
         host_info.domain_name
     );
     nbytes_to_string(host_info.m_cache, 0, buf, sizeof(buf));
@@ -247,22 +248,39 @@ void CLIENT_STATE::show_host_info() {
     );
 
 #ifdef _WIN64
-    if (host_info.wsl_available) {
-        msg_printf(NULL, MSG_INFO, "WSL detected:");
-        for (size_t i = 0; i < host_info.wsls.wsls.size(); ++i) {
-            const WSL& wsl = host_info.wsls.wsls[i];
-            if (wsl.is_default) {
+    if (host_info.wsl_distros.distros.empty()) {
+        msg_printf(NULL, MSG_INFO, "WSL: no usable distros found");
+    } else {
+        msg_printf(NULL, MSG_INFO, "Usable WSL distros:");
+        for (auto &wsl: host_info.wsl_distros.distros) {
+            msg_printf(NULL, MSG_INFO,
+                "-   %s (WSL %d)%s",
+                wsl.distro_name.c_str(),
+                wsl.wsl_version,
+                wsl.is_default?" (default)":""
+            );
+            msg_printf(NULL, MSG_INFO,
+                "-      OS: %s (%s)",
+                wsl.os_name.c_str(), wsl.os_version.c_str()
+            );
+            if (!wsl.libc_version.empty()) {
                 msg_printf(NULL, MSG_INFO,
-                    "   [%s] (default): %s (%s)", wsl.distro_name.c_str(), wsl.name.c_str(), wsl.version.c_str()
+                    "-      libc version: %s", wsl.libc_version.c_str()
                 );
-            } else {
-                msg_printf(NULL, MSG_INFO,
-                    "   [%s]: %s (%s)", wsl.distro_name.c_str(), wsl.name.c_str(), wsl.version.c_str()
+            }
+            if (!wsl.docker_version.empty()) {
+                msg_printf(NULL, MSG_INFO, "-      Docker version %s (%s)",
+                    wsl.docker_version.c_str(),
+                    docker_type_str(wsl.docker_type)
+                );
+            }
+            if (!wsl.docker_compose_version.empty()) {
+                msg_printf(NULL, MSG_INFO, "-      Docker compose version %s (%s)",
+                    wsl.docker_compose_version.c_str(),
+                    docker_type_str(wsl.docker_compose_type)
                 );
             }
         }
-    } else {
-        msg_printf(NULL, MSG_INFO, "No WSL found.");
     }
 #endif
 
@@ -280,7 +298,24 @@ void CLIENT_STATE::show_host_info() {
         }
 #endif
     }
+
+#ifndef _WIN64
+    if (strlen(host_info.docker_version)) {
+        msg_printf(NULL, MSG_INFO, "Docker: version %s (%s)",
+            host_info.docker_version,
+            docker_type_str(host_info.docker_type)
+        );
+    }
+    if (strlen(host_info.docker_compose_version)) {
+        msg_printf(NULL, MSG_INFO, "Docker compose: version %s (%s)",
+            host_info.docker_compose_version,
+            docker_type_str(host_info.docker_compose_type)
+        );
+    }
+#endif
 }
+
+// TODO: the following 3 should be members of COPROCS
 
 int rsc_index(const char* name) {
     const char* nm = strcmp(name, "CUDA")?name:GPU_TYPE_NVIDIA;
@@ -584,6 +619,13 @@ int CLIENT_STATE::init() {
             coprocs.add(coprocs.intel_gpu);
         }
     }
+    if (coprocs.have_apple_gpu()) {
+        if (rsc_index(GPU_TYPE_APPLE)>0) {
+            msg_printf(NULL, MSG_INFO, "APPLE GPU info taken from cc_config.xml");
+        } else {
+            coprocs.add(coprocs.apple_gpu);
+        }
+    }
     coprocs.add_other_coproc_types();
 
     host_info.coprocs = coprocs;
@@ -612,9 +654,7 @@ int CLIENT_STATE::init() {
     //
     parse_state_file();
 
-    if (app_test) {
-        app_test_init();
-    }
+    app_test_init();
 
     bool new_client = is_new_client();
 
@@ -673,22 +713,24 @@ int CLIENT_STATE::init() {
     //
     for (i=0; i<app_versions.size(); i++) {
         APP_VERSION* avp = app_versions[i];
-        if (!avp->flops) {
-            if (!avp->avg_ncpus) {
-                avp->avg_ncpus = 1;
+        if (!avp->resource_usage.flops) {
+            if (!avp->resource_usage.avg_ncpus) {
+                avp->resource_usage.avg_ncpus = 1;
             }
-            avp->flops = avp->avg_ncpus * host_info.p_fpops;
+            avp->resource_usage.flops = avp->resource_usage.avg_ncpus * host_info.p_fpops;
 
             // for GPU apps, use conservative estimate:
             // assume GPU runs at 10X peak CPU speed
             //
-            if (avp->gpu_usage.rsc_type) {
-                avp->flops += avp->gpu_usage.usage * 10 * host_info.p_fpops;
+            if (avp->resource_usage.rsc_type) {
+                avp->resource_usage.flops += avp->resource_usage.coproc_usage * 10 * host_info.p_fpops;
             }
         }
     }
 
     process_gpu_exclusions();
+
+    docker_cleanup();
 
     check_clock_reset();
 
@@ -749,7 +791,7 @@ int CLIENT_STATE::init() {
 
     msg_printf(NULL, MSG_INFO, "Checking active tasks");
     active_tasks.init();
-    active_tasks.report_overdue();
+    check_overdue();
     active_tasks.handle_upload_files();
     had_or_requested_work = (active_tasks.active_tasks.size() > 0);
 
@@ -989,18 +1031,30 @@ bool CLIENT_STATE::poll_slow_events() {
     }
 #endif
 
-    bool old_user_active = user_active;
-#ifdef ANDROID
-    user_active = device_status.user_active;
-#else
-    long idle_time = host_info.user_idle_time(check_all_logins);
-    user_active = idle_time < global_prefs.idle_time_to_run * 60;
+    // there are 2 reasons to get idle state:
+    // if needed for computing prefs,
+    // or (on Mac) we were started by screensaver
+    //
+    bool get_idle_state = global_prefs.need_idle_state;
+#ifdef __APPLE__
+    if (started_by_screensaver) get_idle_state = true;
 #endif
-
-    if (user_active != old_user_active) {
-        set_n_usable_cpus();
-            // if niu_max_ncpus_pct pref is set, # usable CPUs may change
-        request_schedule_cpus(user_active?"Not idle":"Idle");
+    long idle_time;
+    if (get_idle_state) {
+        bool old_user_active = user_active;
+#ifdef ANDROID
+        user_active = device_status.user_active;
+#else
+        idle_time = host_info.user_idle_time(check_all_logins);
+        user_active = idle_time < global_prefs.idle_time_to_run * 60;
+#endif
+        if (user_active != old_user_active) {
+            set_n_usable_cpus();
+                // if niu_max_ncpus_pct pref is set, # usable CPUs may change
+            request_schedule_cpus(user_active?"Not idle":"Idle");
+        }
+    } else {
+        user_active = false;    // shouldn't matter what it is
     }
 
 #if 0
@@ -1276,9 +1330,6 @@ FILE_INFO* CLIENT_STATE::lookup_file_info(PROJECT* p, const char* name) {
 int CLIENT_STATE::link_app(PROJECT* p, APP* app) {
     if (lookup_app(p, app->name)) return ERR_NOT_UNIQUE;
     app->project = p;
-    if (!app->non_cpu_intensive) {
-        p->non_cpu_intensive = false;
-    }
     return 0;
 }
 
@@ -2114,7 +2165,7 @@ int CLIENT_STATE::reset_project(PROJECT* project, bool detaching) {
     project->min_rpc_time = 0;
     project->pwf.reset(project);
     for (int j=0; j<coprocs.n_rsc; j++) {
-        project->rsc_pwf[j].reset();
+        project->rsc_pwf[j].reset(j);
     }
     write_state_file();
     return 0;
