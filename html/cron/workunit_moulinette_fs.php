@@ -17,7 +17,7 @@ debrouxl	14 oct 2011 - after a discussion with Greg Childers, make the WUs
 */
 
 ////temporarily disabled
-//die("plop");
+// die("plop");
 
 //===============================================================================
 // CONFIG
@@ -87,11 +87,13 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 	}
 	for($i=0; $i<$num_wus; $i++) {
 		$wuid = $number->id + 100;
+                $wupriority = $number->priority + 100;
+                if ($wupriority == 100) $wupriority = $wuid;
                 $wuname = sprintf("%s_%d",$number->name,$q_first/1000);
 
 		$command ="cd $boinc && bin/create_work ";
 		$command.="--batch $wuid ";
-		$command.="--priority $wuid ";
+		$command.="--priority $wupriority ";
 		$command.="--appname lasievef_small ";
 		$command.="--wu_name $wuname ";
 		$command.="--wu_template templates/la_wu4 ";

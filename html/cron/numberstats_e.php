@@ -48,7 +48,8 @@ function count_results($number, $field, $cond) {
 	// count workunits in the UNSENT(2) state
 	//--------------------
 	$name = $number->name;
-	$query = "SELECT COUNT(*) AS count FROM result WHERE name like '{$name}\_%' AND $cond";
+	$query = "SELECT COUNT(*) AS count FROM result WHERE name regexp '^{$name}\_[0-9]' AND $cond";
+//	$query = "SELECT COUNT(*) AS count FROM result WHERE name like '{$name}\_%' AND $cond";
 //	echo "$query\n";
 	$result = _mysql_query($query);
 	if(_mysql_errno()!=0) {

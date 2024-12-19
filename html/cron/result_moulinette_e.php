@@ -100,7 +100,9 @@ function manage_result_file($number, $file, $destination) {
 
 function find_files_in($folder, $wildcard) {
 	$results = Array();
-	$cmd="find $folder -maxdepth 1 -name '$wildcard'";
+	$cmd="find $folder -maxdepth 1 -type f -regex '.*/$wildcard"."_[0-9].*'";
+//	echo $cmd."\n";
+//	$cmd="find $folder -maxdepth 1 -name '$wildcard_*";
 	exec($cmd,$results,$error);
 	if($error!=0) {
 		echo "error: find returned $error\n";
@@ -121,6 +123,7 @@ function manage_results($number) {
 	global $stamp;
 	$boinc=PROJECTPATH;
 	$name = $number->name;
+	$wuid = $number->id + 100;
 	$folder = "$boinc/sample_results/managed/$name";
 	//--------------------
 	// Check job folder and create if required
@@ -145,6 +148,10 @@ function manage_results($number) {
 	// Find all received result files so far
 	//--------------------
 	$results = find_files_in("$boinc/sample_results", $name."_*");
+        if (file_exists("$boinc/results/" . $wuid)) {
+                $results2 = find_files_in("$boinc/results/" . $wuid, $name."_*");
+                $results = $results + $results2;
+        }
 	if(count($results)==0) {
 		echo "no files\n";
 	} else {

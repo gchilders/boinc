@@ -87,11 +87,13 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 	}
 	for($i=0; $i<$num_wus; $i++) {
 		$wuid = $number->id;
+                $wupriority = $number->priority;
+                if ($wupriority == 0) $wupriority = $wuid;
                 $wuname = sprintf("%s_%d",$number->name,$q_first/1000);
 
 		$command ="cd $boinc && bin/create_work ";
 		$command.="--batch $wuid ";
-		$command.="--priority $wuid ";
+		$command.="--priority $wupriority ";
 		$command.="--appname lasieve5f ";
 		$command.="--wu_name $wuname ";
 		$command.="--wu_template templates/la_wuf14 ";

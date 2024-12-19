@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
       } else if (strncmp(token, "m:", 2)==0) {
         fprintf(outfb,"R1 1\n");
         fprintf(outfb,"R0 -%s\n",value);
-      } else if ((token[0]=='c') && (token[1] >= '0') && (token[1] <= '6')) {
+      } else if ((token[0]=='c') && (token[1] >= '0') && (token[1] <= '9')) {
         fprintf(outfb,"A%c %s\n",token[1], value);
       } else if ((token[0]=='Y') && (token[1] >= '0') && (token[1] <= '6')) {
         fprintf(outfb,"R%c %s\n",token[1], value);
