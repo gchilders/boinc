@@ -124,6 +124,9 @@ struct CONFIG {
     string project_dir_mount;
         // mount project dir here in container
         // default: don't mount it
+    string image_name;
+        // use this as the image name, and don't delete it when done.
+        // For testing.
     void print() {
         fprintf(stderr, "Wrapper config file:\n");
         if (!workdir.empty()) {
@@ -173,6 +176,10 @@ int parse_config_file() {
     if (x) {
         config.project_dir_mount = x->as<string>();
     }
+    x = v.find("image_name");
+    if (x) {
+        config.image_name = x->as<string>();
+    }
     return 0;
 }
 
@@ -190,8 +197,12 @@ int error_output(vector<string> &out) {
 //////////  IMAGE  ////////////
 
 void get_image_name() {
-    string s = docker_image_name(project_dir, aid.wu_name);
-    strcpy(image_name, s.c_str());
+    if (config.image_name.empty()) {
+        string s = docker_image_name(project_dir, aid.wu_name);
+        strcpy(image_name, s.c_str());
+    } else {
+        strcpy(image_name, config.image_name.c_str());
+    }
 }
 
 int image_exists(bool &exists) {
@@ -341,8 +352,12 @@ void cleanup() {
     sprintf(cmd, "container rm %s", container_name);
     docker_conn.command(cmd, out);
 
-    sprintf(cmd, "image rm %s", image_name);
-    docker_conn.command(cmd, out);
+    // don't remove image if it was specified in config
+    //
+    if (config.image_name.empty()) {
+        sprintf(cmd, "image rm %s", image_name);
+        docker_conn.command(cmd, out);
+    }
 }
 
 void poll_client_msgs() {
@@ -485,7 +500,7 @@ int main(int argc, char** argv) {
     options.check_heartbeat = true;
     options.handle_process_control = true;
     boinc_init_options(&options);
-
+    retval = parse_config_file();
     if (boinc_is_standalone()) {
         verbose = true;
         strcpy(image_name, "boinc");
@@ -497,7 +512,7 @@ int main(int argc, char** argv) {
         get_image_name();
         get_container_name();
     }
-    retval = parse_config_file();
+
     if (retval) {
         fprintf(stderr, "can't parse config file\n");
         exit(1);

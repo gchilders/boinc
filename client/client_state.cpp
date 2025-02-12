@@ -422,12 +422,13 @@ bool CLIENT_STATE::is_new_client() {
         || (core_client_version.minor != old_minor_version)
         || (core_client_version.release != old_release)
     ) {
-        msg_printf(NULL, MSG_INFO,
-            "Version change (%d.%d.%d -> %d.%d.%d)",
+        msg_printf_notice(0, true, 0,
+            "The BOINC client version has changed from %d.%d.%d to %d.%d.%d.<br>To see what's new, view the <a href=%s>Client release notes</a>.",
             old_major_version, old_minor_version, old_release,
             core_client_version.major,
             core_client_version.minor,
-            core_client_version.release
+            core_client_version.release,
+            "https://github.com/BOINC/boinc/wiki/Client-release-notes"
         );
         new_client = true;
     }
@@ -709,14 +710,15 @@ int CLIENT_STATE::init() {
         }
     }
 
-    // fill in avp->flops for anonymous platform projects
+    // fill in resource usage for app versions that are missing it
+    // (typically anonymous platform)
     //
     for (i=0; i<app_versions.size(); i++) {
         APP_VERSION* avp = app_versions[i];
+        if (!avp->resource_usage.avg_ncpus) {
+            avp->resource_usage.avg_ncpus = 1;
+        }
         if (!avp->resource_usage.flops) {
-            if (!avp->resource_usage.avg_ncpus) {
-                avp->resource_usage.avg_ncpus = 1;
-            }
             avp->resource_usage.flops = avp->resource_usage.avg_ncpus * host_info.p_fpops;
 
             // for GPU apps, use conservative estimate:

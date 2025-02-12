@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        type: [libs, client, apps, libs-vcpkg, client-vcpkg, apps-vcpkg, libs-cmake, libs-arm64, apps-arm64, manager-with-webview-vcpkg, server, manager-with-webview, manager-without-webview, unit-test, integration-test]
+        type: [libs, client, apps, manager, libs-vcpkg, client-vcpkg, apps-vcpkg, libs-cmake, libs-arm64, apps-arm64, manager-with-webview-vcpkg, server, manager-with-webview, manager-without-webview, unit-test, integration-test]
       fail-fast: false
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -50,12 +50,22 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get -qq update
-          sudo apt-get install -y autopoint libftgl-dev freeglut3-dev libcurl4-openssl-dev libxmu-dev libxi-dev libfcgi-dev libxss-dev libnotify-dev libxcb-util0-dev libgtk-3-dev libsecret-1-dev libgcrypt20-dev libsystemd-dev libwebkit2gtk-4.0-dev p7zip-full libxxf86vm-dev ocl-icd-opencl-dev zip
+          sudo apt-get install -y autopoint libftgl-dev freeglut3-dev libcurl4-openssl-dev libxmu-dev libxi-dev libfcgi-dev libxss-dev libnotify-dev libxcb-util0-dev libgtk-3-dev libsecret-1-dev libgcrypt20-dev libsystemd-dev libwebkit2gtk-4.1-dev p7zip-full libxxf86vm-dev ocl-icd-opencl-dev zip libltdl-dev
+
+      - name: Install dependencies for manager
+        if: success() && matrix.type == 'manager'
+        run: |
+          sudo apt-get install -y libwxgtk3.2-dev libwxgtk-webview3.2-dev
 
       - name: Install dependencies for arm64
         if: success() && endsWith(matrix.type, 'arm64')
         run: |
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+      - name: Install dependencies for unit testing
+        if: success() && matrix.type == 'unit-test'
+        run: |
+          sudo apt-get install -y libgtest-dev
 
       - name: Install dependencies for integration testing
         if: success() && matrix.type == 'integration-test'
@@ -98,6 +108,10 @@ jobs:
         if: success() && matrix.type == 'apps'
         run: ./configure --enable-apps --enable-apps-vbox --enable-apps-gui --disable-server --disable-client --disable-manager
 
+      - name: Configure manager
+        if: success() && matrix.type == 'manager'
+        run: ./configure --disable-server --disable-client --enable-manager
+
       - name: Configure libs with vcpkg
         if: success() && matrix.type == 'libs-vcpkg'
         run: linux/ci_configure_libs.sh
@@ -132,7 +146,7 @@ jobs:
 
       - name: Configure server for unit testing
         if: success() && matrix.type == 'unit-test'
-        run: ./3rdParty/buildLinuxDependencies.sh --gtest-only && ./configure --disable-client --disable-manager --enable-unit-tests CFLAGS="-g -O0" CXXFLAGS="-g -O0"
+        run: ./configure --disable-client --disable-manager --enable-unit-tests CFLAGS="-g -O0" CXXFLAGS="-g -O0"
 
       - name: Make
         if: success() && ! contains(matrix.type, 'integration-test') && ! endsWith(matrix.type, 'cmake') && ! endsWith(matrix.type, 'arm64')
@@ -161,6 +175,10 @@ jobs:
         if: success() && matrix.type == 'unit-test'
         run: ./tests/executeUnitTests.sh --report-coverage --report-xml
 
+      - name: Execute automation tests
+        if: success() && matrix.type == 'unit-test'
+        run: python ./tests/crypt_prog_tests.py ./lib/crypt_prog
+
       - name: Execute integration-test
         if: success() && matrix.type == 'integration-test'
         run: ./integration_test/executeTestSuite.sh
@@ -171,7 +189,7 @@ jobs:
 
       - name: Upload logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: linux_logs_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
           path: deploy/logs.7z
@@ -181,14 +199,14 @@ jobs:
         run: python ./deploy/prepare_deployment.py linux_${{ matrix.type }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: ${{ ! contains(matrix.type, 'libs') && ! contains(matrix.type, 'server') && ! contains(matrix.type, 'test') }}
         with:
           name: linux_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
           path: deploy/linux_${{ matrix.type }}.7z
 
       - name: Upload Google Tests Results
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: always() && matrix.type == 'unit-test'    # run this step even if previous step failed
         with:
           name: Linux_tests_results
@@ -196,7 +214,7 @@ jobs:
 
       - name: Upload coverage report
         if: success() && matrix.type == 'unit-test'
-        uses: codecov/codecov-action@7f8b4b4bde536c465e797be725718b88c5d95e0e
+        uses: codecov/codecov-action@13ce06bfc6bbe3ecf90edbbf1bc32fe5978ca1d3
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
@@ -279,7 +297,7 @@ jobs:
 
       - name: Upload logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: linux_release_logs_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
           path: deploy/logs.7z
@@ -289,7 +307,7 @@ jobs:
         run: python3 ./deploy/prepare_deployment.py linux_apps
 
       - name: Upload wrapper artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: success()
         with:
           name: linux_release_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}

@@ -38,12 +38,13 @@ if (VALIDATE_EMAIL_TO_POST) {
 
 $forumid = get_int("id");
 $forum = BoincForum::lookup_id($forumid);
+if (!$forum) error_page('No such forum');
 
 if (DISABLE_FORUMS && !is_admin($logged_in_user)) {
     error_page("Forums are disabled");
 }
 
-if (!user_can_create_thread($logged_in_user, $forum)) {
+if (user_can_create_thread($logged_in_user, $forum)=='no') {
     error_page(tra("Only project admins may create a thread here. However, you may reply to existing threads."));
 }
 check_post_access($logged_in_user, $forum);

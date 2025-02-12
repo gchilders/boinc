@@ -16,6 +16,7 @@
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
+      <AdditionalDependencies>libcrypto.lib;libssl.lib;Crypt32.Lib;Ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)'=='Debug'">libcmtd.lib;libcpmtd.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies Condition="'$(Configuration)'=='Release'">libcmt.lib;libcpmt.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SubSystem>Windows</SubSystem>
@@ -35,17 +36,6 @@
     <ResourceCompile Include="..\installer\installer_setup\installer_setup.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
-  <ImportGroup Label="ExtensionTargets">
-  </ImportGroup>
-  <PropertyGroup>
-    <CustomBuildBeforeTargets>ClCompile</CustomBuildBeforeTargets>
-  </PropertyGroup>
-  <ItemDefinitionGroup>
-    <CustomBuildStep>
-      <Command>$(SolutionDir)Build\x64\$(Configuration)\installer.exe -p $(Platform)</Command>
-      <Inputs>$(MSBuildThisFileDirectory)..\installer\boinc.json;$(MSBuildThisFileDirectory)..\installer\locale\en.json;$(OutDir)boinccas.dll;$(SolutionDir)Build\x64\$(Configuration)\installer.exe</Inputs>
-      <Outputs>$(OutDir)boinc.msi</Outputs>
-    </CustomBuildStep>
-  </ItemDefinitionGroup>
+  <ImportGroup Label="ExtensionTargets"/>
   <Import Project="boinc_signing.targets" />
 </Project>

@@ -108,7 +108,7 @@ jobs:
 
       - name: Upload logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         with:
           name: linux-package_logs_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
           path: deploy/logs.7z
@@ -118,7 +118,7 @@ jobs:
         run: python3 ./deploy/prepare_deployment.py linux_${{ matrix.type }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: success()
         with:
           name: linux-package_${{ matrix.type }}_${{ github.event.pull_request.head.sha }}
@@ -225,7 +225,7 @@ jobs:
           dpkg-deb --info "${{ github.workspace }}/${PKG_FULL}.deb"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: success()
         with:
           name: linux-package_${{ matrix.type }}_${{ matrix.os }}_${{ github.event.pull_request.head.sha }}
@@ -592,7 +592,7 @@ jobs:
           rpm -qp --qf '%|DSAHEADER?{%{DSAHEADER:pgpsig}}:{%|RSAHEADER?{%{RSAHEADER:pgpsig}}:{(none)}|}|\n' "RPMS/${{ env.ARCH }}/${PKG_FULL}.rpm"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: success()
         with:
           name: linux-package_${{ matrix.type }}_${{ matrix.os }}_${{ github.event.pull_request.head.sha }}
@@ -618,7 +618,7 @@ jobs:
         if: success()
         run: |
           apt update -qq
-          apt install -y python3 gnupg2
+          apt install -y python3 gnupg2 curl
 
       - name: Install distro package for further upgrade
         if: success() && matrix.type == 'upgrade'
@@ -629,21 +629,19 @@ jobs:
       - name: Install distro package for further upgrade from the alpha
         if: success() && matrix.type == 'upgrade-from-alpha'
         run: |
-          DEBIAN_FRONTEND=noninteractive apt install -y software-properties-common
-          apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 40254C9B29853EA6
-          apt-add-repository "deb https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }} ${{ matrix.os }} main"
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }}/boinc.gpg | gpg --dearmor -o /etc/apt/keyrings/boinc.gpg
+          echo deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/boinc.gpg] https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }} ${{ matrix.os }} main | tee /etc/apt/sources.list.d/boinc.list > /dev/null
           apt update -qq
-          mv /bin/systemctl /bin/systemctl.bak
           DEBIAN_FRONTEND=noninteractive apt install -y boinc-client boinc-manager
 
       - name: Install distro package for further upgrade from the stable
         if: success() && matrix.type == 'upgrade-from-stable'
         run: |
-          DEBIAN_FRONTEND=noninteractive apt install -y software-properties-common
-          apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 40254C9B29853EA6
-          apt-add-repository "deb https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }} ${{ matrix.os }} main"
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }}/boinc.gpg | gpg --dearmor -o /etc/apt/keyrings/boinc.gpg
+          echo deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/boinc.gpg] https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }} ${{ matrix.os }} main | tee /etc/apt/sources.list.d/boinc.list > /dev/null
           apt update -qq
-          mv /bin/systemctl /bin/systemctl.bak
           DEBIAN_FRONTEND=noninteractive apt install -y boinc-client boinc-manager
 
       - name: Download client
@@ -690,7 +688,7 @@ jobs:
         if: success()
         run: |
           apt update -qq
-          apt install -y python3
+          apt install -y python3 gnupg2 curl
 
       - name: Install distro package for further upgrade
         if: success() && matrix.type == 'upgrade'
@@ -708,21 +706,19 @@ jobs:
       - name: Install distro package for further upgrade from the alpha
         if: success() && matrix.type == 'upgrade-from-alpha'
         run: |
-          DEBIAN_FRONTEND=noninteractive apt install -y software-properties-common
-          apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 40254C9B29853EA6
-          apt-add-repository "deb https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }} ${{ matrix.os }} main"
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }}/boinc.gpg | gpg --dearmor -o /etc/apt/keyrings/boinc.gpg
+          echo deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/boinc.gpg] https://boinc.berkeley.edu/dl/linux/alpha/${{ matrix.os }} ${{ matrix.os }} main | tee /etc/apt/sources.list.d/boinc.list > /dev/null
           apt update -qq
-          mv /bin/systemctl /bin/systemctl.bak
           DEBIAN_FRONTEND=noninteractive apt install -y boinc-client boinc-manager
 
       - name: Install distro package for further upgrade from the stable
         if: success() && matrix.type == 'upgrade-from-stable'
         run: |
-          DEBIAN_FRONTEND=noninteractive apt install -y software-properties-common
-          apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 40254C9B29853EA6
-          apt-add-repository "deb https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }} ${{ matrix.os }} main"
+          mkdir -p /etc/apt/keyrings
+          curl -fsSL https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }}/boinc.gpg | gpg --dearmor -o /etc/apt/keyrings/boinc.gpg
+          echo deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/boinc.gpg] https://boinc.berkeley.edu/dl/linux/stable/${{ matrix.os }} ${{ matrix.os }} main | tee /etc/apt/sources.list.d/boinc.list > /dev/null
           apt update -qq
-          mv /bin/systemctl /bin/systemctl.bak
           DEBIAN_FRONTEND=noninteractive apt install -y boinc-client boinc-manager
 
       - name: Rename systemctl (not supported on CI)
@@ -923,12 +919,7 @@ jobs:
       - name: Install dependencies
         if: ${{ success() && env.SKIP_RUN == 0 }}
         run: |
-          # Install aptly version 1.5.0+ (to support ubuntu xz compression)
-          # gpg1 is used for compatibility with aptly
-          wget -qO - https://www.aptly.info/pubkey.txt | sudo apt-key add -
-          echo "deb http://repo.aptly.info/ squeeze main" | sudo tee -a /etc/apt/sources.list
-          sudo apt update -qq
-          sudo apt-get install -y aptly gnupg1 gpgv1
+          sudo apt-get install -y aptly gnupg2 gpgv
 
       - name: Setup GPG keys
         if: ${{ success() && env.SKIP_RUN == 0 }}
@@ -974,7 +965,7 @@ jobs:
           cd ${{ github.workspace }}/.github/workflows/debrepo/
           ./repo_update.sh "$ALLOW_CREATE" ${{ env.BASEREPO }} ${{ github.workspace }} ${{ matrix.os }} ${{ env.RELEASE_TYPE }} ${{ env.PUBKEY }}
 
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: ${{ success() && env.SKIP_RUN == 0 }}
         with:
           name: repo-${{ env.RELEASE_TYPE }}-${{ matrix.os }}
@@ -1077,7 +1068,7 @@ jobs:
             # Updates or creates the repository
             ./repo_update.sh "$ALLOW_CREATE" ${{ env.BASEREPO }} ${CWD} ${{ matrix.os }} ${{ env.RELEASE_TYPE }} ${{ env.PUBKEY }} ${{ env.PUBKEY_HASH }} ${{ env.ARCH }}
 
-      - uses: actions/upload-artifact@b4b15b8c7c6ac21ea08fcf65892d2ee8f75cf882
+      - uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08
         if: ${{ success() && env.SKIP_RUN == 0 }}
         with:
           name: repo-${{ env.RELEASE_TYPE }}-${{ matrix.os }}

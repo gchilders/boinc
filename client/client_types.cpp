@@ -783,11 +783,11 @@ int FILE_INFO::gunzip(char* md5_buf) {
 #endif  // SIM
 
 void RESOURCE_USAGE::clear() {
-    avg_ncpus = 1;
+    avg_ncpus = 0;
     rsc_type = 0;
     coproc_usage = 0;
     gpu_ram = 0;
-    flops = gstate.host_info.p_fpops;
+    flops = 0;
     cmdline[0] = 0;
     missing_coproc = false;
     missing_coproc_name[0] = 0;

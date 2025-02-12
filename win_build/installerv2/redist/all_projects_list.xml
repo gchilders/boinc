@@ -218,6 +218,7 @@
         <name>windows_intelx86</name>
         <name>windows_intelx86[FGRPSSE]</name>
         <name>windows_x86_64[BRP4X64]</name>
+        <name>windows_x86_64[BRP7-cuda102]</name>
         <name>windows_x86_64[BRP7-cuda55]</name>
         <name>windows_x86_64[BRP7-opencl-ati]</name>
         <name>windows_x86_64[BRP7-opencl-intel_gpu]</name>
@@ -230,7 +231,9 @@
         <name>windows_x86_64[FGRPopencl2Pup-nvidia]</name>
         <name>windows_x86_64[FGRPopenclTV-nvidia]</name>
         <name>windows_x86_64[GW-opencl-ati-2]</name>
+        <name>windows_x86_64[GW-opencl-ati-3]</name>
         <name>windows_x86_64[GW-opencl-nvidia-2]</name>
+        <name>windows_x86_64[GW-opencl-nvidia-3]</name>
         <name>windows_x86_64[opencl-intel_gpu-new]</name>
         <name>windows_x86_64[opencl-intel_gpu-newer]</name>
         <name>x86_64-apple-darwin</name>
@@ -241,7 +244,9 @@
         <name>x86_64-apple-darwin[FGRPopenclTV-nvidia]</name>
         <name>x86_64-apple-darwin[FGRPSSE]</name>
         <name>x86_64-apple-darwin[GW-opencl-ati-2]</name>
+        <name>x86_64-apple-darwin[GW-opencl-ati-3]</name>
         <name>x86_64-apple-darwin[GW-opencl-nvidia-2]</name>
+        <name>x86_64-apple-darwin[GW-opencl-nvidia-3]</name>
         <name>x86_64-pc-linux-gnu</name>
         <name>x86_64-pc-linux-gnu[BRP4X64]</name>
         <name>x86_64-pc-linux-gnu[BRP7-cuda102]</name>
@@ -256,8 +261,12 @@
         <name>x86_64-pc-linux-gnu[FGRPopenclTV-nvidia]</name>
         <name>x86_64-pc-linux-gnu[FGRPSSE]</name>
         <name>x86_64-pc-linux-gnu[GW-cuda]</name>
+        <name>x86_64-pc-linux-gnu[GW-cuda-3]</name>
+        <name>x86_64-pc-linux-gnu[GW-cuda-Beta-3]</name>
         <name>x86_64-pc-linux-gnu[GW-opencl-ati-2]</name>
+        <name>x86_64-pc-linux-gnu[GW-opencl-ati-3]</name>
         <name>x86_64-pc-linux-gnu[GW-opencl-nvidia-2]</name>
+        <name>x86_64-pc-linux-gnu[GW-opencl-nvidia-3]</name>
         <name>x86_64-pc-linux-gnu[opencl-intel_gpu]</name>
     </platforms>
       <image>https://boinc.berkeley.edu/images/einstein.jpg</image>
@@ -414,6 +423,7 @@
         <name>x86_64-pc-linux-gnu</name>
         <name>i686-pc-freebsd</name>
         <name>x86_64-pc-freebsd</name>
+        <name>aarch64-unknown-linux-gnu</name>
     </platforms>
       <summary>Discover Latin Squares</summary>
         <keywords>15 20 44 46</keywords>
@@ -748,13 +758,13 @@
     <platforms>
         <name>windows_x86_64</name>
         <name>windows_x86_64[cuda100]</name>
-        <name>windows_x86_64[cuda112]</name>
+        <name>windows_x86_64[cuda110]</name>
         <name>windows_x86_64[cuda120]</name>
         <name>windows_x86_64[opencl_ati_101]</name>
         <name>windows_x86_64[opencl_intel_gpu_intelarc]</name>
         <name>x86_64-pc-linux-gnu</name>
         <name>x86_64-pc-linux-gnu[cuda100]</name>
-        <name>x86_64-pc-linux-gnu[cuda111]</name>
+        <name>x86_64-pc-linux-gnu[cuda112]</name>
         <name>x86_64-pc-linux-gnu[cuda120]</name>
         <name>x86_64-pc-linux-gnu[opencl_ati_101]</name>
         <name>x86_64-pc-linux-gnu[opencl_intel_gpu_intelarc]</name>
