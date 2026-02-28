@@ -116,7 +116,7 @@ if (!defined('POST_MAX_LINKS')) {
 
 // support dark mode if user has selected it
 if (!defined('DARK_MODE')) {
-    define('DARK_MODE', true);
+    define('DARK_MODE', false);
 }
 if (!defined('VALIDATE_EMAIL_TO_POST')) {
     define('VALIDATE_EMAIL_TO_POST', false);
