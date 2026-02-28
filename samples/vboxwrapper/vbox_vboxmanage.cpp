@@ -100,8 +100,10 @@ int VBOX_VM::initialize() {
     }
 #endif
 
-    // Determine the 'VirtualBox home directory'.
-    // We run VboxSVC.exe here, and look for its log file here.
+    // Determine the 'VirtualBox profile directory'.
+    // VboxSVC writes the main VM database and it's logfiles there.
+    // The default location is OS based as well as user based and
+    // can be modified via the VBOX_USER_HOME environment variable.
     //
     // See
     // https://docs.oracle.com/en/virtualization/virtualbox/6.1/admin/TechnicalBackground.html#3.1.3.-Summary-of-Configuration-Data-Locations
@@ -110,9 +112,37 @@ int VBOX_VM::initialize() {
     //
     char *p = getenv("VBOX_USER_HOME");
     if (p) {
-        virtualbox_home_directory = p;
+        virtualbox_profile_directory = p;
     } else {
-        // If not then make one in the BOINC project directory.
+#ifdef _WIN32
+        // Default vbox profile is located in '%USERPROFILE%\.VirtualBox'.
+        // Check for '%USERPROFILE%' instead, since the vbox profile dir
+        // doesn't exist until the user has started
+        // a VirtualBox component at least once.
+        //
+        string vbox_profile_dir = getenv("USERPROFILE");
+
+        if (vbox_profile_dir.size()) {
+            virtualbox_profile_directory  = vbox_profile_dir;
+            virtualbox_profile_directory += "/.VirtualBox";
+
+            // If necessary VirtualBox automatically creates required dirs
+            // at the default locations.
+            //
+        } else {
+            // If '%USERPROFILE%' is not set.
+            //
+            virtualbox_profile_directory  = aid.boinc_dir;
+            virtualbox_profile_directory += "/projects/VirtualBox";
+
+            // create if not there already
+            //
+            boinc_mkdir(virtualbox_profile_directory.c_str());
+        }
+#else
+#ifdef __APPLE__
+        // If 'VBOX_USER_HOME' is not set
+        // then make it point to the BOINC project directory.
         // Notes:
         // 1) we can't put it in the home dir;
         //  in a sandboxed config we're running as user 'boinc_projects',
@@ -120,30 +150,55 @@ int VBOX_VM::initialize() {
         // 2) we can't put it in the BOINC data dir.
         //  boinc_projects can't write their either
         //
-        virtualbox_home_directory = aid.boinc_dir;
-        virtualbox_home_directory += "/projects/VirtualBox";
+        virtualbox_profile_directory  = aid.boinc_dir;
+        virtualbox_profile_directory += "/projects/VirtualBox";
 
         // create if not there already
-        boinc_mkdir(virtualbox_home_directory.c_str());
+        //
+        boinc_mkdir(virtualbox_profile_directory.c_str());
+#else
+        // Default vbox profile is located in '/home/user/.config/VirtualBox'.
+        // Check for '/home/user/.config' instead, since the vbox profile dir
+        // doesn't exist until the user has started
+        // a VirtualBox component at least once.
+        //
+        string linux_user = getenv("USER");
+        string vbox_profile_dir = "/home/";
+        vbox_profile_dir += linux_user;
+        vbox_profile_dir += "/.config";
+
+        if (is_dir(vbox_profile_dir.c_str())) {
+            virtualbox_profile_directory  = vbox_profile_dir;
+            virtualbox_profile_directory += "/VirtualBox";
+
+            // If necessary VirtualBox automatically creates required dirs
+            // at the default locations.
+            //
+        } else {
+            // If BOINC runs as a service without a user's home directory.
+            //
+            virtualbox_profile_directory  = aid.boinc_dir;
+            virtualbox_profile_directory += "/projects/VirtualBox";
+
+            // create if not there already
+            //
+            boinc_mkdir(virtualbox_profile_directory.c_str());
+        }
+#endif
+#endif
 
         // set env var telling VBox where to put log file
 #ifdef _WIN32
-        if (!SetEnvironmentVariable("VBOX_USER_HOME", const_cast<char*>(virtualbox_home_directory.c_str()))) {
+        if (!SetEnvironmentVariable("VBOX_USER_HOME", const_cast<char*>(virtualbox_profile_directory.c_str()))) {
             vboxlog_msg("Failed to modify the search path.");
         }
 #else
         // putenv does not copy its input buffer, so we must use setenv
-        if (setenv("VBOX_USER_HOME", const_cast<char*>(virtualbox_home_directory.c_str()), 1)) {
+        if (setenv("VBOX_USER_HOME", const_cast<char*>(virtualbox_profile_directory.c_str()), 1)) {
             vboxlog_msg("Failed to modify the VBOX_USER_HOME path.");
         }
 #endif
     }
-
-#ifdef _WIN32
-    // Not sure this is needed now that we're not using COM
-    //
-    launch_vboxsvc();
-#endif
 
     rc = get_version_information(
         virtualbox_version_raw, virtualbox_version_display
@@ -158,11 +213,15 @@ int VBOX_VM::initialize() {
 int VBOX_VM::create_vm() {
     string command;
     string output;
+    string needle;
     string default_interface;
     bool disable_acceleration = false;
     char buf[256];
     int retval;
     int save_retval;
+    string vm_nictype1;
+    size_t vm_nictype1_start;
+    size_t vm_nictype1_end;
 
     vboxlog_msg("Create VM. (%s, slot#%d)", vm_master_name.c_str(), aid.slot);
 
@@ -235,7 +294,7 @@ int VBOX_VM::create_vm() {
 
     // Tweak the VM's Graphics Controller Options
     //
-    vboxlog_msg("Setting Graphics Controller Options for VM.");
+    vboxlog_msg("Setting Graphics Controller Options for VM. (Driver: %s, %dMB)", vm_graphics_controller_type.c_str(), (int)vram_size_mb);
     snprintf(buf, sizeof(buf), "%d", (int)vram_size_mb);
 
     command  = "modifyvm \"" + vm_name + "\" ";
@@ -264,11 +323,65 @@ int VBOX_VM::create_vm() {
 
     // Tweak the VM's Network Configuration
     //
+    command  = "showvminfo \"" + vm_name + "\" ";
+    command += "--machinereadable ";
+
+    retval = vbm_popen(command, output, "get default networkadapter type", false, false);
+    if (retval) return retval;
+
+    vm_nictype1.clear();
+    needle = "nictype1=\"";
+
+    if ((vm_nictype1_start = output.find(needle.c_str())) != string::npos) {
+        vm_nictype1_start += needle.size();
+        vm_nictype1_end = output.find("\"", vm_nictype1_start);
+        vm_nictype1 = output.substr(vm_nictype1_start, vm_nictype1_end - vm_nictype1_start);
+    }
+
+    // virtio-net is available since VirtualBox version 3.1.
+    // use it for Linux guests.
+    // see the VirtualBox manual for further details.
+    //
+    if (output.find("effparavirtprovider=\"kvm\"") != string::npos) {
+        vm_nictype1 = "virtio";
+    }
+
+    // if a valid adapter name is set in vbox_job.xml use that one
+    // see the VirtualBox manual for valid names.
+    //
+    if (vm_network_driver.size()) {
+        command = "help modifyvm ";
+
+        retval = vbm_popen(command, output, "verify custom networkadapter name", false, false);
+        if (retval) return retval;
+
+        if (output.find(vm_network_driver.c_str()) != string::npos) {
+            vm_nictype1 = vm_network_driver;
+        } else {
+            vboxlog_msg("Invalid vm_network_driver '%s' detected in 'vbox_job.xml'.", vm_network_driver.c_str());
+            vboxlog_msg("Will use '%s' instead.", vm_nictype1.c_str());
+        }
+    }
+
     if (network_bridged_mode) {
-        vboxlog_msg("Setting Network Configuration for Bridged Mode.");
+        vboxlog_msg("Setting Network Configuration for Bridged Mode. (Driver: %s)", vm_nictype1.c_str());
         command  = "modifyvm \"" + vm_name + "\" ";
         command += "--nic1 bridged ";
-        command += "--cableconnected1 off ";
+        if (is_virtualbox_version_newer(6, 9, 99)) {
+            if (vm_nictype1.size()) {
+                command += "--nic-type1 \"";
+                command += vm_nictype1;
+                command += "\" ";
+            }
+            command += "--cable-connected1 off ";
+        } else {
+            if (vm_nictype1.size()) {
+                command += "--nictype1 \"";
+                command += vm_nictype1;
+                command += "\" ";
+            }
+            command += "--cableconnected1 off ";
+        }
 
         retval = vbm_popen(command, output, "set bridged mode");
         if (retval) return retval;
@@ -284,11 +397,32 @@ int VBOX_VM::create_vm() {
         retval = vbm_popen(command, output, "set bridged interface");
         if (retval) return retval;
     } else {
-        vboxlog_msg("Setting Network Configuration for NAT.");
+        vboxlog_msg("Setting Network Configuration for NAT. (Driver: %s)", vm_nictype1.c_str());
         command  = "modifyvm \"" + vm_name + "\" ";
         command += "--nic1 nat ";
-        command += "--natdnsproxy1 on ";
-        command += "--cableconnected1 off ";
+        if (is_virtualbox_version_newer(6, 9, 99)) {
+            if (vm_nictype1.size()) {
+                command += "--nic-type1 \"";
+                command += vm_nictype1;
+                command += "\" ";
+            }
+            command += "--cable-connected1 off ";
+            command += "--nat-dns-proxy1 on ";
+            if (enable_nat_dns_host_resolver) {
+                command += "--nat-dns-host-resolver1 on ";
+            }
+        } else {
+            if (vm_nictype1.size()) {
+                command += "--nictype1 \"";
+                command += vm_nictype1;
+                command += "\" ";
+            }
+            command += "--cableconnected1 off ";
+            command += "--natdnsproxy1 on ";
+            if (enable_nat_dns_host_resolver) {
+                command += "--natdnshostresolver1 on ";
+            }
+        }
 
         retval = vbm_popen(command, output, "set nat mode");
         if (retval) return retval;
@@ -297,13 +431,21 @@ int VBOX_VM::create_vm() {
     if (enable_network) {
         vboxlog_msg("Enabling VM Network Access.");
         command  = "modifyvm \"" + vm_name + "\" ";
-        command += "--cableconnected1 on ";
+        if (is_virtualbox_version_newer(6, 9, 99)) {
+            command += "--cable-connected1 on ";
+        } else {
+            command += "--cableconnected1 on ";
+        }
         retval = vbm_popen(command, output, "enable network");
         if (retval) return retval;
     } else {
         vboxlog_msg("Disabling VM Network Access.");
         command  = "modifyvm \"" + vm_name + "\" ";
-        command += "--cableconnected1 off ";
+        if (is_virtualbox_version_newer(6, 9, 99)) {
+            command += "--cable-connected1 off ";
+        } else {
+            command += "--cableconnected1 off ";
+        }
         retval = vbm_popen(command, output, "disable network");
         if (retval) return retval;
     }
@@ -375,7 +517,7 @@ int VBOX_VM::create_vm() {
         vboxlog_msg("Hardware acceleration CPU extensions not detected. Disabling VirtualBox hardware acceleration support.");
         disable_acceleration = true;
     }
-    if (strstr(aid.host_info.p_features, "hypervisor")) {
+    if (strstr(aid.host_info.p_features, "hypervisor") && !is_virtualbox_version_newer(7, 1, 99)) {
         vboxlog_msg("Running under Hypervisor. Disabling VirtualBox hardware acceleration support.");
         disable_acceleration = true;
     }
@@ -1042,7 +1184,6 @@ int VBOX_VM::poll(bool log_state) {
     int retval = ERR_EXEC;
     string command;
     string output;
-    string::iterator iter;
     string vmstate;
     static string vmstate_old = "poweredoff";
 
@@ -1050,9 +1191,6 @@ int VBOX_VM::poll(bool log_state) {
     // Is our environment still sane?
     //
 #ifdef _WIN32
-    if (aid.using_sandbox && vboxsvc_pid_handle && !process_exists(vboxsvc_pid_handle)) {
-        vboxlog_msg("Status Report: vboxsvc.exe is no longer running.");
-    }
     if (started_successfully && vm_pid_handle && !process_exists(vm_pid_handle)) {
         vboxlog_msg("Status Report: virtualbox.exe/vboxheadless.exe is no longer running.");
     }
@@ -1168,7 +1306,6 @@ int VBOX_VM::poll2(bool log_state) {
     int retval = ERR_EXEC;
     string command;
     string output;
-    string::iterator iter;
     string vmstate;
     static string vmstate_old = "poweroff";
     size_t vmstate_start;
@@ -1177,9 +1314,6 @@ int VBOX_VM::poll2(bool log_state) {
     // Is our environment still sane?
     //
 #ifdef _WIN32
-    if (aid.using_sandbox && vboxsvc_pid_handle && !process_exists(vboxsvc_pid_handle)) {
-        vboxlog_msg("Status Report: vboxsvc.exe is no longer running.");
-    }
     if (started_successfully && vm_pid_handle && !process_exists(vm_pid_handle)) {
         vboxlog_msg("Status Report: virtualbox.exe/vboxheadless.exe is no longer running.");
     }
@@ -2049,7 +2183,6 @@ int VBOX_VM::get_vm_network_bytes_received(double& received) {
 
 int VBOX_VM::get_vm_process_id() {
     string virtualbox_vm_log;
-    string::iterator iter;
     int retval = BOINC_SUCCESS;
     string line;
     string comp = "Process ID: ";

@@ -129,7 +129,10 @@ function do_inbox($logged_in_user) {
             if (!$msg->opened) {
                 $msg->update("opened=1");
             }
-            echo "<td valign=top> $checkbox $msg->subject </td>\n";
+            echo sprintf("<td valign=top>%s %s </td>\n",
+                $checkbox,
+                htmlspecialchars($msg->subject)
+            );
             echo "<td valign=top>".user_links($sender, BADGE_HEIGHT_SMALL);
             show_block_link($msg->senderid);
             echo "<br>".time_str($msg->date)."</td>\n";
@@ -155,38 +158,8 @@ function do_inbox($logged_in_user) {
     page_tail();
 }
 
-// the following isn't currently used - we never show single messages
+// form to send a personal message
 //
-function do_read($logged_in_user) {
-    $id = get_int("id");
-    $message = BoincPrivateMessage::lookup_id($id);
-    if (!$message || $message->userid != $logged_in_user->id) {
-        error_page(tra("no such message"));
-    }
-    page_head(tra("Private messages")." : ".$message->subject);
-    pm_header();
-
-    $sender = BoincUser::lookup_id($message->senderid);
-
-    start_table();
-    echo "<tr><th>".tra("Subject")."</th><td>".$message->subject."</td></tr>";
-    echo "<tr><th>".tra("Sender")."</th><td>".user_links($sender, BADGE_HEIGHT_SMALL);
-    show_block_link($message->senderid);
-    echo "</td></tr>";
-    echo "<tr><th>".tra("Date")."</th><td>".time_str($message->date)."</td></tr>";
-    echo "<tr><th>".tra("Message")."</th><td>".output_transform($message->content, $options)."</td></tr>";
-    echo "<tr><td></td><td>\n";
-    echo "<a href=\"pm.php?action=new&amp;replyto=$id\">".tra("Reply")."</a>\n";
-    echo " &middot; <a href=\"pm.php?action=delete&amp;id=$id\">".tra("Delete")."</a>\n";
-    echo " &middot; <a href=\"pm.php?action=inbox\">".tra("Inbox")."</a>\n";
-    end_table();
-
-    if ($message->opened == 0) {
-        $message->update("opened=1");
-    }
-    page_tail();
-}
-
 function do_new($logged_in_user) {
     global $replyto, $userid;
     check_banished($logged_in_user);
@@ -419,8 +392,6 @@ if (!$action) {
 
 if ($action == "inbox") {
     do_inbox($logged_in_user);
-} elseif ($action == "read") {
-    do_read($logged_in_user);
 } elseif ($action == "new") {
     if (!$teamid) $teamid = post_int("teamid", true);
     if ($teamid) {

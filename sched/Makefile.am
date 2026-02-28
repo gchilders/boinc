@@ -108,6 +108,7 @@ schedshare_PROGRAMS = \
     db_dump \
     db_purge \
     feeder \
+    feeder_user \
     file_deleter \
     message_handler \
     sample_assimilator \
@@ -155,6 +156,7 @@ EXTRA_DIST = \
     start
 
 cgi_sources = \
+    buda.cpp \
 	credit.cpp \
     edf_sim.cpp \
     handle_request.cpp \
@@ -166,6 +168,7 @@ cgi_sources = \
     sched_check.cpp \
     sched_customize.cpp \
     sched_files.cpp \
+    sched_host.cpp \
     sched_hr.cpp \
     sched_keyword.cpp \
     sched_limit.cpp \
@@ -201,6 +204,11 @@ feeder_SOURCES = \
     hr_info.cpp \
     ../lib/synch.cpp
 feeder_LDADD = $(SERVERLIBS)
+
+feeder_user_SOURCES = \
+    feeder_user.cpp \
+    ../lib/synch.cpp
+feeder_user_LDADD = $(SERVERLIBS)
 
 wu_check_SOURCES = wu_check.cpp
 wu_check_LDADD = $(SERVERLIBS)

@@ -43,6 +43,7 @@ class DbConn {
         }
         global $mysqli;
         $mysqli = $this->db_conn;
+        $mysqli->set_charset("utf8mb4");
         if (!$this->db_conn) {
             return false;
         }
@@ -146,8 +147,9 @@ class DbConn {
         $query = "update DBNAME.$table set $clause where id=$obj->id";
         return $this->do_query($query);
     }
-    function update_aux($table, $clause) {
-        $query = "update DBNAME.$table set $clause";
+    function update_aux($table, $clause, $where='') {
+        if ($where) $where = " where $where";
+        $query = "update DBNAME.$table set $clause $where";
         return $this->do_query($query);
     }
     function insert($table, $clause) {

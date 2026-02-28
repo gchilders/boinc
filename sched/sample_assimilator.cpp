@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2015 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -17,10 +17,9 @@
 
 // A sample assimilator that:
 // 1) if success, copy the output file(s) to a directory
-//      ../results/batchid
-//      If 1 output file, its name is the WU name
-//      If >1 files, file i is named <wuname>_i
-// 2) if failure, write a message to <wuname>_error
+//      ../results/<batchid>/<wu_name>__file_<log_name>
+//      where <log_name> is the file's logical name
+// 2) if failure, write a message to result/<batch_id>/<wuname>_error
 
 // Note: daemons like this run in project/tmp_<host>
 
@@ -74,7 +73,6 @@ int assimilate_handler(
 ) {
     int retval;
     char buf[1024];
-    unsigned int i;
 
     retval = boinc_mkdir(outdir);
     if (retval) return retval;
@@ -85,14 +83,12 @@ int assimilate_handler(
     if (wu.canonical_resultid) {
         vector<OUTPUT_FILE_INFO> output_files;
         get_output_file_infos(canonical_result, output_files);
-        unsigned int n = output_files.size();
         bool file_copied = false;
-        for (i=0; i<n; i++) {
-            OUTPUT_FILE_INFO& fi = output_files[i];
+        for (const OUTPUT_FILE_INFO& fi: output_files) {
             sprintf(buf, "%s/%d/%s__file_%s",
                 outdir, wu.batch, wu.name, fi.logical_name.c_str()
             );
-            retval = boinc_copy(fi.path.c_str() , buf);
+            retval = boinc_rename(fi.path.c_str() , buf);
             if (!retval) {
                 file_copied = true;
             }
