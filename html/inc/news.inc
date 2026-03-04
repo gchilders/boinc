@@ -38,7 +38,7 @@ function news_item($date, $title, $post) {
     ";
     if ($forum_link && !DISABLE_FORUMS) {
         echo "
-            &middot; <a href=\"".url_base()."forum_thread.php?id=$post->thread\"> ".tra("Discuss")."</a>
+            &middot; <a href=\"".url_base()."forum_thread.php?id=$post->thread\" aria-label=\"".tra("Discuss")." $title\"> ".tra("Discuss")."</a>
         ";
     }
     echo "</span>
