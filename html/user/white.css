@@ -6,7 +6,7 @@ th.bg-primary a:active {
 }
 
 a, a:link, a:visited, a:active {
-	color: #0069A1; 
+	color: #005a8a; 
 }
 
 body {
@@ -112,7 +112,7 @@ input.btn:hover,
 .btn:hover ,
 .forum_toplinks a:hover {
 	border: 1px solid #555;
-	color: #0069A1;
+	color: #005a8a;
 }
 
 a.btn-green {
@@ -128,7 +128,7 @@ input[type="text"], input[type="password"], select, textarea {
 }
 
 input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:focus {
-	border-color: #0069A1;
+	border-color: #005a8a;
 }
 
 #news {
@@ -137,11 +137,11 @@ input[type="text"]:focus, input[type="password"]:focus, select:focus, textarea:f
 }
 
 #news h3 {
-	color: #666;
+	color: #444;
 }
 
 #uotd {
-	background-color: #d3d3d3;
+	background-color: #dddddd;
 	border-color: #eee;
 }
 
@@ -151,7 +151,7 @@ td.news {
 }
 
 td.uotd {
-	background-color: #d3d3d3;
+	background-color: #dddddd;
 	border-color: #eee;
 }
 
@@ -197,7 +197,7 @@ blockquote.postbody {
 }
 
 span.news_date {
-    color: rgb(100,100,100);
+    color: #444;
     font-size: 0.9em;
     float: right;
 }
@@ -211,11 +211,11 @@ span.highlight {
 }
 
 p.text-danger, .error {
-	color: #f00;
+	color: #b00020;
 }
 
 .notice {
-	color: #090;
+	color: #0b5d1e;
 }
 
 div.pm_preview {
