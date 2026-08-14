@@ -52,7 +52,6 @@ const char file_osrelease[] = "/etc/os-release";
 const char file_redhatrelease[] = "/etc/redhat-release";
 
 extern const char* docker_cli_prog(DOCKER_TYPE type);
-extern const char* docker_type_str(DOCKER_TYPE type);
 
 // if you add fields, update clear_host_info()
 
@@ -88,6 +87,9 @@ public:
 #ifdef _WIN32
     // on Windows, Docker info is per WSL_DISTRO, not global
     WSL_DISTROS wsl_distros;
+    int get_os_information();
+    int major_version;
+    int build_number;
 #else
     char docker_version[256]; // null if not present
     DOCKER_TYPE docker_type;
@@ -126,7 +128,8 @@ public:
 
     bool host_is_running_on_batteries();
     long user_idle_time(bool check_all_logins);
-        // seconds since last user interaction
+        // seconds since last user interaction,
+        // or a large number (USER_IDLE_TIME_INF) if we have no info
     int get_host_info(bool init);
     int get_cpu_info();
     int get_cpu_count();
@@ -219,5 +222,19 @@ extern NXEventHandle gEventHandle;
 // is the filesystem remote? (Linux only)
 //
 extern int is_filesystem_remote(const char* path, bool&);
+
+// user-visible name
+//
+inline const char* docker_type_str(DOCKER_TYPE t) {
+    switch (t) {
+    case DOCKER:
+        return "Docker";
+    case PODMAN:
+        return "Podman";
+    case NONE:
+        break;
+    }
+    return "Unknown";
+}
 
 #endif

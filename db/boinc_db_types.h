@@ -348,7 +348,10 @@ struct HOST {
     char venue[256];        // home/work/school
     int nresults_today;     // results sent since midnight
     double avg_turnaround;  // recent average result turnaround time
-    char host_cpid[256];    // host cross-project ID
+    char host_cpid[256];    // external host cross-project ID
+        // the client generates an 'internal' host CPID;
+        // the server hashes this with email addr to avoid spoofing
+        // See https://github.com/BOINC/boinc/wiki/Host-identification
     char external_ip_addr[256]; // IP address seen by scheduler
     int _max_results_day;
         // MRD is dynamically adjusted to limit work sent to bad hosts.
@@ -405,6 +408,10 @@ struct HOST {
     bool get_opencl_cpu_prop(const char* platform, OPENCL_CPU_PROP&);
     inline bool low_turnaround() {
         return _error_rate > 0;
+    }
+    // for scheduler: see if client is Win
+    inline bool is_windows() {
+        return strcasestr(os_name, "windows") != NULL;
     }
 };
 

@@ -17,6 +17,8 @@
 
 // GUI RPC server side (the actual RPCs)
 
+//#define PRINT_TIME      // write RPC times to stdout
+
 #include "cpp.h"
 
 #ifdef __APPLE__
@@ -1862,13 +1864,24 @@ GUI_RPC gui_rpcs[] = {
 static int handle_rpc_aux(GUI_RPC_CONN& grc) {
     int retval = 0;
     grc.mfin.init_buf_read(grc.request_msg);
-    if (grc.xp.get_tag()) {    // parse <boinc_gui_rpc_request>
+
+    // parse <boinc_gui_rpc_request>
+    //
+    if (grc.xp.get_tag()) {
         grc.mfout.printf("<error>missing boinc_gui_rpc_request tag</error>\n");
         return 0;
     }
-    if (grc.xp.get_tag()) {    // parse the request tag
+    // parse the request tag
+    //
+    if (grc.xp.get_tag()) {
         grc.mfout.printf("<error>missing request</error>\n");
         return 0;
+    }
+    if (log_flags.gui_rpc_debug) {
+        msg_printf(0, MSG_INFO,
+            "[gui_rpc] got request %s on socket %d",
+            grc.xp.parsed_tag, grc.sock
+        );
     }
     for (unsigned int i=0; i<sizeof(gui_rpcs)/sizeof(GUI_RPC); i++) {
         GUI_RPC& gr = gui_rpcs[i];
@@ -1886,7 +1899,14 @@ static int handle_rpc_aux(GUI_RPC_CONN& grc) {
         if (gr.enable_network)  {
             gstate.gui_rpcs.time_of_last_rpc_needing_network = gstate.now;
         }
+#ifdef PRINT_TIME
+        double start = dtime();
+#endif
         (*gr.handler)(grc);
+#ifdef PRINT_TIME
+        int diff = (dtime()-start)*1000000;
+        printf("%s : %d microseconds \n", gr.req_tag, diff);
+#endif
         return 0;
     }
     grc.mfout.printf("<error>unrecognized op: %s</error>\n", grc.xp.parsed_tag);
@@ -1898,13 +1918,19 @@ static int handle_rpc_aux(GUI_RPC_CONN& grc) {
 static bool is_http_post_request(char* buf) {
     if (strstr(buf, "POST") != buf) return false;
     char* p = strstr(buf, "Content-Length: ");
-    if (!p) return false;
+    if (!p) {
+        return false;
+    }
     p += strlen("Content-Length: ");
     int n = atoi(p);
     p = strstr(p, HTTP_HEADER_DELIM);
-    if (!p) return false;
+    if (!p) {
+        return false;
+    }
     p += 4;
-    if ((int)strlen(p) < n) return false;
+    if ((int)strlen(p) < n) {
+        return false;
+    }
     return true;
 }
 
@@ -2015,9 +2041,9 @@ int GUI_RPC_CONN::handle_rpc() {
     }
     request_msg[request_nbytes] = 0;
 
-    if (log_flags.gui_rpc_debug) {
+    if (log_flags.gui_rpc_msg_debug) {
         msg_printf(0, MSG_INFO,
-            "[gui_rpc] GUI RPC Command = '%s'\n", request_msg
+            "[gui_rpc] GUI RPC request = '%s'\n", request_msg
         );
     }
 
@@ -2061,7 +2087,7 @@ int GUI_RPC_CONN::handle_rpc() {
             *p = 0;
             http_request = false;
         } else {
-            if (log_flags.gui_rpc_debug) {
+            if (log_flags.gui_rpc_msg_debug) {
                 msg_printf(0, MSG_INFO,
                     "[gui_rpc] partial GUI RPC Command = '%s'\n", request_msg
                 );
@@ -2129,11 +2155,13 @@ int GUI_RPC_CONN::handle_rpc() {
     }
     if (p) {
         send(sock, p, n, 0);
-        if (log_flags.gui_rpc_debug) {
+        if (log_flags.gui_rpc_msg_debug) {
             if (!http_request) {
-                p[n-1]=0;   // replace 003 with NULL
+                p[n-1] = 0;   // replace 003 with NULL
             }
-            if (n > 128) p[128] = 0;
+            if (n > 128) {
+                p[128] = 0;
+            }
             msg_printf(0, MSG_INFO,
                 "[gui_rpc] GUI RPC reply: '%s'\n", p
             );

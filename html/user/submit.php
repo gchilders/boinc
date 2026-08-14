@@ -419,7 +419,7 @@ function handle_show_user_batches($user) {
 }
 
 function handle_update_only_own($user) {
-    if (!parse_bool(get_config(), 'enable_assignment')) {
+    if (!project_config_bool('enable_assignment')) {
         error_page(
             'Job assignment is not enabled in the project config file.
             Please ask the project admins to enable it.'
@@ -667,7 +667,7 @@ function handle_query_batch($user) {
     }
     $app = BoincApp::lookup_id($batch->app_id);
     $wus = BoincWorkunit::enum_fields(
-        'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask',
+        'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask, priority',
         "batch = $batch->id"
     );
     $batch = get_batch_params($batch, $wus);
@@ -677,7 +677,7 @@ function handle_query_batch($user) {
         $owner = BoincUser::lookup_id($batch->user_id);
     }
 
-    $is_assim_move = is_assim_move($app);
+    $is_batch_collect = is_batch_collect($app);
 
     page_head("Batch $batch_id");
     text_start(800);
@@ -708,7 +708,7 @@ function handle_query_batch($user) {
     }
     row2("GFLOP/hours, estimated", number_format(credit_to_gflop_hours($batch->credit_estimate), 2));
     row2("GFLOP/hours, actual", number_format(credit_to_gflop_hours($batch->credit_canonical), 2));
-    if (!$is_assim_move) {
+    if (!$is_batch_collect) {
         row2("Total size of output files",
             size_string(batch_output_file_size($batch->id))
         );
@@ -716,7 +716,7 @@ function handle_query_batch($user) {
     end_table();
 
     echo "<p>";
-    if ($is_assim_move) {
+    if ($is_batch_collect) {
         //if (is_batch_gzipped($wus)) {
         if (true) {
             $url = "get_output3.php?action=get_batch_tar&batch_id=$batch->id";
@@ -786,7 +786,8 @@ function handle_query_batch($user) {
     $x = [
         "Name <br><small>click for details</small>",
         "status",
-        "GFLOPS-hours"
+        "GFLOPS-hours",
+        "Priority"
     ];
     row_heading_array($x);
     foreach($wus as $wu) {
@@ -814,7 +815,8 @@ function handle_query_batch($user) {
         $x = [
             "<a href=submit.php?action=query_job&wuid=$wu->id>$wu->name</a>",
             $y,
-            $c
+            $c,
+            $wu->priority
         ];
         row_array($x);
     }
@@ -824,16 +826,15 @@ function handle_query_batch($user) {
     page_tail();
 }
 
-// Does the assimilator for the given app move output files
-// to a results/<batchid>/ directory?
+// Does the app use the batch-collect paradigm?
 // This info is stored in the $remote_apps data structure in project.inc
 //
-function is_assim_move($app) {
+function is_batch_collect($app) {
     global $remote_apps;
     foreach ($remote_apps as $category => $apps) {
         foreach ($apps as $web_app) {
             if ($web_app->app_name == $app->name) {
-                return $web_app->is_assim_move;
+                return $web_app->batch_collect;
             }
         }
     }
@@ -848,7 +849,7 @@ function handle_query_job($user) {
     if (!$wu) error_page("no such job");
 
     $app = BoincApp::lookup_id($wu->appid);
-    $is_assim_move = is_assim_move($app);
+    $is_batch_collect = is_batch_collect($app);
 
     page_head("Job '$wu->name'");
 
@@ -875,8 +876,8 @@ function handle_query_job($user) {
         "Output files"
     );
     $results = BoincResult::enum("workunitid=$wuid");
-    $upload_dir = parse_config(get_config(), "<upload_dir>");
-    $fanout = parse_config(get_config(), "<uldl_dir_fanout>");
+    $upload_dir = project_config_val("upload_dir");
+    $fanout = project_config_val("uldl_dir_fanout");
     foreach ($results as $result) {
         $x = [
             "<a href=result.php?resultid=$result->id>$result->id</a>",
@@ -886,13 +887,15 @@ function handle_query_job($user) {
             $result->priority
         ];
         $files = [];
-        if ($is_assim_move) {
+        if ($is_batch_collect) {
             if ($result->id == $wu->canonical_resultid) {
                 [$log_names, $gzip] = get_outfile_log_names($result);
                 $nfiles = count($log_names);
                 for ($i=0; $i<$nfiles; $i++) {
                     $name = $log_names[$i];
-                    $path = assim_move_outfile_path($wu, $i, $log_names, $gzip);
+                    $path = batch_collect_outfile_path(
+                        $wu, $i, $log_names, $gzip
+                    );
                     if (file_exists($path)) {
                         $y = sprintf('%s (%s): ',
                             $name, size_string(filesize($path))
@@ -1037,6 +1040,7 @@ function handle_retire_batch($user) {
     } else {
         page_head("Confirm retire batch");
         echo "
+            <p>
             Retiring a batch will remove all of its output files.
             Are you sure you want to do this?
             <p>

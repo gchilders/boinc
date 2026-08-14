@@ -100,19 +100,12 @@ function show_profile_link_ops($user) {
 // command line instead of config.xml
 //
 function db_init_cli() {
-    $config = get_config();
-    $db_name = parse_config($config, "<db_name>");
-    $host = parse_config($config, "<db_host>");
-    if ($host == null) {
-        $host = "localhost";
-    }
-    $in = fopen("php://stdin","r");
-    print "Database username (default: owner of mysqld process): ";
-    $user = rtrim(fgets($in, 80));
-    print "Database password (if any): ";
-    $pass = rtrim(fgets($in, 80));
-
-    $retval = _mysql_connect($host, $user, $pass, $db_name);
+    $db_name = project_config_val("db_name");
+    $db_host = project_config_val("db_host");
+    $db_user = project_config_val("db_user");
+    $db_pass = project_config_val("db_passwd");
+    $retval = _mysql_connect(
+    $db_host, $db_user, $db_pass, $db_name);
     if (!$retval) {
         die("Can't connect to DB\n");
     }

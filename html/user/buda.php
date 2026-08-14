@@ -206,7 +206,7 @@ function variant_form($user) {
     ";
     $sb = '<br><small>From your <a href=sandbox.php>file sandbox</a></small>';
     $pc = '<br><small>Specify
-    <a href=https://github.com/BOINC/boinc/wiki/AppPlan>GPU and other host requirements</a>.<br>Leave blank if none.</small>';
+    <a href=https://github.com/BOINC/boinc/wiki/Plan-classes>GPU and other host requirements</a>.<br>Leave blank if none.</small>';
     form_start('buda.php');
     form_input_hidden('app', $app);
     form_input_hidden('action', 'variant_action');
@@ -314,9 +314,9 @@ function create_templates($app, $desc, $dir) {
 function file_xml_elements($log_name, $phys_name, $md5, $nbytes) {
     static $download_dir, $download_url, $fanout;
     if ($download_dir == null) {
-        $download_dir = parse_element(get_config(), "<download_dir>");
-        $download_url = parse_element(get_config(), "<download_url>");
-        $fanout = (int)(parse_element(get_config(), "<uldl_dir_fanout>"));
+        $download_dir = project_config_val("download_dir");
+        $download_url = project_config_val("download_url");
+        $fanout = (int)(project_config_val("uldl_dir_fanout"));
     }
     $file_info = sprintf(
 "<file_info>
@@ -462,7 +462,13 @@ function variant_delete() {
             unlink($phys_path);
             unlink("$phys_path.md5");
         }
-        system("rm -r $buda_root/$app/$variant", $ret);
+        system(
+            sprintf(
+                'rm -r %s',
+                escapeshellarg("$buda_root/$app/$variant")
+            ),
+            $ret
+        );
         if ($ret) {
             error_page("delete failed");
         }
@@ -491,8 +497,13 @@ function app_delete() {
         if ($vars) {
             error_page("You must delete all variants first.");
         }
-        system("rm $buda_root/$app/desc.json", $ret);
-        system("rmdir $buda_root/$app", $ret);
+        system(
+            sprintf(
+                'rm -r %s',
+                escapeshellarg("$buda_root/$app")
+            ),
+            $ret
+        );
         if ($ret) {
             error_page('delete failed');
         }
@@ -537,7 +548,12 @@ function app_form($desc=null) {
         implode(' ', $desc->input_file_names)
     );
     form_input_text(
-        'Output file names<br><small>Space-separated</small>',
+        'Output file names<br><small>
+            Space-separated.
+            <br>The app must generate all of these.
+            They are uploaded to the server.
+            Do not include checkpoint or temp files.
+        </small>',
         'output_file_names',
         implode(' ', $desc->output_file_names)
     );

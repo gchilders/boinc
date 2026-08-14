@@ -37,11 +37,11 @@ function log_write($x) {
 
     if (!isset($enabled)) {
         $enabled = false;
-        $filename = parse_config(get_config(), "<remote_submit_log>");
+        $filename = project_config_val("remote_submit_log");
         if (!$filename) {
             return;
         }
-        $log_dir = parse_config(get_config(), "<log_dir>");
+        $log_dir = project_config_val("log_dir");
         if (!$log_dir) {
             return;
         }
@@ -285,6 +285,11 @@ function get_outfile_phys_names($result) {
     return $names;
 }
 
+// return two corresponding lists:
+// - logical names of output files
+// - whether files are gzipped (they may not have .gz extension)
+// TODO: return a list of pairs
+//
 function get_outfile_log_names($result) {
     $xml = "<a>".$result->xml_doc_in."</a>";
     $r = simplexml_load_string($xml);
@@ -302,11 +307,11 @@ function get_outfile_log_names($result) {
     return [$names, $gzip];
 }
 
-// get output file paths for non-assim-move apps
+// get output file paths for batch-static apps
 //
 function get_outfile_paths($result) {
-    $fanout = parse_config(get_config(), "<uldl_dir_fanout>");
-    $upload_dir = parse_config(get_config(), "<upload_dir>");
+    $fanout = project_config_val("uldl_dir_fanout");
+    $upload_dir = project_config_val("upload_dir");
 
     $paths = array();
     $xml = "<a>".$result->xml_doc_out."</a>";
@@ -319,15 +324,19 @@ function get_outfile_paths($result) {
     return $paths;
 }
 
-// the path of an output file in the 'assim move' scheme.
+// Return the path of an output file in the 'batch-collect' paradigm.
 // This must agree with the corresponding assimilators:
-// tools/sample_assimilate.py
-// sched/sample_assimilator.cpp
+// tools/batch_collect_assimilate.py
+// sched/batch_collect_assimilator.cpp
 // and with tools/query_job
 //
-function assim_move_outfile_path($wu, $index, $log_names, $gzip) {
-    if (!is_valid_filename($wu->name)) error_page("bad WU name");
-    if (!is_valid_filename($log_names[$index])) error_page("bad logical name");
+function batch_collect_outfile_path($wu, $index, $log_names, $gzip) {
+    if (!is_valid_filename($wu->name)) {
+        error_page("bad WU name");
+    }
+    if (!is_valid_filename($log_names[$index])) {
+        error_page("bad logical name");
+    }
     return sprintf('../../results/%d/%s__file_%s%s',
         $wu->batch, $wu->name, $log_names[$index],
         $gzip[$index]?'.gz':''
@@ -384,19 +393,19 @@ function abort_batch($batch) {
 }
 
 // retire a batch:
-// - mark the batch as retired (don't delete it; might be useful later)
+// - mark the batch as retired (don't delete it)
 // - delete output files (results/batchid/)
 // - mark unsent WUs as cancelled
 //
 // Don't delete the batch; it may have in-progress jobs that
-// we still need to file-delete and purge,
+// we'll need to file-delete and purge,
 // and the batch needs to be present for this.
 // Use ops/delete_batches.php to delete retired batches with no WUs
 //
 function retire_batch($batch) {
     system("rm -rf ../../results/$batch->id");
 
-    // get list of unsent WUs in this batch
+    // we need to call get_batch_params() to set WU.status
     //
     $wus = BoincWorkunit::enum_fields(
         'id, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask',
@@ -405,6 +414,9 @@ function retire_batch($batch) {
     get_batch_params($batch, $wus);
     $batch->update("state=".BATCH_STATE_RETIRED);
         // do this AFTER get_batch_params()
+
+    // get list of unsent WUs in this batch
+    //
     $wu_ids = [];
     foreach ($wus as $wu) {
         if ($wu->status == WU_UNSENT) {
@@ -424,10 +436,12 @@ function retire_batch($batch) {
     }
 }
 
+// batches can have 'expiration times' when they automatically get retired
+// if you run html/ops/expire_batches
+//
 function expire_batch($batch) {
     abort_batch($batch);
     retire_batch($batch);
-    $batch->update("state=".BATCH_STATE_EXPIRED);
 }
 
 function batch_state_string($state) {
@@ -440,7 +454,7 @@ function batch_state_string($state) {
     }
     return "unknown state $state";
 }
-// get the total size of output files of a batch for non-assim-move apps
+// get the total size of output files of a batch for batch-static apps
 // (i.e. files are in the upload hier)
 //
 function batch_output_file_size($batchid) {
@@ -449,8 +463,8 @@ function batch_output_file_size($batchid) {
         'canonical_resultid',
         "batch=$batchid"
     );
-    $fanout = parse_config(get_config(), "<uldl_dir_fanout>");
-    $upload_dir = parse_config(get_config(), "<upload_dir>");
+    $fanout = project_config_val("uldl_dir_fanout");
+    $upload_dir = project_config_val("upload_dir");
     foreach ($wus as $wu) {
         if (!$wu->canonical_resultid) continue;
         $result = BoincResult::lookup_id($wu->canonical_resultid);
