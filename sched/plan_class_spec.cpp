@@ -726,6 +726,17 @@ bool PLAN_CLASS_SPEC::check(
             }
         }
 
+        if (min_amd_simd_width
+            && (int)cp.opencl_prop.amd_simd_width < min_amd_simd_width
+        ) {
+            if (config.debug_version_select) {
+                log_messages.printf(MSG_NORMAL,
+                    "[version] plan_class_spec: AMD SIMD width less than minimum (%u < %d)\n",
+                    cp.opencl_prop.amd_simd_width, min_amd_simd_width
+                );
+            }
+            return false;
+        }
         if (min_cal_target && cp.attribs.target < min_cal_target) {
             if (config.debug_version_select) {
                 log_messages.printf(MSG_NORMAL,
@@ -1313,6 +1324,7 @@ int PLAN_CLASS_SPEC::parse(XML_PARSER& xp) {
         if (xp.parse_bool("need_ati_libs", need_ati_libs)) continue;
         if (xp.parse_bool("need_amd_libs", need_amd_libs)) continue;
         if (xp.parse_bool("without_opencl", without_opencl)) continue;
+        if (xp.parse_int("min_amd_simd_width", min_amd_simd_width)) continue;
         if (xp.parse_int("min_cal_target", min_cal_target)) continue;
         if (xp.parse_int("max_cal_target", max_cal_target)) continue;
 
@@ -1433,6 +1445,7 @@ PLAN_CLASS_SPEC::PLAN_CLASS_SPEC() {
 
     need_ati_libs = false;
     need_amd_libs = false;
+    min_amd_simd_width = 0;
     min_cal_target = 0;
     max_cal_target = 0;
     without_opencl = false;
