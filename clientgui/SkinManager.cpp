@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2023 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -14,10 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
-
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "SkinManager.h"
-#endif
 
 #include "stdwx.h"
 #include "diagnostics.h"
@@ -1022,7 +1018,7 @@ int CSkinManager::Parse(MIOFILE& in, wxString strDesiredLocale) {
     strLocaleEndTag.Printf(wxT("</%s>"), strDesiredLocale.c_str());
 
     // TODO: Eliminate the <en> tags: localization is no longer in skin files.
-    // Look for the begining of the desired locale.
+    // Look for the beginning of the desired locale.
     while (in.fgets(buf, 256)) {
         if (match_tag(buf, (const char*)strLocaleStartTag.mb_str(wxConvUTF8))) {
             bLocaleFound = true;

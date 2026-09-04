@@ -1,6 +1,6 @@
 // This file is part of BOINC.
-// http://boinc.berkeley.edu
-// Copyright (C) 2022 University of California
+// https://boinc.berkeley.edu
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -15,9 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "AsyncRPC.h"
-#endif
+#include "stdwx.h"
 
 #ifdef _WIN32
 #include "boinc_win.h"
@@ -28,7 +26,6 @@
 #include <xlocale.h>
 #endif
 
-#include "stdwx.h"
 #include "BOINCGUIApp.h"
 #include "MainDocument.h"
 #include "AsyncRPC.h"
@@ -599,7 +596,7 @@ int CMainDocument::RequestRPC(ASYNC_RPC_REQUEST& request, bool hasPriority) {
                 // we are in this loop, to prevent undesirable recursion.
                 // Since the manager is minimized, we don't have to worry about
                 // discarding crucial drawing or command events.
-                // The filter does allow the the Open Manager menu item from
+                // The filter does allow the Open Manager menu item from
                 // the system tray icon and wxEVT_RPC_FINISHED event.
                 //
                 timeToSleep = DELAY_WHEN_MINIMIZED; // Allow user to maximize Manager
@@ -982,13 +979,11 @@ void CMainDocument::HandleCompletedRPC() {
 
     if (m_bNeedTaskBarRefresh && !m_bWaitingForRPC) {
         m_bNeedTaskBarRefresh = false;
-#ifndef __WXGTK__
         CTaskBarIcon* pTaskbar = wxGetApp().GetTaskBarIcon();
         if (pTaskbar) {
             CTaskbarEvent event(wxEVT_TASKBAR_REFRESH, pTaskbar);
             pTaskbar->ProcessEvent(event);
         }
-#endif
     }
 
     if (current_rpc_request.rpcType == RPC_TYPE_ASYNC_WITH_REFRESH_EVENT_LOG_AFTER) {

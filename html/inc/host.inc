@@ -285,16 +285,18 @@ function docker_desc($misc) {
         htmlspecialchars($d->version)
     );
     if (isset($d->wsl_distro)) {
-        if (empty($d->boinc_buda_runner_version)) {
+        // Science United at point had a bug; work around it
+        $d2 = is_object($d->wsl_distro) ? $d->wsl_distro : $d;
+        if (empty($d2->boinc_buda_runner_version)) {
             $x .= sprintf(
                 '<br>WSL distro: %s',
-                htmlspecialchars($d->wsl_distro)
+                htmlspecialchars($d2->wsl_distro)
             );
         } else {
             $x .= sprintf(
                 '<br>WSL distro: %s ver %d',
-                htmlspecialchars($d->wsl_distro),
-                $d->boinc_buda_runner_version
+                htmlspecialchars($d2->wsl_distro),
+                $d2->boinc_buda_runner_version
             );
         }
     }
@@ -328,8 +330,8 @@ function gpu_desc($misc) {
         }
         if (!empty($g->opencl_version)) {
             $x .= sprintf('; OpenCL: %d.%d',
-                $g->opencl_version/100,
-                $g->opencl_version%100
+                intval($g->opencl_version)/100,
+                intval($g->opencl_version)%100
             );
         }
         $gpus[] = $x;

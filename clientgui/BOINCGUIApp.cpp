@@ -15,9 +15,7 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "BOINCGUIApp.h"
-#endif
+#include "stdwx.h"
 
 #ifdef __WXMAC__
 #include <Carbon/Carbon.h>
@@ -29,7 +27,6 @@
 #include "mac_branding.h"
 #endif
 
-#include "stdwx.h"
 #include "diagnostics.h"
 #include "network.h"
 #include "util.h"
@@ -567,7 +564,6 @@ bool CBOINCGUIApp::OnInit() {
         }
     }
 
-#ifndef __WXGTK__
     // Initialize the task bar icon
 	m_pTaskBarIcon = new CTaskBarIcon(
         m_pSkinManager->GetAdvanced()->GetApplicationIcon(),
@@ -578,7 +574,6 @@ bool CBOINCGUIApp::OnInit() {
 #endif
     );
     wxASSERT(m_pTaskBarIcon);
-#endif // __WXGTK__
 #ifdef __WXMAC__
     m_pMacDockIcon = new CTaskBarIcon(
         m_pSkinManager->GetAdvanced()->GetApplicationIcon(),
@@ -650,7 +645,7 @@ int CBOINCGUIApp::OnExit() {
     }
     m_pMacDockIcon = NULL;
 #endif
-#ifndef __WXGTK__
+#ifdef __WXMAC__
     if (m_pTaskBarIcon) {
         delete m_pTaskBarIcon;
     }
@@ -868,11 +863,7 @@ bool CBOINCGUIApp::DetectDuplicateInstance() {
     m_pInstanceChecker = new wxSingleInstanceChecker();
 #endif
     if (m_pInstanceChecker->IsAnotherRunning()) {
-        if (m_bMultipleInstancesOK) return false;
-#ifdef __WXMSW__
-        CTaskBarIcon::FireAppRestore();
-#endif
-        return true;
+        return !m_bMultipleInstancesOK;
     }
     return false;
 }
@@ -896,8 +887,8 @@ void CBOINCGUIApp::DetectExecutableName() {
     // Store the root directory for later use.
     m_strBOINCMGRExecutableName = pszProg;
 #elif defined(__WXGTK__)
-    char path[PATH_MAX];
-    if (!get_real_executable_path(path, PATH_MAX)) {
+    char path[MAXPATHLEN];
+    if (!get_real_executable_path(path, MAXPATHLEN)) {
         // find filename component
         char* name = strrchr(path, '/');
         if (name) {
@@ -927,8 +918,8 @@ void CBOINCGUIApp::DetectRootDirectory() {
     // Store the root directory for later use.
     m_strBOINCMGRRootDirectory = szPath;
 #elif defined(__WXGTK__)
-    char path[PATH_MAX];
-    if (!get_real_executable_path(path, PATH_MAX)) {
+    char path[MAXPATHLEN];
+    if (!get_real_executable_path(path, MAXPATHLEN)) {
         // find path component
         char* name = strrchr(path, '/');
         if (name) {
@@ -1165,7 +1156,7 @@ void CBOINCGUIApp::OnActivateApp(wxActivateEvent& event) {
     {
 #ifdef __WXMAC__
         // When our LaunchAgent / login item launches us at login, it activates
-        // this app, but we want it hidden. So we immediatly hide it upon the
+        // this app, but we want it hidden. So we immediately hide it upon the
         // first activation when run as a login item.
         static bool first = true;
 
@@ -1493,7 +1484,7 @@ int CBOINCGUIApp::ConfirmExit() {
     }
 
 #ifdef __WXMSW__
-    if (m_iShutdownCoreClient) {
+    if (m_iShutdownCoreClient && dlg.m_DialogShutdownCoreClient) {
         dlg.m_DialogShutdownCoreClient->SetValue(TRUE);
     }
 #endif
@@ -1509,7 +1500,9 @@ int CBOINCGUIApp::ConfirmExit() {
 #ifdef __WXMAC__
         s_bSkipExitConfirmation = true;     // Don't ask twice (only affects Mac)
 #else
-        m_iShutdownCoreClient = dlg.m_DialogShutdownCoreClient->GetValue();
+        if (dlg.m_DialogShutdownCoreClient) {
+            m_iShutdownCoreClient = dlg.m_DialogShutdownCoreClient->GetValue();
+        }
 #endif
         m_iDisplayExitDialog = !dlg.m_DialogDisplay->GetValue();
         retval = true;

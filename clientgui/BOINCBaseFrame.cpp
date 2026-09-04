@@ -15,10 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "BOINCBaseFrame.h"
-#endif
-
 #include "stdwx.h"
 #include "diagnostics.h"
 #include "util.h"
@@ -36,7 +32,6 @@
 #include "Events.h"
 #include "DlgEventLog.h"
 #include "DlgSelectComputer.h"
-#include "wizardex.h"
 #include "BOINCBaseWizard.h"
 #include "WizardAttach.h"
 
@@ -244,18 +239,14 @@ void CBOINCBaseFrame::OnRefreshView(CFrameEvent& ) {
 }
 
 
-void CBOINCBaseFrame::OnAlert(CFrameAlertEvent&
-#ifndef __WXGTK__
-        event
-#endif
-        ) {
+void CBOINCBaseFrame::OnAlert(CFrameAlertEvent& event) {
     wxLogTrace(wxT("Function Start/End"), wxT("CBOINCBaseFrame::OnAlert - Function Begin"));
     static bool       bAlreadyRunningLoop = false;
 
     if (!bAlreadyRunningLoop) {
         bAlreadyRunningLoop = true;
 
-#ifdef __WXMSW__
+#ifndef __WXMAC__
         CTaskBarIcon* pTaskbar = wxGetApp().GetTaskBarIcon();
         wxASSERT(pTaskbar);
 
@@ -277,26 +268,22 @@ void CBOINCBaseFrame::OnAlert(CFrameAlertEvent&
             //   to notify the user instead.  This keeps dialogs from interfering
             //   with people typing email messages or any other activity where they
             //   do not want keyboard focus changed to another window while typing.
-            unsigned int  icon_type;
-
+            unsigned int icon_type = wxICON_INFORMATION;
             if (wxICON_ERROR & event.m_style) {
-                icon_type = NIIF_ERROR;
+                icon_type = wxICON_ERROR;
             } else if (wxICON_WARNING & event.m_style) {
-                icon_type = NIIF_WARNING;
+                icon_type = wxICON_WARNING;
             } else if (wxICON_INFORMATION & event.m_style) {
-                icon_type = NIIF_INFO;
-            } else {
-                icon_type = NIIF_NONE;
+                icon_type = wxICON_INFORMATION;
             }
-
-            pTaskbar->SetBalloon(
+            pTaskbar->QueueBalloon(
                 pTaskbar->m_iconTaskBarNormal,
                 event.m_title,
                 event.m_message,
                 icon_type
             );
         }
-#elif defined (__WXMAC__)
+#else
         // SafeMessageBox() / ProcessResponse() hangs the Manager if hidden.
         // Currently, the only non-notification-only alert is Connection Failed,
         // which is now has logic to be displayed when Manager is maximized.
@@ -374,6 +361,13 @@ void CBOINCBaseFrame::OnExit(wxCommandEvent& WXUNUSED(event)) {
         if (eventLog) {
             eventLog->Destroy();
         }
+
+#ifdef __WXMSW__
+        CTaskBarIcon* taskbar = wxGetApp().GetTaskBarIcon();
+        if (taskbar) {
+            taskbar->FireShutdown();
+        }
+#endif
 
         Close(true);
     }

@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // https://boinc.berkeley.edu
-// Copyright (C) 2025 University of California
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -14,10 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
-
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "BOINCTaskBar.h"
-#endif
 
 #include "stdwx.h"
 #include "diagnostics.h"
@@ -35,6 +31,10 @@
 #include "DlgEventLog.h"
 #include "Events.h"
 
+#ifdef __WXGTK__
+#include <wx/notifmsg.h>
+#endif
+
 #ifdef __WXMAC__
 #include "res/macsnoozebadge.xpm"
 #include "res/macdisconnectbadge.xpm"
@@ -47,19 +47,26 @@
 
 DEFINE_EVENT_TYPE(wxEVT_TASKBAR_RELOADSKIN)
 DEFINE_EVENT_TYPE(wxEVT_TASKBAR_REFRESH)
+#ifdef __WXMSW__
+DEFINE_EVENT_TYPE(wxEVT_TASKBAR_SHUTDOWN)
+#endif // __WXMSW__
 
-BEGIN_EVENT_TABLE(CTaskBarIcon, wxTaskBarIconEx)
+BEGIN_EVENT_TABLE(CTaskBarIcon, wxTaskBarIcon)
 
     EVT_IDLE(CTaskBarIcon::OnIdle)
     EVT_CLOSE(CTaskBarIcon::OnClose)
     EVT_TASKBAR_REFRESH(CTaskBarIcon::OnRefresh)
     EVT_TASKBAR_RELOADSKIN(CTaskBarIcon::OnReloadSkin)
     EVT_TASKBAR_LEFT_DCLICK(CTaskBarIcon::OnLButtonDClick)
-#ifndef __WXMAC__
+#ifdef __WXGTK__
     EVT_TASKBAR_RIGHT_DOWN(CTaskBarIcon::OnRButtonDown)
+#endif
+#ifdef __WXMSW__
     EVT_TASKBAR_RIGHT_UP(CTaskBarIcon::OnRButtonUp)
-    EVT_TASKBAR_CONTEXT_USERCLICK(CTaskBarIcon::OnNotificationClick)
-    EVT_TASKBAR_BALLOON_USERTIMEOUT(CTaskBarIcon::OnNotificationTimeout)
+#endif
+#ifndef __WXMAC__
+    EVT_TASKBAR_BALLOON_CLICK(CTaskBarIcon::OnNotificationClick)
+    EVT_TASKBAR_BALLOON_TIMEOUT(CTaskBarIcon::OnNotificationTimeout)
 #endif
     EVT_MENU(ID_OPENBOINCMANAGER, CTaskBarIcon::OnOpen)
     EVT_MENU(ID_OPENWEBSITE, CTaskBarIcon::OnOpenWebsite)
@@ -70,7 +77,6 @@ BEGIN_EVENT_TABLE(CTaskBarIcon, wxTaskBarIconEx)
 
 #ifdef __WXMSW__
     EVT_TASKBAR_SHUTDOWN(CTaskBarIcon::OnShutdown)
-    EVT_TASKBAR_APPRESTORE(CTaskBarIcon::OnAppRestore)
 #endif
 
 END_EVENT_TABLE()
@@ -84,7 +90,7 @@ CTaskBarIcon::CTaskBarIcon(wxIconBundle* icon, wxIconBundle* iconDisconnected, w
 #ifdef __WXMAC__
     wxTaskBarIcon(iconType)
 #else
-    wxTaskBarIconEx(wxT("BOINCManagerSystray"), 1)
+    wxTaskBarIcon()
 #endif
 {
 #ifdef __WXMAC__
@@ -115,10 +121,6 @@ CTaskBarIcon::CTaskBarIcon(wxIconBundle* icon, wxIconBundle* iconDisconnected, w
     }
     m_SnoozeGPUMenuItem = NULL;
 
-    m_bTaskbarInitiatedShutdown = false;
-
-    m_bMouseButtonPressed = false;
-
     m_dtLastNotificationAlertExecuted = wxDateTime((time_t)0);
     m_iLastNotificationUnreadMessageCount = 0;
 }
@@ -135,11 +137,10 @@ void CTaskBarIcon::OnIdle(wxIdleEvent& event) {
 }
 
 
-void CTaskBarIcon::OnClose(wxCloseEvent& ) {
+void CTaskBarIcon::OnClose(wxCloseEvent&) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnClose - Function Begin"));
 
     RemoveIcon();
-    m_bTaskbarInitiatedShutdown = true;
 
     CDlgEventLog* pEventLog = wxGetApp().GetEventLog();
     if (pEventLog) {
@@ -152,6 +153,10 @@ void CTaskBarIcon::OnClose(wxCloseEvent& ) {
         wxLogTrace(wxT("Function Status"), wxT("CTaskBarIcon::OnClose - Closing Current Frame"));
         pFrame->Close(true);
     }
+
+#ifdef __WXMSW__
+    Destroy();
+#endif
 
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnClose - Function End"));
 }
@@ -177,8 +182,8 @@ void CTaskBarIcon::OnLButtonDClick(wxTaskBarIconEvent& event) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnLButtonDClick - Function End"));
 }
 
-
-void CTaskBarIcon::OnNotificationClick(wxTaskBarIconExEvent& WXUNUSED(event)) {
+#ifndef __WXMAC__
+void CTaskBarIcon::OnNotificationClick(wxTaskBarIconEvent& WXUNUSED(event)) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnNotificationClick - Function Begin"));
 
     ResetTaskBar();
@@ -188,14 +193,14 @@ void CTaskBarIcon::OnNotificationClick(wxTaskBarIconExEvent& WXUNUSED(event)) {
 }
 
 
-void CTaskBarIcon::OnNotificationTimeout(wxTaskBarIconExEvent& WXUNUSED(event)) {
+void CTaskBarIcon::OnNotificationTimeout(wxTaskBarIconEvent& WXUNUSED(event)) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnNotificationTimeout - Function Begin"));
 
     ResetTaskBar();
 
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnNotificationTimeout - Function End"));
 }
-
+#endif
 
 void CTaskBarIcon::OnOpen(wxCommandEvent& WXUNUSED(event)) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnOpen - Function Begin"));
@@ -319,24 +324,18 @@ void CTaskBarIcon::OnExit(wxCommandEvent& event) {
 }
 
 
-#ifndef __WXMAC__
+#ifdef __WXGTK__
 void CTaskBarIcon::OnRButtonDown(wxTaskBarIconEvent& WXUNUSED(event)) {
-    m_bMouseButtonPressed = true;
+    DisplayContextMenu();
 }
-
-
-void CTaskBarIcon::OnRButtonUp(wxTaskBarIconEvent& WXUNUSED(event)) {
-    if (m_bMouseButtonPressed) {
-        DisplayContextMenu();
-        m_bMouseButtonPressed = false;
-    }
-}
-#endif  // #ifndef __WXMAC__
-
+#endif
 
 #ifdef __WXMSW__
+void CTaskBarIcon::OnRButtonUp(wxTaskBarIconEvent& WXUNUSED(event)) {
+    DisplayContextMenu();
+}
 
-void CTaskBarIcon::OnShutdown(wxTaskBarIconExEvent& event) {
+void CTaskBarIcon::OnShutdown(wxTaskBarIconEvent& event) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnShutdown - Function Begin"));
 
     wxCloseEvent eventClose;
@@ -344,15 +343,6 @@ void CTaskBarIcon::OnShutdown(wxTaskBarIconExEvent& event) {
     if (eventClose.GetSkipped()) event.Skip();
 
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnShutdown - Function End"));
-}
-
-void CTaskBarIcon::OnAppRestore(wxTaskBarIconExEvent&) {
-    wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnAppRestore - Function Begin"));
-
-    ResetTaskBar();
-    wxGetApp().ShowInterface();
-
-    wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnAppRestore - Function End"));
 }
 
 #endif
@@ -379,6 +369,13 @@ void CTaskBarIcon::OnReloadSkin(CTaskbarEvent& WXUNUSED(event)) {
     m_iconTaskBarSnooze = pSkinAdvanced->GetApplicationSnoozeIcon()->GetIcon(GetBestIconSize(), wxIconBundle::FALLBACK_NEAREST_LARGER);
 #endif
 }
+
+#ifdef __WXMSW__
+void CTaskBarIcon::FireShutdown() {
+    CTaskbarEvent event(wxEVT_TASKBAR_SHUTDOWN, this);
+    AddPendingEvent(event);
+}
+#endif
 
 
 void CTaskBarIcon::FireReloadSkin() {
@@ -618,28 +615,6 @@ void CTaskBarIcon::AdjustMenuItems(wxMenu* pMenu) {
         }
     }
 
-#ifdef __WXMSW__
-    // Weird things happen with menus and wxWidgets on Windows when you try
-    //   to change the font and use the system default as the baseline, so
-    //   instead of fighting the system get the original font and tweak it
-    //   a bit. It shouldn't hurt other platforms.
-    for (loc = 0; loc < pMenu->GetMenuItemCount(); loc++) {
-        pMenuItem = pMenu->FindItemByPosition(loc);
-        pMenu->Remove(pMenuItem);
-
-        font = pMenuItem->GetFont();
-        font.SetPointSize(8);
-        if (pMenuItem->GetId() != ID_OPENBOINCMANAGER) {
-            font.SetWeight(wxFONTWEIGHT_NORMAL);
-        } else {
-            font.SetWeight(wxFONTWEIGHT_BOLD);
-        }
-        pMenuItem->SetFont(font);
-
-        pMenu->Insert(loc, pMenuItem);
-    }
-#endif
-
     // Prevent recursive entry of CMainDocument::RequestRPC()
     if (pDoc->WaitingForRPC()) return;
 
@@ -782,6 +757,26 @@ void CTaskBarIcon::UpdateTaskbarStatus() {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::UpdateTaskbarStatus - Function End"));
 }
 
+#ifndef __WXMAC__
+bool CTaskBarIcon::IsBalloonsSupported() {
+    return true;
+}
+
+bool CTaskBarIcon::QueueBalloon(const wxIcon&
+#ifdef __WXGTK__
+                                WXUNUSED(icon),
+#else
+                                icon,
+#endif
+                                const wxString title, const wxString message, unsigned int type) {
+#ifdef __WXGTK__
+    wxNotificationMessage notification = wxNotificationMessage(title, message, wxGetApp().GetFrame()->GetParent(), type);
+    return notification.Show();
+#else
+    return ShowBalloon(title, message, 0, type, icon);
+#endif
+}
+#endif
 
 void CTaskBarIcon::UpdateNoticeStatus() {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::UpdateNoticeStatus - Function Begin"));

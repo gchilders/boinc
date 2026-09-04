@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // https://boinc.berkeley.edu
-// Copyright (C) 2025 University of California
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -18,26 +18,13 @@
 #ifndef BOINC_BOINCTASKBAR_H
 #define BOINC_BOINCTASKBAR_H
 
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma interface "BOINCTaskBar.cpp"
-#endif
-
 #ifdef __APPLE__
 #define NSInteger int
 #endif
 
-#if   defined(__WXMSW__)
-#include "msw/taskbarex.h"
-#elif defined(__WXGTK__)
-#include "gtk/taskbarex.h"
-#else
-#define wxTaskBarIconEx         wxTaskBarIcon
-#define wxTaskBarIconExEvent    wxTaskBarIconEvent
-#endif
-
 class CTaskbarEvent;
 
-class CTaskBarIcon : public wxTaskBarIconEx {
+class CTaskBarIcon : public wxTaskBarIcon {
 public:
     CTaskBarIcon(wxIconBundle* icon, wxIconBundle* iconDisconnected, wxIconBundle* iconSnooze
 #ifdef __WXMAC__
@@ -58,13 +45,21 @@ public:
     void OnRefresh(CTaskbarEvent& event);
     void OnReloadSkin(CTaskbarEvent& event);
 
-    void OnNotificationClick(wxTaskBarIconExEvent& event);
-    void OnNotificationTimeout(wxTaskBarIconExEvent& event);
-    void OnAppRestore(wxTaskBarIconExEvent& event);
-    void OnShutdown(wxTaskBarIconExEvent& event);
+#ifndef __WXMAC__
+    void OnNotificationClick(wxTaskBarIconEvent& event);
+    void OnNotificationTimeout(wxTaskBarIconEvent& event);
+#endif
+#ifdef __WXMSW__
+    void OnShutdown(wxTaskBarIconEvent& event);
+#endif
     void OnLButtonDClick(wxTaskBarIconEvent& event);
+#ifdef __WXGTK__
     void OnRButtonDown(wxTaskBarIconEvent& event);
+#endif
+#ifdef __WXMSW__
     void OnRButtonUp(wxTaskBarIconEvent& event);
+    void FireShutdown();
+#endif
 
     void FireReloadSkin();
 
@@ -89,6 +84,8 @@ public:
 #else
     bool SetIcon(const wxIcon& icon, const wxString& message = wxEmptyString);
 #endif
+#endif  // __WXMAC__
+
 
 #define BALLOONTYPE_INFO 0
     bool IsBalloonsSupported();
@@ -99,7 +96,6 @@ public:
         const wxString message = wxEmptyString,
         unsigned int iconballoon = BALLOONTYPE_INFO
     );
-#endif  // __WXMAC__
 
     wxIcon          m_iconTaskBarNormal;
     wxIcon          m_iconTaskBarDisconnected;
@@ -107,10 +103,7 @@ public:
 
     wxIcon          m_iconCurrentIcon;
 
-    bool            m_bTaskbarInitiatedShutdown;
-
 private:
-    bool            m_bMouseButtonPressed;
     wxMenuItem*     m_SnoozeMenuItem;
     wxMenuItem*     m_SnoozeGPUMenuItem;
 
@@ -149,11 +142,17 @@ public:
 
 
 BEGIN_DECLARE_EVENT_TYPES()
-DECLARE_EVENT_TYPE( wxEVT_TASKBAR_RELOADSKIN, 10100 )
-DECLARE_EVENT_TYPE( wxEVT_TASKBAR_REFRESH, 10101 )
+DECLARE_EVENT_TYPE(wxEVT_TASKBAR_RELOADSKIN, 10100)
+DECLARE_EVENT_TYPE(wxEVT_TASKBAR_REFRESH, 10101)
+#ifdef __WXMSW__
+DECLARE_EVENT_TYPE(wxEVT_TASKBAR_SHUTDOWN, 10104)
+#endif // __WXMSW__
 END_DECLARE_EVENT_TYPES()
 
 #define EVT_TASKBAR_RELOADSKIN(fn) DECLARE_EVENT_TABLE_ENTRY(wxEVT_TASKBAR_RELOADSKIN, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
 #define EVT_TASKBAR_REFRESH(fn)  DECLARE_EVENT_TABLE_ENTRY(wxEVT_TASKBAR_REFRESH, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
+#ifdef __WXMSW__
+#define EVT_TASKBAR_SHUTDOWN(fn) DECLARE_EVENT_TABLE_ENTRY(wxEVT_TASKBAR_SHUTDOWN, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
+#endif // __WXMSW__
 
 #endif

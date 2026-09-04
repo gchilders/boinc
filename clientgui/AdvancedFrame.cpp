@@ -15,10 +15,6 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
 
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "AdvancedFrame.h"
-#endif
-
 #ifdef __APPLE__
 #include "mac/MacGUI.pch"
 #include "mac_util.h"
@@ -58,7 +54,6 @@
 #include "DlgHiddenColumns.h"
 #include "DlgGenericMessage.h"
 #include "DlgEventLog.h"
-#include "wizardex.h"
 #include "BOINCBaseWizard.h"
 #include "WizardAttach.h"
 #include "DlgAdvPreferences.h"

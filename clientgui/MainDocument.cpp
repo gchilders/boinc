@@ -1,6 +1,6 @@
 // This file is part of BOINC.
 // https://boinc.berkeley.edu
-// Copyright (C) 2025 University of California
+// Copyright (C) 2026 University of California
 //
 // BOINC is free software; you can redistribute it and/or modify it
 // under the terms of the GNU Lesser General Public License
@@ -14,10 +14,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
-
-#if defined(__GNUG__) && !defined(__APPLE__)
-#pragma implementation "MainDocument.h"
-#endif
 
 #include "stdwx.h"
 #include <wx/numformatter.h>
@@ -909,13 +905,11 @@ void CMainDocument::RunPeriodicRPCs(int frameRefreshRate) {
     if (!IsConnected()) {
         CFrameEvent event(wxEVT_FRAME_REFRESHVIEW, pFrame);
         pFrame->GetEventHandler()->AddPendingEvent(event);
-#ifndef __WXGTK__
         CTaskBarIcon* pTaskbar = wxGetApp().GetTaskBarIcon();
         if (pTaskbar) {
             CTaskbarEvent event2(wxEVT_TASKBAR_REFRESH, pTaskbar);
             pTaskbar->AddPendingEvent(event2);
         }
-#endif
         CDlgEventLog* eventLog = wxGetApp().GetEventLog();
         if (eventLog) {
             eventLog->OnRefresh();
