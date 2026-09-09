@@ -224,7 +224,7 @@ echo "$stamp: starting rsals workunits moulinette\n";
 $time_start = microtime(true);
 
 
-$numbers = BoincNumber_f::enum("status=1 AND q_start<>0 AND q_end<>0 AND q_last<q_end");
+$numbers = BoincNumber_f::enum("status=1 AND sievesize=0 AND q_start<>0 AND q_end<>0 AND q_last<q_end");
 $count = count($numbers);
 if($count>0) {
 

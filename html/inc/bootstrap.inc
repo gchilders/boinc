@@ -253,7 +253,7 @@ function panel($title, $content_func, $class="panel-primary", $body_class="") {
     if ($title) {
         echo '
             <div class="panel-heading">
-                <h1 class="panel-title">'.$title.'</h1>
+                <h2 class="panel-title">'.$title.'</h2>
             </div>
         ';
     }

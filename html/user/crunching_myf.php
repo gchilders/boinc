@@ -60,6 +60,7 @@ function display_result($xml, $numbers, $type, $details=false) {
 		echo "<td align='center'>$number->project</td>";
 		echo "<td align='center'>$number->type($number->difficulty)</td>";
 		echo "<td align='center'>$number->primebits</td>";
+		if ($number->sievesize > 0) $q_per_wu = 100000; else $q_per_wu = 2000;
 		if($details) {
 			if($number->q_end != 0 && $number->q_start != 0) {
 				$last = $number->q_last;
@@ -72,8 +73,8 @@ function display_result($xml, $numbers, $type, $details=false) {
 				$p     = $number->results_pending;
 				$r     = $number->results_received;
 				$rels  = $number->globresult_relations;
-				$numwu = ($number->q_end - $number->q_start)/2000;
-				$numunc = ($number->q_end - $number->q_last)/2000;
+				$numwu = ($number->q_end - $number->q_start)/$q_per_wu;
+				$numunc = ($number->q_end - $number->q_last)/$q_per_wu;
 				if($number->results_received==0) {
 					$prels="...";
 				} else {

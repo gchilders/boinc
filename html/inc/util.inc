@@ -362,6 +362,8 @@ EOT;
         ";
     }
 
+    echo '<script src="'.secure_url_base().'/nfs2-theme.js"></script>'."\n";
+
     if (defined("SHORTCUT_ICON")) {
         echo '<link rel="icon" type="image/x-icon" href="'.SHORTCUT_ICON.'"/>
 ';
