@@ -1,0 +1,1309 @@
+/* ============================================================================
+   nfs2.css - site-wide theme for NFS@Home
+   ============================================================================
+   Drop-in replacement for white.css. Set in html/project/project.inc:
+
+       define("STYLESHEET", "nfs2.css");
+
+   LOAD ORDER on every page that calls page_head():
+       1. sample_bootstrap.min.css   Bootstrap 3.3.7
+       2. custom.css                 project link/blockquote tweaks
+       3. nfs2.css                   this file, so it wins on equal specificity
+
+   This file is a THEME LAYER, not a framework. It deliberately does not
+   redefine .row or .col-*: Bootstrap's grid, forms, pagination, wells and
+   collapse behaviour are left alone so nothing on the forum or account pages
+   changes shape. Only colour, type and component chrome are restyled.
+
+   Where a Bootstrap selector is overridden, the selector here matches
+   Bootstrap's own specificity pattern (e.g. .navbar-default .navbar-nav>li>a).
+   Loosening those to a single class will silently lose the override.
+
+   Colours are the official Cal State Fullerton web palette including their
+   published dark-mode set: https://brand.fullerton.edu/colors/
+
+   DARK MODE works with no markup at all: the media query below targets
+   :root:not([data-theme="light"]), so a page that never sets the attribute
+   still follows the operating system. nfs2-theme.js adds an explicit
+   Auto/Light/Dark choice and remembers it.
+   ============================================================================ */
+
+
+/* ===========================================================================
+   1. TOKENS   (this section is the white.css analogue)
+   =========================================================================== */
+
+:root {
+  /* CSUF web palette */
+  --c-titan-blue:  #00244E;
+  --c-medium-blue: #0F3F8C;
+  --c-sky:         #EBFBFF;
+  --c-beige:       #F8F7F3;
+  --c-orange:      #FF7900;
+
+  --c-page:        #F5F5F5;
+  --c-surface:     #FFFFFF;
+  --c-surface-alt: var(--c-beige);
+  --c-tint:        var(--c-sky);
+  --c-ink:         #222222;
+  --c-ink-muted:   #5A6470;
+  --c-heading:     var(--c-titan-blue);
+  --c-link:        var(--c-medium-blue);
+  --c-link-hover:  #072A63;
+  --c-on-brand:    #FFFFFF;
+  --c-brand-bar:   var(--c-titan-blue);
+  --c-accent:      var(--c-orange);
+  /* Orange used for text or a border, not for a large fill. Titan Orange
+     itself is only 2.6:1 on white and 3.9:1 on the dark striped-row colour,
+     so each theme needs its own value. */
+  --c-accent-ink:  #A34D00;
+  --c-rule:        #8A93A1;
+  --c-hairline:    #DFE3E8;
+  --c-ok:          #1E6B2F;
+  --c-warn-ink:    #7A4E00;
+  --c-err:         #A31515;
+  --c-focus:       var(--c-titan-blue);
+  --c-bar-track:   #DCE1E7;
+  --c-bar-fill:    var(--c-medium-blue);
+  --c-code-bg:     #F1F3F5;
+  --c-mark:        #FFF3C4;
+  /* Filled buttons. Routed through variables so the dark theme overrides the
+     value, not the selector: raising specificity per theme is what broke the
+     button labels in the first place. */
+  --c-btn-fill:        var(--c-medium-blue);
+  --c-btn-fill-hover:  var(--c-titan-blue);
+  --c-btn-text:        #FFFFFF;
+  --c-btn-danger-text: #FFFFFF;
+  /* Bootstrap's contextual table classes. It hardcodes light values for
+     these, so they have to be themed or they stay pale in dark mode. */
+  --c-row-info:    #EBFBFF;
+  --c-row-success: #E8F3E8;
+  --c-row-warning: #FBF3DE;
+  --c-row-danger:  #F7E4E4;
+  --c-row-active:  #F0F1F3;
+  /* Text on the solid .label / .badge fills. */
+  --c-label-text:  #FFFFFF;
+
+  --font-ui: "Museo Sans", "Nunito Sans", system-ui, -apple-system,
+             "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-num: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas,
+              "Liberation Mono", monospace;
+
+  --radius: 4px;
+  --measure: 68ch;
+}
+
+/* Dark tokens, declared twice on purpose: once for "follow the OS", which must
+   also cover pages that never set a data-theme attribute, and once for the
+   explicit choice made by the toggle. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-page:        #1A2029;
+    --c-surface:     #252A30;
+    --c-surface-alt: #3C4148;
+    --c-tint:        #32404E;
+    --c-ink:         #EBEBEB;
+    --c-ink-muted:   #ADB5BF;
+    --c-heading:     #EBEBEB;
+    --c-link:        #8ACCE4;
+    --c-link-hover:  #B9E3F2;
+    --c-brand-bar:   #1A2F48;
+    --c-accent-ink:  #FFA347;
+    --c-rule:        #767F8C;
+    --c-hairline:    #3C4148;
+    --c-ok:          #6FD48A;
+    --c-warn-ink:    #E0B44A;
+    --c-err:         #FF9E93;
+    --c-focus:       var(--c-orange);
+    --c-bar-track:   #3C4148;
+    --c-bar-fill:    #8ACCE4;
+    --c-code-bg:     #1E242B;
+    --c-mark:        #4A431F;
+    --c-btn-fill:        #1F5FBF;
+    --c-btn-fill-hover:  #2E6FCC;
+    --c-btn-text:        #FFFFFF;
+    --c-btn-danger-text: #1A2029;
+    --c-row-info:    #1F3348;
+    --c-row-success: #23392B;
+    --c-row-warning: #3B3320;
+    --c-row-danger:  #3E2626;
+    --c-row-active:  #2E343B;
+    --c-label-text:  #1A2029;
+  }
+}
+:root[data-theme="dark"] {
+  --c-page:        #1A2029;
+  --c-surface:     #252A30;
+  --c-surface-alt: #3C4148;
+  --c-tint:        #32404E;
+  --c-ink:         #EBEBEB;
+  --c-ink-muted:   #ADB5BF;
+  --c-heading:     #EBEBEB;
+  --c-link:        #8ACCE4;
+  --c-link-hover:  #B9E3F2;
+  --c-brand-bar:   #1A2F48;
+  --c-accent-ink:  #FFA347;
+  --c-rule:        #767F8C;
+  --c-hairline:    #3C4148;
+  --c-ok:          #6FD48A;
+  --c-warn-ink:    #E0B44A;
+  --c-err:         #FF9E93;
+  --c-focus:       var(--c-orange);
+  --c-bar-track:   #3C4148;
+  --c-bar-fill:    #8ACCE4;
+  --c-code-bg:     #1E242B;
+  --c-mark:        #4A431F;
+  --c-btn-fill:        #1F5FBF;
+  --c-btn-fill-hover:  #2E6FCC;
+  --c-btn-text:        #FFFFFF;
+  --c-btn-danger-text: #1A2029;
+  --c-row-info:    #1F3348;
+  --c-row-success: #23392B;
+  --c-row-warning: #3B3320;
+  --c-row-danger:  #3E2626;
+  --c-row-active:  #2E343B;
+  --c-label-text:  #1A2029;
+}
+
+
+/* ===========================================================================
+   2. BASE
+   =========================================================================== */
+
+/* Bootstrap 3.3.7 sets `html { font-size: 10px }` so that rem units resolve
+   against a 10px base. Every rem value in this file assumes a normal root, so
+   put it back. Verified safe: Bootstrap 3 uses rem nowhere else, all of its
+   own sizing is in px. Remove this and everything here renders at 62.5%. */
+html { font-size: 100%; -webkit-text-size-adjust: 100%; }
+
+body {
+  background: var(--c-page);
+  color: var(--c-ink);
+  font-family: var(--font-ui);
+  font-size: 17px;
+  line-height: 1.65;
+}
+
+h1, h2, h3, h4, h5, h6,
+.h1, .h2, .h3, .h4 {
+  font-family: var(--font-ui);
+  color: var(--c-heading);
+  line-height: 1.2;
+  font-weight: 700;
+}
+h1, .h1 { font-size: 1.75rem; }
+h2, .h2 { font-size: 1.375rem; }
+h3, .h3 { font-size: 1.0625rem; }
+h4, .h4 { font-size: 1rem; }
+
+/* project_banner() prints the page title as a bare heading straight after the
+   navbar. Both h1 and h2 are matched so this keeps working whichever it emits:
+   it is <h2> as shipped, and <h1> if you make the heading-outline fix
+   described next to .panel-title below. */
+body > .container-fluid > h1:first-of-type,
+body > .container-fluid > h2:first-of-type {
+  margin: 1.5rem 0 1.25rem;
+  padding-bottom: .375rem;
+  border-bottom: 2px solid var(--c-rule);
+}
+
+p { margin: 0 0 1em; }
+
+a, a:link, a:visited { color: var(--c-link); }
+a:hover, a:focus { color: var(--c-link-hover); }
+
+/* Bootstrap sets `a { text-decoration: none }`, which leaves links in running
+   text distinguished by colour alone. Put the underline back, but only inside
+   content: an earlier version of this rule used `li a`, which silently
+   underlined every navbar item, dropdown entry and pagination link.
+
+   Note for whoever maintains custom.css: its first rule block never applies.
+   Line 1 is `# BOINC fixes to light-background themes`, and `#` starts an ID
+   selector in CSS, so the parser swallows the comment and the following
+   selector list together and discards the whole block. Verified in a browser:
+   `blockquote { font-size: 15px }` (rule 3) applies, the text-decoration rule
+   (rule 1) does not. Changing the line to a slash-star comment fixes it. */
+p a, dd a, blockquote a,
+.prose li a, .prose a,
+td.postbody a, td.postbody li a,
+.notice a, #news a, .alert a, .panel-body p a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+/* Chrome, never content: keep these clean whatever context they sit in. */
+.navbar a, .dropdown-menu a, .pagination a, .nav a,
+.actionlist a, .breadcrumb a, .site-footer .sponsors a,
+a.btn, a.button, a.btn-green, .panel-title a {
+  text-decoration: none;
+}
+
+/* One focus style, contrast-checked in both themes. Bootstrap 3 strips
+   outlines in several places, so this is set with matching specificity. */
+:focus-visible,
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+.btn:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Responsive images, but without clobbering legacy size attributes.
+   BOINC sizes badges with the HTML height attribute and no class:
+   badges_string() in util.inc emits <img title="..." valign=top height=24 ...>
+   for BADGE_HEIGHT_MEDIUM (user_links, so the User of the day panel), 20 for
+   SMALL (forum posts) and 56 for LARGE (the Badges row on a profile).
+   A blanket `img { height: auto }` outranks that presentational attribute, so
+   badges render at their full intrinsic size. Measured: a 200x200 badge PNG
+   came out 200x200 instead of 24x24.
+
+   So: only apply height:auto where it cannot override a height-only attribute.
+     no attributes      -> max-width + height:auto, scales correctly
+     width only         -> height:auto, scales correctly
+     width AND height   -> height:auto, so the logo still scales when narrow
+     height only        -> attribute honoured, width stays auto  (badges, flags)
+*/
+img { max-width: 100%; }
+img:not([height]), img[width][height] { height: auto; }
+
+hr { border: 0; border-top: 1px solid var(--c-hairline); margin: 1.25rem 0; }
+
+code, pre, kbd, samp, .code, .pre {
+  font-family: var(--font-num);
+  font-size: .9375em;
+}
+code, .code {
+  background: var(--c-code-bg);
+  color: var(--c-ink);
+  padding: .0625rem .25rem;
+  border-radius: 2px;
+}
+pre, .pre {
+  background: var(--c-code-bg);
+  color: var(--c-ink);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  overflow-x: auto;
+}
+
+mark, span.highlight { background: var(--c-mark); color: var(--c-ink); padding: 0 .125rem; }
+
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  background: var(--c-surface); color: var(--c-link);
+  padding: .75rem 1.25rem; font-weight: 700;
+  border: 2px solid var(--c-focus);
+  border-radius: 0 0 var(--radius) 0;
+}
+.skip-link:focus { left: 0; }
+
+
+/* ===========================================================================
+   3. BOOTSTRAP 3 COMPONENT OVERRIDES
+   =========================================================================== */
+
+/* page_head() wraps every page in .container-fluid, which is full-bleed by
+   default. Cap it so text does not run to 2000px on a wide monitor. */
+.container-fluid { max-width: 1180px; margin-right: auto; margin-left: auto; }
+
+/* The navbar carries its own .container-fluid. On index2.php that nav sits at
+   the top level, so it needs the usual 15px gutter to line up with content.
+   On every page_head() page the nav is nested inside the body container, which
+   already supplies that gutter, so the inner one is zeroed to stop the nav
+   items sitting 15px further in than the content below them. */
+.navbar > .container-fluid { padding-left: 15px; padding-right: 15px; }
+body > .container-fluid > .navbar > .container-fluid {
+  padding-left: 0; padding-right: 0;
+}
+
+/* ---- navbar: sample_navbar() emits .navbar.navbar-default -------------- */
+
+.navbar { border: 0; border-radius: 0; margin-bottom: 0; min-height: 0; }
+.navbar-default,
+.navbar-inverse {
+  background: var(--c-brand-bar);
+  border-bottom: 3px solid var(--c-accent);
+}
+.navbar-default .navbar-brand,
+.navbar-inverse .navbar-brand {
+  color: var(--c-on-brand);
+  font-weight: 700;
+  font-size: 1.125rem;
+  height: auto;
+  padding: .875rem 1rem;
+}
+.navbar-default .navbar-brand:hover,
+.navbar-default .navbar-brand:focus { color: var(--c-on-brand); }
+.navbar-brand > img { max-height: 40px; width: auto; }
+
+.navbar-default .navbar-nav > li > a,
+.navbar-inverse .navbar-nav > li > a {
+  color: var(--c-on-brand);
+  font-size: .9375rem;
+  padding: 14px 14px;
+  border-bottom: 3px solid transparent;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus,
+.navbar-inverse .navbar-nav > li > a:hover,
+.navbar-inverse .navbar-nav > li > a:focus {
+  color: var(--c-on-brand);
+  background: rgba(255, 255, 255, .10);
+  border-bottom-color: var(--c-accent);
+}
+.navbar-default .navbar-nav > .active > a,
+.navbar-default .navbar-nav > .active > a:hover,
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
+  color: var(--c-on-brand);
+  background: rgba(255, 255, 255, .16);
+  border-bottom-color: var(--c-accent);
+}
+.navbar-nav > li > a:focus-visible { outline-offset: -3px; outline-color: var(--c-orange); }
+
+.navbar-default .navbar-toggle {
+  border-color: rgba(255, 255, 255, .5);
+  margin: 10px 15px 10px 0;
+  min-height: 44px; min-width: 44px;
+}
+.navbar-default .navbar-toggle:hover,
+.navbar-default .navbar-toggle:focus { background: rgba(255, 255, 255, .12); }
+.navbar-default .navbar-toggle .icon-bar { background: var(--c-on-brand); }
+.navbar-default .navbar-collapse,
+.navbar-default .navbar-form { border-color: rgba(255, 255, 255, .25); }
+
+.dropdown-menu {
+  background: var(--c-surface);
+  border: 1px solid var(--c-rule);
+  border-top: 3px solid var(--c-accent);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: none;
+  padding: .375rem 0;
+  min-width: 15rem;
+}
+.dropdown-menu > li > a {
+  color: var(--c-link);
+  padding: .5rem 1rem;
+  min-height: 40px;
+  white-space: normal;
+}
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus {
+  background: var(--c-tint);
+  color: var(--c-link-hover);
+  text-decoration: underline;
+}
+.dropdown-menu .divider { background: var(--c-hairline); }
+.dropdown-header {
+  color: var(--c-ink-muted);
+  font-size: .8125rem;
+  font-weight: 700;
+  padding: .5rem 1rem .25rem;
+}
+
+/* Collapsed menu sits inside the blue bar on phones. */
+@media (max-width: 767px) {
+  .navbar-default .navbar-nav .open .dropdown-menu {
+    background: rgba(0, 0, 0, .18);
+    border: 0;
+  }
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a,
+  .navbar-default .navbar-nav .open .dropdown-menu .dropdown-header {
+    color: var(--c-on-brand);
+  }
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a:hover,
+  .navbar-default .navbar-nav .open .dropdown-menu > li > a:focus {
+    background: rgba(255, 255, 255, .10);
+    color: var(--c-on-brand);
+  }
+}
+
+/* ---- panels ------------------------------------------------------------ */
+
+.panel {
+  background: var(--c-surface);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius);
+  box-shadow: none;
+  margin-bottom: 1.5rem;
+}
+.panel-heading {
+  background: var(--c-brand-bar);
+  border-bottom: 1px solid var(--c-rule);
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: .625rem 1rem;
+  color: var(--c-on-brand);
+}
+.panel-default > .panel-heading,
+.panel-primary > .panel-heading,
+.panel-info > .panel-heading,
+.panel-success > .panel-heading,
+.panel-warning > .panel-heading,
+.panel-danger > .panel-heading {
+  background: var(--c-brand-bar);
+  border-color: var(--c-rule);
+  color: var(--c-on-brand);
+}
+.panel-primary, .panel-default, .panel-info,
+.panel-success, .panel-warning, .panel-danger { border-color: var(--c-hairline); }
+
+/* bootstrap.inc's panel() emits the title as <h1 class="panel-title">, which
+   gives most BOINC pages several h1 elements. Styling cannot fix the document
+   outline: change that one line in bootstrap.inc to <h2>. */
+.panel-title {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--c-on-brand);
+}
+.panel-title > a, .panel-title > a:link { color: var(--c-on-brand); }
+.panel-body { padding: 1rem; color: var(--c-ink); }
+.panel-body > :last-child { margin-bottom: 0; }
+.panel-footer {
+  background: var(--c-surface-alt);
+  border-top: 1px solid var(--c-hairline);
+  color: var(--c-ink-muted);
+}
+
+/* ---- buttons ----------------------------------------------------------- */
+
+.btn {
+  font-family: inherit;
+  font-weight: 700;
+  border-radius: var(--radius);
+  min-height: 40px;
+  padding: .4375rem 1rem;
+  text-decoration: none;
+}
+.btn-lg { min-height: 48px; font-size: 1.125rem; }
+.btn-sm, .btn-xs { min-height: 32px; font-weight: 400; }
+
+.btn-primary, .btn-success, .btn-info {
+  background: var(--c-btn-fill);
+  border-color: var(--c-btn-fill);
+  color: var(--c-btn-text);
+}
+/* Hover darkens in the light theme and lightens in the dark one, so the
+   button always moves toward the pointer rather than receding. */
+.btn-primary:hover, .btn-primary:focus,
+.btn-success:hover, .btn-success:focus,
+.btn-info:hover, .btn-info:focus {
+  background: var(--c-btn-fill-hover);
+  border-color: var(--c-btn-fill-hover);
+  color: var(--c-btn-text);
+}
+
+/* A button that is an <a> needs its colour declared with :link and :visited.
+   `a:link` in the base section is (0,1,1); a bare `.btn-success` is only
+   (0,1,0), so the link rule won and painted the label --c-link, which is the
+   same blue as the fill. The button was invisible until hovered. Anything
+   here that sets a colour on a link-as-button must keep the pseudo-class. */
+a.btn-primary:link, a.btn-primary:visited,
+a.btn-success:link, a.btn-success:visited,
+a.btn-info:link,    a.btn-info:visited { color: var(--c-btn-text); }
+
+.btn-default {
+  background: transparent;
+  border-color: var(--c-rule);
+  color: var(--c-link);
+}
+.btn-default:hover, .btn-default:focus {
+  background: var(--c-surface-alt);
+  border-color: var(--c-rule);
+  color: var(--c-link-hover);
+}
+.btn-danger {
+  background: var(--c-err); border-color: var(--c-err);
+  color: var(--c-btn-danger-text);
+}
+a.btn-danger:link, a.btn-danger:visited { color: var(--c-btn-danger-text); }
+.btn-warning {
+  background: transparent;
+  border-color: var(--c-warn-ink);
+  color: var(--c-warn-ink);
+}
+a.btn-warning:link, a.btn-warning:visited { color: var(--c-warn-ink); }
+.btn-link { color: var(--c-link); text-decoration: underline; }
+
+/* nfsathome's own button classes, still used on some older pages. */
+.button, a.button, a.btn-green {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 40px; padding: .4375rem 1rem;
+  background: var(--c-btn-fill); color: var(--c-btn-text);
+  border: 1px solid var(--c-btn-fill); border-radius: var(--radius);
+  font-weight: 700; text-decoration: none;
+}
+a.button:link, a.button:visited,
+a.btn-green:link, a.btn-green:visited { color: var(--c-btn-text); }
+.button:hover, a.button:hover, a.btn-green:hover {
+  background: var(--c-btn-fill-hover); border-color: var(--c-btn-fill-hover);
+  color: var(--c-btn-text);
+}
+
+/* ---- tables ------------------------------------------------------------ */
+
+.table, table { background: transparent; border-collapse: collapse; color: var(--c-ink); }
+
+/* start_table() wraps every BOINC table in <div class="table">, so the real
+   table is a descendant of a .table and matches Bootstrap's nested-table rule
+   `.table .table { background-color: #fff }`. That selector is (0,2,0) and
+   beats a plain `.table` override, so the table was painted white underneath
+   the rows. In dark mode the striped rows were themed correctly and the
+   unstriped ones showed the white through, which is why every other row on
+   forum_index.php was unreadable. */
+.table .table { background: transparent; }
+.table > thead > tr > th,
+.table > tbody > tr > th,
+.table > tbody > tr > td,
+.table > tfoot > tr > td,
+th, td {
+  border-color: var(--c-hairline);
+  padding: .5rem .625rem;
+  vertical-align: top;
+}
+.table > thead > tr > th, th {
+  color: var(--c-ink-muted);
+  font-size: .8125rem;
+  font-weight: 700;
+  text-align: left;
+  border-bottom: 2px solid var(--c-rule);
+  vertical-align: bottom;
+}
+.table-bordered, .table-bordered > thead > tr > th,
+.table-bordered > tbody > tr > td,
+.table-bordered > tbody > tr > th,
+.bordered, td.bordered, table.bordered { border: 1px solid var(--c-hairline); }
+.table-striped > tbody > tr:nth-of-type(odd) { background: var(--c-surface-alt); }
+.table-hover > tbody > tr:hover { background: var(--c-tint); }
+
+/* Bootstrap contextual classes and BOINC's .bg-primary table headings. */
+.table > thead > tr > th.bg-primary,
+th.bg-primary, .bg-primary {
+  background: var(--c-brand-bar);
+  color: var(--c-on-brand);
+  border-bottom-color: var(--c-brand-bar);
+}
+.bg-primary a, th.bg-primary a,
+.bg-primary a:link, .bg-primary a:visited {
+  color: #FFFFFF;
+  text-decoration: underline;
+}
+
+/* Bootstrap's background helper classes, which are separate from the
+   contextual table classes above and hardcoded just as light:
+   .bg-success #dff0d8, .bg-info #d9edf7, .bg-warning #fcf8e3,
+   .bg-danger #f2dede.
+
+   server_status.php uses these for every daemon row — `bg-success` for
+   Running, `bg-danger` for Not Running, `bg-warning` for the rest — so in
+   dark mode the light body text landed on a pale green and vanished. Text
+   colour is set explicitly here rather than left to inherit. */
+.bg-success { background: var(--c-row-success); color: var(--c-ink); }
+.bg-info    { background: var(--c-row-info);    color: var(--c-ink); }
+.bg-warning { background: var(--c-row-warning); color: var(--c-ink); }
+.bg-danger  { background: var(--c-row-danger);  color: var(--c-ink); }
+
+a.bg-success:hover, a.bg-success:focus,
+a.bg-info:hover,    a.bg-info:focus,
+a.bg-warning:hover, a.bg-warning:focus,
+a.bg-danger:hover,  a.bg-danger:focus { color: var(--c-ink); }
+
+/* The old white.css styled these cells by state class instead. Kept for any
+   page still emitting them, and scoped so it does not fight the bg-* rules:
+   a cell carrying both gets the tinted background and a coloured label. */
+td.bg-success, td.bg-danger, td.bg-warning { font-weight: 700; }
+/* Bootstrap hardcodes light backgrounds for the contextual table classes:
+   .info #d9edf7, .success #dff0d8, .warning #fcf8e3, .danger #f2dede,
+   .active #f5f5f5. It applies them through long selector chains such as
+   `.table > tbody > tr > td.info`, so a short `.info` override loses on
+   specificity and the rows stay pale in dark mode.
+
+   forum_index.php puts <th class="info" colspan="4"> on every category
+   heading, which is exactly what looked unreadable. Written out longhand
+   rather than with :is() so nothing depends on selector-list support: if the
+   selector were dropped, the bug would come straight back.
+
+   Only the table-scoped forms are overridden. Bootstrap does not define bare
+   `.info` or `.active` background rules, and adding them would light up
+   `<li class="active">` in the navbar. */
+
+.table > thead > tr > td.info,
+.table > thead > tr.info > td,
+.table > thead > tr > th.info,
+.table > thead > tr.info > th,
+.table > tbody > tr > td.info,
+.table > tbody > tr.info > td,
+.table > tbody > tr > th.info,
+.table > tbody > tr.info > th,
+.table > tfoot > tr > td.info,
+.table > tfoot > tr.info > td,
+.table > tfoot > tr > th.info,
+.table > tfoot > tr.info > th {
+  background: var(--c-row-info);
+  color: var(--c-ink);
+}
+
+.table > thead > tr > td.success,
+.table > thead > tr.success > td,
+.table > thead > tr > th.success,
+.table > thead > tr.success > th,
+.table > tbody > tr > td.success,
+.table > tbody > tr.success > td,
+.table > tbody > tr > th.success,
+.table > tbody > tr.success > th,
+.table > tfoot > tr > td.success,
+.table > tfoot > tr.success > td,
+.table > tfoot > tr > th.success,
+.table > tfoot > tr.success > th {
+  background: var(--c-row-success);
+  color: var(--c-ink);
+}
+
+.table > thead > tr > td.warning,
+.table > thead > tr.warning > td,
+.table > thead > tr > th.warning,
+.table > thead > tr.warning > th,
+.table > tbody > tr > td.warning,
+.table > tbody > tr.warning > td,
+.table > tbody > tr > th.warning,
+.table > tbody > tr.warning > th,
+.table > tfoot > tr > td.warning,
+.table > tfoot > tr.warning > td,
+.table > tfoot > tr > th.warning,
+.table > tfoot > tr.warning > th {
+  background: var(--c-row-warning);
+  color: var(--c-ink);
+}
+
+.table > thead > tr > td.danger,
+.table > thead > tr.danger > td,
+.table > thead > tr > th.danger,
+.table > thead > tr.danger > th,
+.table > tbody > tr > td.danger,
+.table > tbody > tr.danger > td,
+.table > tbody > tr > th.danger,
+.table > tbody > tr.danger > th,
+.table > tfoot > tr > td.danger,
+.table > tfoot > tr.danger > td,
+.table > tfoot > tr > th.danger,
+.table > tfoot > tr.danger > th {
+  background: var(--c-row-danger);
+  color: var(--c-ink);
+}
+
+.table > thead > tr > td.active,
+.table > thead > tr.active > td,
+.table > thead > tr > th.active,
+.table > thead > tr.active > th,
+.table > tbody > tr > td.active,
+.table > tbody > tr.active > td,
+.table > tbody > tr > th.active,
+.table > tbody > tr.active > th,
+.table > tfoot > tr > td.active,
+.table > tfoot > tr.active > td,
+.table > tfoot > tr > th.active,
+.table > tfoot > tr.active > th {
+  background: var(--c-row-active);
+  color: var(--c-ink);
+}
+
+
+/* start_table() wraps every table in <div class="table">, which makes a ready
+   made scroll container. Using it is much better than letting a wide table
+   compress: a runaway value scrolls its own table instead of either dragging
+   the page sideways or squeezing every other column to nothing.
+
+   This replaced an earlier `overflow-wrap: anywhere` on all cells. That did
+   stop the page overflowing, but because `anywhere` drops a cell's
+   min-content width to one character, auto table layout then starved the
+   columns: on crunching.php's detail tables it broke dispnames and
+   comma-grouped relation counts across two lines each. Measured on the real
+   13-column markup, 37 cells wrapped before and 1 after — and the one left is
+   a free-text comment, which should wrap.
+
+   A pathological 200-character dispname now makes its wrapper scroll to
+   1938px while the page stays at the viewport width. */
+div.table { overflow-x: auto; }
+
+/* Cap breakable content so one long comment cannot starve the row. Has no
+   effect on an unbreakable token, which is what the scroll container is for. */
+.table td { max-width: 40ch; }
+
+/* These tables are dense: crunching.php's detail view is 13 columns. One step
+   down from body size buys real room without hurting legibility. */
+.table { font-size: .9375rem; }
+
+/* crunching.php emits every numeric detail column with align='right' and the
+   short ones with align='center', which is a precise hook for "never break
+   this". Tabular figures line the digits up columnwise as a bonus. */
+.table td[align] {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Headers on one line too. Left to wrap, "Post processing / Comments" was
+   starved to a 100px column and broke over four lines, inflating the header
+   row to 92px and leaving a band of dead space above the data. One line
+   brings it to 36px; the extra table width scrolls in the wrapper.
+   `.table th` rather than bare `th`, so it beats the vertical-align:top set
+   on all cells further up. */
+.table th {
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+/* Cells that hold prose or form controls are exempt: they legitimately want
+   the full column. Listed after the cap so they win on source order. */
+td.postbody, blockquote.postbody,
+td.fieldvalue, td.fieldvalue_error,
+td.news, td.uotd { max-width: none; }
+
+/* Wide data tables (stats, host lists, numbers.php) should scroll rather than
+   push the whole page sideways on a phone. */
+.table-responsive { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-responsive:focus-visible { outline: 3px solid var(--c-focus); outline-offset: 0; }
+
+/* ---- forms ------------------------------------------------------------- */
+
+.form-control,
+input[type="text"], input[type="password"], input[type="email"],
+input[type="number"], input[type="url"], input[type="search"],
+input[type="tel"], input[type="date"], select, textarea {
+  background: var(--c-surface);
+  color: var(--c-ink);
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+  box-shadow: none;
+  font-family: inherit;
+  font-size: 1rem;
+  min-height: 40px;
+  padding: .375rem .625rem;
+  max-width: 100%;
+}
+textarea, textarea.form-control { min-height: 8rem; line-height: 1.5; }
+.form-control:focus,
+input[type="text"]:focus, input[type="password"]:focus,
+select:focus, textarea:focus {
+  border-color: var(--c-link);
+  box-shadow: none;
+  outline: 3px solid var(--c-focus);
+  outline-offset: 1px;
+}
+.form-control[disabled], .form-control[readonly], fieldset[disabled] .form-control {
+  background: var(--c-surface-alt);
+  color: var(--c-ink-muted);
+}
+.control-label, label { color: var(--c-ink); font-weight: 700; }
+.help-block { color: var(--c-ink-muted); font-size: .9375rem; }
+.has-error .form-control { border-color: var(--c-err); }
+.has-error .control-label, .has-error .help-block { color: var(--c-err); }
+::placeholder { color: var(--c-ink-muted); opacity: 1; }
+
+/* ---- messages, labels, misc ------------------------------------------- */
+
+.well {
+  background: var(--c-surface-alt);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius);
+  box-shadow: none;
+  color: var(--c-ink);
+}
+.alert {
+  border-radius: var(--radius);
+  border: 1px solid var(--c-rule);
+  border-left-width: 4px;
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+.alert-success { border-left-color: var(--c-ok); }
+.alert-info    { border-left-color: var(--c-link); background: var(--c-tint); }
+.alert-warning { border-left-color: var(--c-warn-ink); }
+.alert-danger  { border-left-color: var(--c-err); }
+.alert a { color: var(--c-link); text-decoration: underline; }
+
+.label, .badge { border-radius: var(--radius); font-weight: 700; font-size: .75rem; }
+.label-default, .badge { background: var(--c-ink-muted); color: var(--c-surface); }
+.label-primary, .label-info { background: var(--c-medium-blue); color: #FFFFFF; }
+/* --c-ok and --c-err are light in the dark theme, so the text on them has to
+   flip. Routed through a token: an override keyed to [data-theme="dark"]
+   alone does nothing for a visitor who is simply following their OS. */
+.label-success { background: var(--c-ok);  color: var(--c-label-text); }
+.label-danger  { background: var(--c-err); color: var(--c-label-text); }
+
+.text-muted { color: var(--c-ink-muted); }
+.text-danger, p.text-danger { color: var(--c-err); }
+.text-success { color: var(--c-ok); }
+.text-primary { color: var(--c-link); }
+/* Bootstrap sets font-weight:300 on .lead, which reads as washed-out grey in
+   this type stack rather than as emphasis. */
+.lead { font-size: 1.125rem; font-weight: 400; color: var(--c-ink); }
+.small, small { font-size: .8125rem; }
+
+.pagination > li > a, .pagination > li > span {
+  background: var(--c-surface);
+  border-color: var(--c-rule);
+  color: var(--c-link);
+  min-width: 40px; min-height: 40px;
+  text-align: center;
+}
+.pagination > .active > a, .pagination > .active > span,
+.pagination > .active > a:hover, .pagination > .active > span:hover {
+  background: var(--c-brand-bar);
+  border-color: var(--c-brand-bar);
+  color: var(--c-on-brand);
+}
+.breadcrumb { background: var(--c-surface-alt); border-radius: var(--radius); }
+.list-group-item {
+  background: var(--c-surface);
+  border-color: var(--c-hairline);
+  color: var(--c-ink);
+}
+.nav-tabs { border-bottom-color: var(--c-rule); }
+.nav-tabs > li > a { color: var(--c-link); border-radius: var(--radius) var(--radius) 0 0; }
+.nav-tabs > li.active > a, .nav-tabs > li.active > a:hover, .nav-tabs > li.active > a:focus {
+  background: var(--c-surface);
+  border-color: var(--c-rule) var(--c-rule) var(--c-surface);
+  color: var(--c-ink);
+}
+.progress { background: var(--c-bar-track); border-radius: 999px; box-shadow: none; height: 10px; }
+.progress-bar { background: var(--c-bar-fill); box-shadow: none; }
+.modal-content { background: var(--c-surface); color: var(--c-ink); border-radius: var(--radius); }
+.modal-header, .modal-footer { border-color: var(--c-hairline); }
+.close { color: var(--c-ink); text-shadow: none; opacity: .7; }
+blockquote {
+  border-left: 4px solid var(--c-rule);
+  color: var(--c-ink);
+  padding: .5rem 0 .5rem 1rem;
+  font-size: 1rem;
+}
+
+
+/* ===========================================================================
+   4. BOINC AND NFS@HOME LEGACY CLASSES
+   Everything white.css and main.css covered, so replacing white.css does not
+   regress the forum, account or status pages.
+   =========================================================================== */
+
+/* ---- forum and message board tables ----------------------------------- */
+
+td.category, tr.subtitle, th.subheading, td.heading {
+  background: var(--c-brand-bar);
+  color: var(--c-on-brand);
+  font-weight: 700;
+  border-bottom: 0;
+}
+td.category a, tr.subtitle a, th.subheading a, td.heading a,
+td.category a:link, td.heading a:link { color: #FFFFFF; text-decoration: underline; }
+
+.row0, tr.row0, td.row0, .row_hd0, tr.row_hd0 { background: var(--c-surface); }
+.row1, tr.row1, td.row1, .row_hd1, tr.row_hd1 { background: var(--c-surface-alt); }
+.row_hd0, .row_hd1, tr.row_hd0, tr.row_hd1 { font-weight: 700; }
+.highlighted_row0, .highlighted_row1,
+tr.highlighted_row0, tr.highlighted_row1 {
+  background: var(--c-tint);
+  box-shadow: inset 3px 0 0 var(--c-accent-ink);
+}
+
+td.postheader {
+  background: var(--c-surface-alt);
+  border-bottom: 1px solid var(--c-hairline);
+  font-size: .875rem;
+  color: var(--c-ink-muted);
+}
+td.postheader a { color: var(--c-link); }
+td.postbody {
+  background: var(--c-surface);
+  color: var(--c-ink);
+  line-height: 1.6;
+}
+blockquote.postbody {
+  border-left: 4px solid var(--c-rule);
+  background: var(--c-surface-alt);
+  color: var(--c-ink);
+  margin: .75rem 0;
+  padding: .5rem 1rem;
+}
+td.postfooter {
+  background: var(--c-surface);
+  border-top: 1px solid var(--c-hairline);
+  font-size: .8125rem;
+  color: var(--c-ink-muted);
+}
+td.postfooter .button { min-height: 32px; font-weight: 400; font-size: .8125rem; }
+tr.postseparator, tr.postseperator, tr.helpdeskseperator {
+  border-bottom: 2px solid var(--c-rule);
+}
+tr.message { background: var(--c-surface); }
+
+.authorcol, div.authorcol, td.authorcol {
+  background: var(--c-surface-alt);
+  border-right: 1px solid var(--c-hairline);
+  font-size: .875rem;
+  color: var(--c-ink);
+  width: 12rem;
+  vertical-align: top;
+}
+.authorcol a { color: var(--c-link); font-weight: 700; }
+.authorinfo, img.authorinfo, .authorinfo img {
+  max-width: 100px;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+}
+.forum_toplinks, .forum_toplinks td {
+  background: var(--c-surface-alt);
+  border: 1px solid var(--c-hairline);
+  font-size: .9375rem;
+}
+.forum_toplinks a { color: var(--c-link); }
+.forum_toplinks a:hover { color: var(--c-link-hover); text-decoration: underline; }
+
+td.lastpost, td.numbers { font-size: .875rem; color: var(--c-ink-muted); }
+td.numbers { text-align: right; font-variant-numeric: tabular-nums; }
+td.indent { padding-left: 2rem; }
+td.friend { background: var(--c-tint); }
+span.inboxunread { font-weight: 700; color: var(--c-accent-ink); }
+div.pm_preview {
+  background: var(--c-surface-alt);
+  border: 1px solid var(--c-hairline);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+}
+#preview, #thread { background: var(--c-surface); }
+#preview .header {
+  background: var(--c-brand-bar);
+  color: var(--c-on-brand);
+  padding: .5rem .75rem;
+  font-weight: 700;
+}
+.actionlist { list-style: none; margin: 0; padding: 0; }
+.actionlist li { display: inline-block; margin: 0 .75rem .25rem 0; font-size: .875rem; }
+
+img.flag { border: 1px solid var(--c-hairline); vertical-align: baseline; }
+img.userimg { border: 1px solid var(--c-rule); border-radius: var(--radius); }
+
+/* ---- name/value field tables (prefs, account, forms) ------------------ */
+
+td.fieldname {
+  background: var(--c-surface-alt);
+  color: var(--c-ink);
+  font-weight: 700;
+  text-align: right;
+  width: 30%;
+  vertical-align: top;
+}
+td.fieldvalue { background: var(--c-surface); color: var(--c-ink); }
+td.fieldname_error, td.fieldvalue_error {
+  background: var(--c-surface);
+  color: var(--c-err);
+  font-weight: 700;
+}
+
+/* ---- status pages ----------------------------------------------------- */
+
+td.running    { color: var(--c-ok);        font-weight: 700; }
+td.notrunning { color: var(--c-err);       font-weight: 700; }
+td.disabled   { color: var(--c-ink-muted); }
+
+/* ---- news and user of the day ---------------------------------------- */
+
+#news, td.news { color: var(--c-ink); }
+#news h3 { color: var(--c-heading); margin-bottom: .25rem; }
+#news p { margin-bottom: .5rem; }
+span.news_date, .news_date {
+  display: block;
+  font-size: .8125rem;
+  color: var(--c-ink-muted);
+}
+hr.news_line { border-top: 1px solid var(--c-hairline); margin: 1rem 0; }
+#uotd, td.uotd { color: var(--c-ink); }
+
+/* show_news() emits, per item:
+     <p><span class="lead">Title</span><br>body<br>
+     <span class="small">date &middot; <a>Discuss</a></span><br clear=all><hr>
+   show_uotd() emits a left-floated thumbnail carrying legacy hspace/vspace
+   attributes, then user_links(), then a text snippet. Neither uses a class of
+   its own, so both are styled here directly. */
+.panel-body .lead, #news .lead {
+  display: block;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  color: var(--c-heading);
+  line-height: 1.3;
+  margin-bottom: .25rem;
+}
+.panel-body .small { color: var(--c-ink-muted); }
+.panel-body hr { margin: .875rem 0; }
+.panel-body hr:last-child { display: none; }
+.panel-body > p:first-child { margin-top: 0; }
+.panel-body br[clear] { clear: both; }
+.panel-body img[align="left"], #uotd img[align="left"] {
+  float: left;
+  max-width: 80px;
+  margin: 0 .875rem .5rem 0;
+  border: 1px solid var(--c-rule);
+  border-radius: var(--radius);
+}
+.panel-body::after { content: ""; display: block; clear: both; }
+
+/* ---- notices and odds and ends --------------------------------------- */
+
+.notice {
+  background: var(--c-tint);
+  border-left: 4px solid var(--c-link);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  color: var(--c-ink);
+}
+.error {
+  background: var(--c-surface);
+  border-left: 4px solid var(--c-err);
+  border-radius: var(--radius);
+  padding: .75rem 1rem;
+  color: var(--c-err);
+  font-weight: 700;
+}
+span.note, .smalltext { font-size: .8125rem; color: var(--c-ink-muted); }
+.nobr { white-space: nowrap; }
+.title { font-size: 1.375rem; font-weight: 700; color: var(--c-heading); }
+.description { color: var(--c-ink-muted); }
+span.page_title {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--c-heading);
+  margin-bottom: .5rem;
+}
+#mainnav h2 { font-size: 1rem; margin: 1rem 0 .25rem; }
+
+/* project_footer() emits <center><img pb_boinc.gif></center> plus a copyright
+   line. Keep it quiet and separated rather than rewriting the PHP. */
+body > .container-fluid > center,
+body > .container-fluid > p > center { color: var(--c-ink-muted); font-size: .875rem; }
+
+
+/* ===========================================================================
+   5. FRONT PAGE COMPONENTS  (index2.php)
+   =========================================================================== */
+
+.masthead { background: var(--c-surface); border-bottom: 1px solid var(--c-hairline); }
+.masthead-inner {
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: .75rem 1.5rem;
+  width: 100%; max-width: 1180px; margin: 0 auto;
+  padding: 1rem 1.25rem;
+}
+.site-title { margin: 0; font-size: 0; }
+
+/* The logo is a full-bleed photographic banner, not artwork on a flat
+   background, so there is nothing to key out and no light/dark pair is
+   needed. It is a 600x150 raster with no detail to spare, so it is capped at
+   its native width and never upscaled. */
+.site-logo {
+  display: block; width: 480px; max-width: 100%; height: auto;
+  border-radius: var(--radius);
+}
+.site-tagline { margin: 0; font-size: .9375rem; color: var(--c-ink-muted); max-width: 26ch; }
+
+.theme-switch { display: flex; align-items: center; gap: .25rem; margin-left: auto; }
+.theme-switch-label { font-size: .8125rem; color: var(--c-ink-muted); margin-right: .25rem; }
+.theme-btn {
+  font: inherit; font-size: .875rem;
+  min-height: 44px; min-width: 44px; padding: 0 .75rem;
+  background: var(--c-surface); color: var(--c-ink);
+  border: 1px solid var(--c-rule); border-radius: 0;
+  cursor: pointer;
+}
+.theme-btn + .theme-btn { margin-left: -1px; }
+.theme-btn:first-of-type { border-radius: var(--radius) 0 0 var(--radius); }
+.theme-btn:last-of-type  { border-radius: 0 var(--radius) var(--radius) 0; }
+.theme-btn[aria-pressed="true"] {
+  background: var(--c-brand-bar);
+  border-color: var(--c-brand-bar);
+  color: var(--c-on-brand);
+  font-weight: 700;
+}
+
+/* Sieving status band */
+.sieve { background: var(--c-surface); border-bottom: 1px solid var(--c-hairline); }
+.sieve-head {
+  display: flex; align-items: baseline; justify-content: space-between;
+  flex-wrap: wrap; gap: .5rem; padding-top: 1.5rem;
+}
+.sieve-head h2 { margin: 0; }
+.sieve-note { font-size: .8125rem; color: var(--c-ink-muted); margin: 0; }
+.sieve table { width: 100%; margin: .75rem 0 0; }
+.sieve caption {
+  text-align: left; font-size: .875rem;
+  color: var(--c-ink-muted); padding-bottom: .375rem;
+}
+.sieve th, .sieve td {
+  padding: .625rem .75rem;
+  border-bottom: 1px solid var(--c-hairline);
+  vertical-align: middle;
+}
+.sieve tbody tr:hover { background: var(--c-tint); }
+.app-name { font-weight: 700; white-space: nowrap; font-size: 1rem; color: var(--c-ink); }
+.app-name a { color: var(--c-link); }
+
+/* Monospace here is doing real work: these are 180+ digit integers in
+   Cunningham notation and they need tabular figures to line up. */
+.num {
+  font-family: var(--font-num); font-size: .9375rem;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.digits { color: var(--c-ink-muted); font-size: .875rem; }
+.bar { display: flex; align-items: center; gap: .625rem; min-width: 9rem; }
+.bar-track {
+  flex: 1; height: 8px; border-radius: 999px;
+  background: var(--c-bar-track); overflow: hidden;
+}
+.bar-fill { display: block; height: 100%; background: var(--c-bar-fill); }
+.bar-pct {
+  font-family: var(--font-num); font-size: .8125rem;
+  font-variant-numeric: tabular-nums; color: var(--c-ink-muted);
+}
+.server-line {
+  display: flex; align-items: center; flex-wrap: wrap; gap: .5rem;
+  font-size: .9375rem; padding: .75rem 0 1.5rem;
+}
+
+/* Prose lines under the band. Deliberately not .server-line: that one is a
+   flex row for the status dot, and flex would turn each text node between the
+   links into its own item, spacing the commas away from the words. */
+.sieve-line { font-size: .9375rem; margin: 0; padding: .75rem 0 1.5rem; }
+.sieve-line + .sieve-line { padding-top: 0; }
+
+/* Front page prose sits on the page rather than in a card: the About text is
+   the substance and boxing it would flatten the hierarchy. */
+.prose h2 {
+  padding-bottom: .375rem;
+  border-bottom: 2px solid var(--c-rule);
+  margin-bottom: .75rem;
+}
+.prose h3 {
+  font-size: 1.25rem;
+  margin: 2rem 0 .625rem;
+  padding-bottom: .25rem;
+  border-bottom: 1px solid var(--c-hairline);
+}
+.prose > .lead:first-child { margin-bottom: 1.5rem; }
+.prose p, .prose ul { max-width: var(--measure); }
+.prose + .prose { margin-top: 2.25rem; }
+.prose ul { padding-left: 1.25rem; }
+.prose li { margin-bottom: .375rem; }
+
+.panel-join .panel-body { background: var(--c-tint); }
+.panel-join .btn { width: 100%; }
+.panel-join .btn-default { margin-top: .5rem; }
+
+.quicklinks { border-top: 1px solid var(--c-hairline); margin-top: 1.5rem; padding-top: 1.75rem; }
+.quicklinks h2 { font-size: 1.0625rem; }
+.ql-grid { display: grid; gap: 1.5rem; grid-template-columns: 1fr; }
+.ql-grid h3 { font-size: .9375rem; color: var(--c-ink-muted); margin-bottom: .375rem; }
+.ql-grid ul { list-style: none; margin: 0; padding: 0; font-size: .9375rem; }
+.ql-grid li { margin-bottom: .375rem; }
+@media (min-width: 40rem) { .ql-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.site-footer {
+  background: var(--c-brand-bar);
+  color: var(--c-on-brand);
+  border-top: 3px solid var(--c-accent);
+  margin-top: 2.5rem;
+  padding: 2rem 0 1.5rem;
+}
+.site-footer a, .site-footer a:link, .site-footer a:visited { color: #C6E4F5; }
+.site-footer a:hover { color: #FFFFFF; }
+.site-footer :focus-visible { outline-color: var(--c-orange); }
+.sponsors {
+  display: flex; flex-wrap: wrap; align-items: center;
+  gap: 1.25rem 2rem; padding-bottom: 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, .25);
+}
+.sponsors a {
+  display: inline-flex; align-items: center;
+  background: #FFFFFF; border-radius: var(--radius);
+  padding: .5rem .75rem; min-height: 48px;
+}
+.grant { font-size: .875rem; max-width: 80ch; margin: 1.25rem 0 0; color: #DCE6F0; }
+
+
+/* ===========================================================================
+   6. NARROW SCREENS
+   Overrides come after the base rules. Same specificity means source order
+   decides, and being inside a media query does not change that.
+   =========================================================================== */
+
+@media (max-width: 48rem) {
+  .site-logo { width: 100%; }
+  .site-tagline { max-width: none; }
+  .theme-switch { margin-left: 0; }
+  .authorcol, div.authorcol, td.authorcol { width: auto; }
+}
+
+@media (max-width: 40rem) {
+  /* Stack name/value tables rather than squeezing them into a 30% column. */
+  td.fieldname { width: auto; text-align: left; }
+}
+
+@media (max-width: 30rem) {
+  body { font-size: 16px; }
+  .sieve th, .sieve td { padding: .5rem .375rem; font-size: .9375rem; }
+  .sieve thead th { white-space: normal; font-size: .75rem; }
+  .sieve .num { font-size: .875rem; }
+  .bar { min-width: 0; }
+  .bar-track { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+@media print {
+  .navbar, .theme-switch, .site-footer, .skip-link { display: none; }
+  body { background: #FFFFFF; color: #000000; font-size: 11pt; }
+  a { text-decoration: underline; }
+}
+
+/* The injected control sits inside the navbar's right-hand <ul>. */
+.theme-switch-nav { display: flex; align-items: center; padding: 8px 15px; }
+.navbar .theme-switch { margin-left: 0; }
+.navbar .theme-switch-label { color: rgba(255, 255, 255, .75); }
+.navbar .theme-btn {
+  background: transparent;
+  color: var(--c-on-brand);
+  border-color: rgba(255, 255, 255, .5);
+  min-height: 34px;
+  font-size: .8125rem;
+}
+.navbar .theme-btn[aria-pressed="true"] {
+  background: rgba(255, 255, 255, .18);
+  border-color: rgba(255, 255, 255, .7);
+}
+.navbar .theme-btn:focus-visible { outline-color: var(--c-orange); }
+
+/* Fallback position for the theme control, used by nfs2-theme.js when the
+   page has no navbar to put it in. Kept out of the way but reachable, and
+   after the main content in the tab order since it is a preference, not
+   navigation. */
+.theme-switch-floating {
+  position: fixed; top: .5rem; right: .5rem; z-index: 90;
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: .25rem;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .25);
+}
+@media print { .theme-switch-floating { display: none; } }
+
+/* nfs2-theme.js adds tabindex to a table wrapper only while it is actually
+   scrolling, so the focus ring needs to sit tight against the table rather
+   than the 2px offset used elsewhere. */
+div.table[tabindex]:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 0;
+}
