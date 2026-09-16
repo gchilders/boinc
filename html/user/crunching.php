@@ -98,7 +98,12 @@ function display_result($xml, $numbers, $type, $details=false) {
 			echo "<td align='right'>$prels</td>";
 		}
 		if (!empty($number->pastebin)) {
-			echo "<td><a href=\"http://pastebin.com/$number->pastebin\">$number->postprocessor</a></td>";
+			$pastebin = $number->pastebin;
+			$log_url = is_file(__DIR__ . "/pastebin/$pastebin")
+			    ? "pastebin/$pastebin"
+			    : "https://pastebin.com/$pastebin";
+			echo "<td><a href=\"$log_url\">$number->postprocessor</a></td>";
+			// echo "<td><a href=\"http://pastebin.com/$number->pastebin\">$number->postprocessor</a></td>";
 		} else {
 			echo "<td>$number->postprocessor</td>";
 		}

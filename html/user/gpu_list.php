@@ -1,5 +1,4 @@
 <?php
-
 // This file is part of BOINC.
 // http://boinc.berkeley.edu
 // Copyright (C) 2011 University of California
@@ -16,7 +15,6 @@
 //
 // You should have received a copy of the GNU Lesser General Public License
 // along with BOINC.  If not, see <http://www.gnu.org/licenses/>.
-
 // generate a page of the best-performing GPU models.
 //
 // "best-performing" is defined as minimizing the average of
@@ -29,6 +27,7 @@
 require_once("../inc/util.inc");
 require_once("../inc/common_defs.inc");
 
+define('GPU_MIN_RESULTS', 10);
 // strip leading AMD, NVIDIA, etc.
 // This avoids showing the same model twice
 //
@@ -41,7 +40,6 @@ function strip_vendor($model) {
     }
     return $model;
 }
-
 // given a host.misc field,
 // extract the GPU model name for the given vendor
 //
@@ -54,7 +52,6 @@ function get_gpu_model($x, $vendor) {
     }
     return null;
 }
-
 function add_model($model, $r, $wu, &$models) {
     if (array_key_exists($model, $models)) {
         $models[$model]->count++;
@@ -66,14 +63,13 @@ function add_model($model, $r, $wu, &$models) {
         $models[$model] = $x;
     }
 }
-
 // return a data structure containing GPU usage info for a vendor
 // $x->total: combined list
 // $x->windows
 // $x->linux
 // $x->mac
 //
-// vendor is nvidia, amd, intel, or apple
+// vendor is nvidia or amd
 
 function get_gpu_list($vendor) {
 
@@ -82,7 +78,6 @@ function get_gpu_list($vendor) {
     // amd or ati
     // intel
     // apple
-
     $clause = "plan_class like '%$vendor%'";
     if ($vendor == 'amd') {
         $clause .= " or plan_class like '%ati%'";
@@ -94,9 +89,11 @@ function get_gpu_list($vendor) {
     if (count($avs) == 0) {
         $x = new StdClass;
         $x->total = array();
+        $x->win = array();
+        $x->linux = array();
+        $x->mac = array();
         return $x;
     }
-
     $av_ids = [];
     foreach($avs as $av) {
         $av_ids[] = $av->id;
@@ -105,18 +102,14 @@ function get_gpu_list($vendor) {
         $av_ids[] = ANON_PLATFORM_NVIDIA;
     } else if ($vendor == "amd") {
         $av_ids[] = ANON_PLATFORM_ATI;
-    } else if ($vendor == "intel") {
-        $av_ids[] = ANON_PLATFORM_INTEL_GPU;
-    } else if ($vendor == "apple") {
-        $av_ids[] = ANON_PLATFORM_APPLE_GPU;
     }
 
     $av_ids = implode(',', $av_ids);
-
     $t = time() - 30*86400;
     //echo "start enum $vendor $av_ids\n";
     $results = BoincResult::enum(
-        "app_version_id in ($av_ids) and create_time > $t and elapsed_time>100 limit 2000"
+        "app_version_id in ($av_ids) and create_time > $t and elapsed_time > 100 "
+        ."and outcome = 1 and validate_state = 1 and exit_status = 0"
     );
     //echo "end enum\n";
     $total = array();
@@ -140,7 +133,6 @@ function get_gpu_list($vendor) {
         if (strstr($h->os_name, "Darwin")) {
             add_model($model, $r, $wu, $mac);
         }
-
     }
     $x = new StdClass;
     $x->total = $total;
@@ -150,12 +142,37 @@ function get_gpu_list($vendor) {
     return $x;
 }
 
+function merge_model_lists($a, $b) {
+    $out = array();
+    foreach (array($a, $b) as $models) {
+        foreach ($models as $model=>$x) {
+            if (!array_key_exists($model, $out)) {
+                $y = new StdClass;
+                $y->count = 0;
+                $y->time = 0;
+                $out[$model] = $y;
+            }
+            $out[$model]->count += $x->count;
+            $out[$model]->time += $x->time;
+        }
+    }
+    return $out;
+}
+
+function merge_gpu_lists($a, $b) {
+    $x = new StdClass;
+    $x->total = merge_model_lists($a->total, $b->total);
+    $x->win = merge_model_lists($a->win, $b->win);
+    $x->linux = merge_model_lists($a->linux, $b->linux);
+    $x->mac = merge_model_lists($a->mac, $b->mac);
+    return $x;
+}
+
 function get_gpu_lists() {
     $x = new StdClass;
     $x->cuda = get_gpu_list("nvidia");
     $x->ati = get_gpu_list("amd");
-    $x->intel_gpu = get_gpu_list("intel");
-    $x->apple_gpu = get_gpu_list("apple");
+    $x->nvidia_amd = merge_gpu_lists($x->cuda, $x->ati);
     $x->time = time();
     return $x;
 }
@@ -163,75 +180,78 @@ function get_gpu_lists() {
 function gpucmp($x1, $x2) {
     return $x1->avg_time > $x2->avg_time;
 }
-
 function show_list($models, $name) {
     echo "<td><h2>$name</h2>\n";
     if (!count($models)) {
         echo tra("No GPU tasks reported")."</td>\n";
         return;
     }
-    $max_count = 0;
     foreach ($models as $model=>$x) {
-        if ($x->count > $max_count) $max_count = $x->count;
         $x->avg_time = $x->time/$x->count;
     }
     $min_time = 1e9;
     foreach ($models as $model=>$x) {
-        if ($x->count < $max_count/10) continue;
+        if ($x->count < GPU_MIN_RESULTS) continue;
         if ($x->avg_time < $min_time) $min_time = $x->avg_time;
     }
     uasort($models, 'gpucmp');
     echo "<ol>\n";
     foreach ($models as $model=>$x) {
-        if ($x->count < $max_count/10) continue;
+        if ($x->count < GPU_MIN_RESULTS) continue;
         $s = number_format($min_time/$x->avg_time, 3);
         echo "<li>($s)  $model\n";
     }
     echo "</ol></td>\n";
 }
-
-function show_vendor($vendor, $x) {
-    echo "<h2>$vendor</h2>\n";
-    if (!count($x->total)) {
-        echo tra("No GPU tasks reported");
-        return;
+function has_qualifying_models($models) {
+    foreach ($models as $x) {
+        if ($x->count >= GPU_MIN_RESULTS) return true;
     }
-    $have_win = count($x->win)>0;
-    $have_mac = count($x->mac)>0;
-    $have_linux = count($x->linux)>0;
+    return false;
+}
+function show_vendor($vendor, $x) {
+    $have_win = has_qualifying_models($x->win);
+    $have_linux = has_qualifying_models($x->linux);
+    $have_mac = has_qualifying_models($x->mac);
     $n = 0;
     if ($have_win) $n++;
-    if ($have_mac) $n++;
     if ($have_linux) $n++;
-    $show_total = $n>1;
+    if ($have_mac) $n++;
+    if (!$n) return;
+
+    echo "<h2>$vendor</h2>\n";
+    $show_total = $n > 1 && has_qualifying_models($x->total);
     start_table();
     echo "<tr>";
     if ($show_total) {
         show_list($x->total, "Total");
     }
-    show_list($x->win, "Windows");
-    show_list($x->linux, "Linux");
-    show_list($x->mac, "Mac");
+    if ($have_win) {
+        show_list($x->win, "Windows");
+    }
+    if ($have_linux) {
+        show_list($x->linux, "Linux");
+    }
+    if ($have_mac) {
+        show_list($x->mac, "Mac");
+    }
     echo "</tr></table>\n";
 }
-
 $d = get_cached_data(86400);
 $data = FALSE;
 if ($d) {
     $data = unserialize($d);
 }
 
-if (!$data) {
+if (!$data || !isset($data->nvidia_amd)) {
     $data = get_gpu_lists();
     set_cached_data(86400, serialize($data));
 }
-
 page_head(tra("Top GPU models"));
-echo tra("The following lists show the most productive GPU models on different platforms.  Relative speeds, measured by average elapsed time of tasks, are shown in parentheses.");
+echo tra("The following lists show the most productive GPU models on different platforms.  Relative speeds, measured by average elapsed time of successful, validated tasks, are shown in parentheses.  Models must have at least ").GPU_MIN_RESULTS.tra(" qualifying results in a list to be shown.");
+show_vendor("NVIDIA + ATI/AMD", $data->nvidia_amd);
 show_vendor("NVIDIA", $data->cuda);
 show_vendor("ATI/AMD", $data->ati);
-show_vendor("Intel", $data->intel_gpu);
-show_vendor("Apple", $data->apple_gpu);
 echo "<p>Generated ".time_str($data->time);
 page_tail();
 

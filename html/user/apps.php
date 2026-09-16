@@ -18,6 +18,24 @@
 
 require_once("../inc/util.inc");
 
+
+require_once("../inc/credit.inc");
+
+// Return the current, decayed RAC for an app version, expressed as GFLOPS.
+function app_version_gflops($av, $now) {
+    if (!$av->expavg_credit || !$av->expavg_time) {
+        return 0;
+    }
+
+    $diff = $now - $av->expavg_time;
+    if ($diff < 0) {
+        $diff = 0;
+    }
+
+    $weight = exp(-$diff*M_LN2/CREDIT_HALF_LIFE);
+    return ($av->expavg_credit * $weight) / 200;
+}
+
 if (REQUIRE_LOGIN) {
     get_logged_in_user();
 }
@@ -86,6 +104,10 @@ function show_apps() {
     text_end();
 
     $apps = BoincApp::enum("deprecated=0");
+
+    $platforms = BoincPlatform::enum("deprecated=0");
+
+    $now = time();
     start_table('table-striped');
     row_heading_array([
         'Name<br><small>Click for details</small>',
@@ -94,7 +116,13 @@ function show_apps() {
     ]);
     foreach ($apps as $app) {
         $b = $app->beta?' (beta test)':'';
-        $gf = BoincAppVersion::sum('expavg_credit', "where appid=$app->id")/200;
+        $gf = 0;
+        foreach ($platforms as $platform) {
+            $avs = latest_avs_app_platform($app->id, $platform->id);
+            foreach ($avs as $av) {
+                $gf += app_version_gflops($av, $now);
+            }
+        }
         row_array([
             "<a href=apps.php?app_id=$app->id>$app->user_friendly_name$b</a>",
             pretty_time_str($app->create_time),
@@ -113,6 +141,7 @@ function show_app($app_id) {
     start_table('table-striped');
     $platforms = BoincPlatform::enum("deprecated=0");
     $total_gf = 0;
+    $now = time();
     row_heading_array([
         'ID',
         'Platform',
@@ -126,7 +155,7 @@ function show_app($app_id) {
         foreach($avs as $av) {
             $create_time_f = pretty_time_str($av->create_time);
             $version_num_f = sprintf("%0.2f", $av->version_num/100);
-            $gf = $av->expavg_credit/200;
+            $gf = app_version_gflops($av, $now);
             $total_gf += $gf;
             $gf = number_format($gf, 2);
             $b = $av->beta?" (beta test)":"";
