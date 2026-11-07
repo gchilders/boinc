@@ -59,13 +59,13 @@
 
 // if host sends us an impossible RAM size, use this instead
 //
-const double DEFAULT_RAM_SIZE = 64000000;
+const double DEFAULT_RAM_SIZE = 4*GIGA;
 
 int selected_app_message_index=0;
 
 static inline bool file_present_on_host(const char* name) {
     for (const FILE_INFO& fi: g_request->file_infos) {
-        if (!strstr(name, fi.name)) {
+        if (!strcmp(name, fi.name)) {
             return true;
         }
     }
@@ -682,7 +682,8 @@ static int add_wu_to_reply(
     if (bvp) {
         retval = add_usage_to_wu(wu2, hu);
         if (retval) return retval;
-        add_app_files(wu2, *bvp);
+        retval = add_app_files(wu2, *bvp);
+        if (retval) return retval;
     }
     wu3 = wu2;
     if (strlen(config.replace_download_url_by_timezone)) {
@@ -721,13 +722,15 @@ static int insert_deadline_tag(RESULT& result) {
 // - transition time
 // - app_version_id, if app uses homogeneous app version
 // - hr_class, if we're using HR
+// - n_sent
 //
-// In the latter two cases, the update is conditional on the field
+// In the HR and HAV cases, the update is conditional on the field
 // fields either being zero or the desired value.
 // Some other scheduler instance might have updated it since we read the WU,
 // and the transitioner might have set it to zero.
+// In that case we return an error, and the result won't get sent.
 //
-int update_wu_on_send(WORKUNIT wu, time_t x, APP& app, BEST_APP_VERSION& bav) {
+int update_wu_on_send(WORKUNIT& wu, time_t x, APP& app, BEST_APP_VERSION& bav) {
     DB_WORKUNIT dbwu;
     char buf[256], buf2[256], where_clause[256];
     int retval;
@@ -737,7 +740,7 @@ int update_wu_on_send(WORKUNIT wu, time_t x, APP& app, BEST_APP_VERSION& bav) {
     // SQL note: can't use min() here
     //
     sprintf(buf,
-        "transition_time=if(transition_time<%d, transition_time, %d)",
+        "transition_time=if(transition_time<%d, transition_time, %d), n_sent=n_sent+1",
         (int)x, (int)x
     );
     strcpy(where_clause, "");
@@ -759,10 +762,17 @@ int update_wu_on_send(WORKUNIT wu, time_t x, APP& app, BEST_APP_VERSION& bav) {
         strcat(where_clause, buf2);
     }
     retval = dbwu.update_field(buf, strlen(where_clause)?where_clause:NULL);
-    if (retval) return retval;
+    if (retval) {
+        log_messages.printf(MSG_NORMAL,
+            "[WU%ld] update failed update_wu_on_send(): %d\n",
+            wu.id, retval
+        );
+        return retval;
+    }
     if (boinc_db.affected_rows() != 1) {
         return ERR_DB_NOT_FOUND;
     }
+
     return 0;
 }
 
@@ -978,6 +988,23 @@ int add_result_to_reply(
             retval
         );
         return retval;
+    }
+
+    // If the WU is part of a batch, update batch.n_in_progress
+    //
+    if (wu.batch > 0 && wu.n_sent == 0) {
+        char buf[256];
+        DB_BATCH batch;
+        batch.id = wu.batch;
+        sprintf(buf, "n_in_progress=n_in_progress+1");
+        retval = batch.update_field(buf);
+        if (retval) {
+            log_messages.printf(MSG_CRITICAL,
+                "[BATCH%d] add_result_to_reply(): batch update failed: %d\n",
+                wu.batch, retval
+            );
+            return retval;
+        }
     }
 
     // update result DB record.

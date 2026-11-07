@@ -20,10 +20,9 @@
 
 class CErrAlreadyExistsPage: public CBOINCWizardPage {
     DECLARE_DYNAMIC_CLASS(CErrAlreadyExistsPage)
-    DECLARE_EVENT_TABLE()
 
 public:
-    CErrAlreadyExistsPage();
+    CErrAlreadyExistsPage() = default;
     CErrAlreadyExistsPage(CWizardAttach* parent);
     bool Create(CWizardAttach* parent);
 
@@ -41,11 +40,11 @@ public:
     bool HasPrevPage() const;
 
 private:
-    wxStaticText* m_pTitleStaticCtrl;
-    wxStaticText* m_pDirectionsStaticCtrl;
+    wxStaticText* m_pTitleStaticCtrl = nullptr;
+    wxStaticText* m_pDirectionsStaticCtrl = nullptr;
 
-    CWizardAttach *m_pParent;
-    CBOINCWizardPage *m_pPrev;
+    CWizardAttach *m_pParent = nullptr;
+    CBOINCWizardPage *m_pPrev = nullptr;
 };
 
 #endif

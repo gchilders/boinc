@@ -24,7 +24,6 @@
 
 class CDlgAdvPreferences : public CDlgAdvPreferencesBase {
     DECLARE_DYNAMIC_CLASS( CDlgAdvPreferences )
-    DECLARE_EVENT_TABLE()
     void ReadPreferenceSettings();
     bool SavePreferencesSettings();
     void UpdateControlStates();

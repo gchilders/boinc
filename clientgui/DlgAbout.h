@@ -18,27 +18,9 @@
 #ifndef BOINC_DLGABOUT_H
 #define BOINC_DLGABOUT_H
 
-/*!
- * Includes
- */
-
-////@begin includes
 #include "wx/valgen.h"
 #include "wx/statline.h"
-////@end includes
 
-/*!
- * Forward declarations
- */
-
-////@begin forward declarations
-////@end forward declarations
-
-/*!
- * Control identifiers
- */
-
-////@begin control identifiers
 #define ID_DIALOG 10000
 #define SYMBOL_CDLGABOUT_STYLE wxDEFAULT_DIALOG_STYLE
 #define SYMBOL_CDLGABOUT_TITLE wxT("")
@@ -46,11 +28,6 @@
 #define SYMBOL_CDLGABOUT_SIZE wxSize(-1, -1)
 #define SYMBOL_CDLGABOUT_POSITION wxDefaultPosition
 #define ID_ABOUTBOINCLINK 10031
-////@end control identifiers
-
-/*!
- * Compatibility
- */
 
 #ifndef wxCLOSE_BOX
 #define wxCLOSE_BOX 0x1000
@@ -59,18 +36,13 @@
 #define wxFIXED_MINSIZE 0
 #endif
 
-/*!
- * CDlgAbout class declaration
- */
-
 class CDlgAbout: public wxDialog
 {
     DECLARE_DYNAMIC_CLASS( CDlgAbout )
-    DECLARE_EVENT_TABLE()
 
 public:
     /// Constructors
-    CDlgAbout( );
+    CDlgAbout() = default;
     CDlgAbout( wxWindow* parent, wxWindowID id = SYMBOL_CDLGABOUT_IDNAME, const wxString& caption = SYMBOL_CDLGABOUT_TITLE, const wxPoint& pos = SYMBOL_CDLGABOUT_POSITION, const wxSize& size = SYMBOL_CDLGABOUT_SIZE, long style = SYMBOL_CDLGABOUT_STYLE );
 
     /// Creation
@@ -99,9 +71,9 @@ public:
     static bool ShowToolTips();
 
 ////@begin CDlgAbout member variables
-    wxStaticText* m_AboutBOINCTitleCtrl;
-    wxStaticBitmap* m_AboutBOINCLogoCtrl;
-    wxHyperlinkCtrl* m_AboutBOINCURLCtrl;
+    wxStaticText* m_AboutBOINCTitleCtrl = nullptr;
+    wxStaticBitmap* m_AboutBOINCLogoCtrl = nullptr;
+    wxHyperlinkCtrl* m_AboutBOINCURLCtrl = nullptr;
     wxString m_strVersion;
     wxString m_strWidgetsVersion;
 ////@end CDlgAbout member variables

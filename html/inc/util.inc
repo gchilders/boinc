@@ -171,11 +171,14 @@ function send_cookie($name, $value, $permanent, $ops=false) {
         $path .= "_ops/";
     }
     $expire = $permanent?time()+3600*24*365:0;
-    setcookie($name, $value, $expire, $path,
-        '',
-        is_https(),     // if this page is secure, make cookie secure
-        true            // use cookie for HTTP only; no JS access
-    );
+    setcookie($name, $value, [
+        'expires' => $expire,
+        'path' => $path,
+        'domain' => '',
+        'secure' => is_https(),    // if this page is secure, make cookie secure
+        'httponly' => true,            // use cookie for HTTP only; no JS access
+        'SameSite' => 'Lax'
+    ]);
 }
 
 function clear_cookie($name, $ops=false) {
@@ -205,7 +208,9 @@ function get_logged_in_user($must_be_logged_in=true) {
     if (web_stopped()) return null;
 
     $authenticator = null;
-    if (isset($_COOKIE['auth'])) $authenticator = $_COOKIE['auth'];
+    if (isset($_COOKIE['auth'])) {
+        $authenticator = $_COOKIE['auth'];
+    }
 
     if ($authenticator) {
         $authenticator = BoincDb::escape_string($authenticator);
@@ -231,7 +236,7 @@ function get_logged_in_user($must_be_logged_in=true) {
 function show_login_info($prefix="") {
     $user = get_logged_in_user(false);
     if ($user) {
-        $url_tokens = url_tokens($user->authenticator);
+        $url_tokens = url_tokens();
         echo "<nobr>$user->name &middot; <a href=".$prefix."logout.php?$url_tokens>".tra("log out")."</a></nobr>";
     } else {
         echo "<a href=".$prefix."login_form.php>".tra("log in")."</a>";
@@ -335,14 +340,14 @@ function page_head(
     document.documentElement.style.display = 'none';
     document.head.insertAdjacentHTML(
         'beforeend',
-        '<link rel="stylesheet" href="sample_bootstrap.min.css" onload="document.documentElement.style.display = \'\'"><link rel="stylesheet" href="custom.css">'
+        '<link rel="stylesheet" href="{$url_base}sample_bootstrap.min.css" onload="document.documentElement.style.display = \'\'"><link rel="stylesheet" href="{$url_base}custom.css">'
     );
   }
 </script>
-<link rel="stylesheet" href="bootstrap_darkly.min.css" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="custom_dark.css" media="(prefers-color-scheme: dark)">
-<link rel="stylesheet" href="sample_bootstrap.min.css" media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)">
-<link rel="stylesheet" href="custom.css" media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)">
+<link rel="stylesheet" href="{$url_base}bootstrap_darkly.min.css" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="{$url_base}custom_dark.css" media="(prefers-color-scheme: dark)">
+<link rel="stylesheet" href="{$url_base}sample_bootstrap.min.css" media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)">
+<link rel="stylesheet" href="{$url_base}custom.css" media="(prefers-color-scheme: no-preference), (prefers-color-scheme: light)">
 EOT;
     } else {
         echo '
@@ -365,7 +370,7 @@ EOT;
     echo '<script src="'.secure_url_base().'/nfs2-theme.js"></script>'."\n";
 
     if (defined("SHORTCUT_ICON")) {
-        echo '<link rel="icon" type="image/x-icon" href="'.SHORTCUT_ICON.'"/>
+        echo '<link rel="icon" href="'.$url_base.SHORTCUT_ICON.'"/>
 ';
     }
 
@@ -611,43 +616,62 @@ jQuery(document).ready(function() {
 );
 }
 
-function url_tokens($auth) {
+// Cross-site request forgery (CSRF) prevention.
+// how CSRF works:
+// - Hackers make a page with a link (or invisible image URL)
+//  to a state-changing script on a BOINC project.
+// - A user of that project visits the hacker page
+// - The resulting request to the BOINC project includes a cookie
+//  with the user's auth, and the request is carried out
+//
+// The defense: for state-changing scripts, include (in GET or POST args)
+// "tokens" generated from the logged-in user's auth.
+//
+function url_tokens() {
+    $user = get_logged_in_user(false);
+    if (!$user) error_page('must be logged in');
     $now = time();
-    $ttok = md5((string)$now.$auth);
+    $ttok = md5((string)$now.$user->authenticator);
     return "&amp;tnow=$now&amp;ttok=$ttok";
 }
 
-function form_tokens($auth) {
+function form_tokens() {
+    $user = get_logged_in_user(false);
+    if (!$user) error_page('must be logged in');
     $now = time();
-    $ttok = md5((string)$now.$auth);
+    $ttok = md5((string)$now.$user->authenticator);
     return "<input type=\"hidden\" name=\"tnow\" value=\"$now\">
         <input type=\"hidden\" name=\"ttok\" value=\"$ttok\">
     ";
 }
 
-function valid_tokens($auth) {
+function valid_tokens() {
+    $user = get_logged_in_user(false);
+    if (!$user) error_page('must be logged in');
     $tnow = get_str('tnow', true);
-    $ttok = get_str('ttok', true);
     if (!$tnow) {
-      if (isset($_POST['tnow'])) {
-          $tnow = $_POST['tnow'];
-      }
-    }
-    if (!$ttok) {
-      if (isset($_POST['ttok'])) {
-          $ttok = $_POST['ttok'];
-      }
+        if (isset($_POST['tnow'])) {
+            $tnow = $_POST['tnow'];
+        }
     }
     if (!$tnow) return false;
+
+    $ttok = get_str('ttok', true);
+    if (!$ttok) {
+        if (isset($_POST['ttok'])) {
+            $ttok = $_POST['ttok'];
+        }
+    }
     if (!$ttok) return false;
-    $t = md5((string)$tnow.$auth);
+
+    $t = md5((string)$tnow.$user->authenticator);
     if ($t != $ttok) return false;
     if (time() > $tnow + 86400) return false;
     return true;
 }
 
-function check_tokens($auth) {
-    if (valid_tokens($auth)) return;
+function check_tokens() {
+    if (valid_tokens()) return;
     error_page(
         tra("Link has timed out. Please click Back, refresh the page, and try again.")
     );
@@ -978,6 +1002,20 @@ function show_button($url, $text, $desc=null, $class=null, $extra=null) {
 //
 function show_button_small($url, $text, $desc=null) {
     echo button_text_small($url, $text, $desc);
+}
+
+function submit_button_text($text, $tooltip=null) {
+    if (!$tooltip) $tooltip = $text;
+    return sprintf(
+        '<input class="btn btn-sm" %s title="%s" type="submit" value="%s"><br>',
+        button_style(),
+        $tooltip,
+        $text
+    );
+}
+
+function show_submit_button($text, $tooltip=null) {
+    echo submit_button_text($text, $tooltip);
 }
 
 // used for showing icons

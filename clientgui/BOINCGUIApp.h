@@ -269,7 +269,6 @@ public:
     long                GetBrandID();
 #endif
 
-DECLARE_EVENT_TABLE()
 };
 
 DECLARE_APP(CBOINCGUIApp)

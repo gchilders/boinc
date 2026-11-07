@@ -35,17 +35,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CProjectWelcomePage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CProjectWelcomePage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CProjectWelcomePage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CProjectWelcomePage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CProjectWelcomePage::OnCancel)
-
-END_EVENT_TABLE()
-
-CProjectWelcomePage::CProjectWelcomePage() {
-}
-
 CProjectWelcomePage::CProjectWelcomePage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -58,6 +47,10 @@ bool CProjectWelcomePage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
 
 	return true;
 }

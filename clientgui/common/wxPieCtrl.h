@@ -29,11 +29,6 @@
 #ifndef _WX_PIE_CTRL
 #define _WX_PIE_CTRL
 
-
-#include <wx/wx.h>
-#include <wx/image.h>
-#include <wx/dynarray.h>
-
 #ifndef M_PI
 #define M_PI 3.14159265358979
 #endif

@@ -29,16 +29,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CErrProxyInfoPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CErrProxyInfoPage, CBOINCWizardPage)
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CErrProxyInfoPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CErrProxyInfoPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CErrProxyInfoPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CErrProxyInfoPage::CErrProxyInfoPage() {
-}
-
 CErrProxyInfoPage::CErrProxyInfoPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -54,6 +44,10 @@ bool CErrProxyInfoPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
 
     return true;
 }

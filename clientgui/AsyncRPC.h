@@ -375,7 +375,6 @@ private:
 class AsyncRPCDlg : public wxDialog
 {
     DECLARE_DYNAMIC_CLASS( AsyncRPCDlg )
-    DECLARE_EVENT_TABLE()
 
 public:
     AsyncRPCDlg();
@@ -395,13 +394,6 @@ public:
     virtual wxEvent *Clone() const { return new CRPCFinishedEvent(*this); }
 };
 
-BEGIN_DECLARE_EVENT_TYPES()
-DECLARE_EVENT_TYPE( wxEVT_RPC_FINISHED, -1 )
-END_DECLARE_EVENT_TYPES()
-
-#define EVT_RPC_FINISHED(fn) \
-    DECLARE_EVENT_TABLE_ENTRY(wxEVT_RPC_FINISHED, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
-
-
+wxDECLARE_EVENT(wxEVT_RPC_FINISHED, CRPCFinishedEvent);
 
 #endif

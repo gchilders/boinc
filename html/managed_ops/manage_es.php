@@ -77,11 +77,16 @@ function calc_table($id,$item) {
 	}
 	echo "<tr><td>Generated Q range</td><TD align='left'>$range $percent</td></tr>";
         if ($item->results_received > 9) {
-                if ($item->primebits == 30) { $needed_rels = 100000000*1.1; }
-                else if ($item->primebits == 31) { $needed_rels = 220000000*1.1; }
-                else if ($item->primebits == 32) { $needed_rels = 420000000*1.1; }
-                else if ($item->primebits == 33) { $needed_rels = 700000000*1.1; }
-                else { $needed_rels = 10000000; }
+                preg_match('/lpbr:\s*(\d+)/', $item->polyfile, $m);
+                $pbr = (int)$m[1];
+                preg_match('/lpba:\s*(\d+)/', $item->polyfile, $m);
+                $pba = (int)$m[1];
+                $needed_rels = round(57500000/2*((2**($pba-29) * 29/$pba)**0.981 + (2**($pbr-29)*29/$pbr)**0.981));
+                //if ($item->primebits == 30) { $needed_rels = 100000000*1.1; }
+                //else if ($item->primebits == 31) { $needed_rels = 220000000*1.1; }
+                //else if ($item->primebits == 32) { $needed_rels = 420000000*1.1; }
+                //else if ($item->primebits == 33) { $needed_rels = 700000000*1.1; }
+                //else { $needed_rels = 10000000; }
                 $rec_last = $needed_rels / $item->globresult_relations * $item->results_received * 4000 + $item->q_start; 
                 $rec_last = round($rec_last/1000000);
                 // if ($rec_last % 2) $rec_last += 1;
@@ -118,6 +123,7 @@ function display_result($result,$details,$comp=false) {
           <TH>Prime bits</TH>
           <TH>Post Processor</TH>
           <TH>Pastebin</TH>
+          <TH>Priority</TH>
           <TH>DELETE?<sup>*</sup></TH>
 	  <th>Update</th>
            </TR>\n";
@@ -142,6 +148,7 @@ echo "<form action='$self' method='POST'>\n";
             <TH>Prime bits</TH>
             <TH>Post Processor</TH>
             <TH>Pastebin</TH>
+            <TH>Priority</TH>
             <TH>DELETE?<sup>*</sup></TH>
             </TR>\n";
         }  //            <TH>Ranges</TH>
@@ -206,6 +213,12 @@ echo "<form action='$self' method='POST'>\n";
         $v=$item->pastebin;
         echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
         
+        $field="priority_".$id;
+        $v=$item->priority;
+        if (empty($v)) $v = $item->id;
+        if ($v == 0) $v = $item->id;
+        echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
+
         $field="delete_number_".$id; 
         echo "  <TD align='center'><input type='text' size='6' name='$field' value=''></TD>\n";
     
@@ -325,6 +338,7 @@ if( !empty($_POST) ) {
 		$commands .= 	update_if_changed("primebits",		$id, (int)$item->primebits	, "primebits"		);
 		$commands .= 	update_if_changed("postprocessor",	$id, $item->postprocessor	, "postprocessor"	);
 		$commands .= 	update_if_changed("pastebin",		$id, $item->pastebin	, "pastebin"	);
+		$commands .=    update_if_changed("priority",   $id, (int)$item->priority       , "priority"    );
 		$commands .= 	update_if_changed("ranges",			$id, $item->ranges			, "ranges"		);
 		if($item->status==0) {
 			$commands .= update_if_changed("value",			$id, $item->value			, "value"		);
@@ -344,6 +358,9 @@ if( !empty($_POST) ) {
         $project=_mysql_escape_string($_POST['add_project']);
         if( empty($name) || empty($project) ) {
             $commands .= "<p><font color='red'>To add a new number please supply both a name and a project.</font></p>\n";
+        }
+        else if (!preg_match('/^[a-zA-Z0-9._-]+$/', $name) ) {
+            $commands .= "<p><font color='red'>The name can only contain alphanumeric characters, underscores, hyphens, and periods.</font></p>\n";
         }
         else {
             $now=time();

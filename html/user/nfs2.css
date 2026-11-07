@@ -270,6 +270,16 @@ textarea:focus-visible,
 img { max-width: 100%; }
 img:not([height]), img[width][height] { height: auto; }
 
+/* Small fixed-size icons must opt out of max-width:100%.
+   A replaced element with max-width:100% can shrink below its intrinsic size,
+   so its min-content contribution is effectively zero. forum_forum.php puts
+   the thread status icons in <td width="1%">, and the table then resolves that
+   cell to almost nothing and scales the image down with it: measured 4.5x5.2
+   instead of 13x15, which reads as the icon simply being absent. Same applies
+   to country flags and the ratings arrows.
+   These images are 9-15px to begin with and never need constraining. */
+img.icon, img.flag { max-width: none; }
+
 hr { border: 0; border-top: 1px solid var(--c-hairline); margin: 1.25rem 0; }
 
 code, pre, kbd, samp, .code, .pre {
@@ -308,8 +318,32 @@ mark, span.highlight { background: var(--c-mark); color: var(--c-ink); padding: 
    =========================================================================== */
 
 /* page_head() wraps every page in .container-fluid, which is full-bleed by
-   default. Cap it so text does not run to 2000px on a wide monitor. */
-.container-fluid { max-width: 1180px; margin-right: auto; margin-left: auto; }
+   default. Cap it so text does not run to 2000px on a wide monitor.
+
+   1400px rather than something narrower because the widest thing on the site
+   is crunching.php's 13-column detail table. Measured at 1370px natural
+   width, so at a 1440 viewport or above it now fits without scrolling; below
+   that it scrolls in its wrapper. Long prose is capped separately below, so
+   the extra width goes to tables rather than to line length. */
+.container-fluid { max-width: 1400px; margin-right: auto; margin-left: auto; }
+
+/* Top-level prose has no .prose wrapper to cap it, so cap it here, or raising
+   the container width above would stretch paragraphs on a page like info.php
+   to roughly 170 characters a line.
+
+   But only on pages with no wide table. The crunching pages interleave short
+   explanatory paragraphs with 13-column tables, and a paragraph capped to 80ch
+   next to a 1370px table does not read as a deliberate measure, it reads as
+   truncated. `start_table()` always wraps its table in <div class="table">,
+   so that is a reliable marker for "this page is table-led".
+
+   If a browser does not support :has() the whole rule is dropped and prose
+   runs to the container width, which is what the site did before the cap
+   existed. A benign failure, which is why :has() is acceptable here. */
+body > .container-fluid:not(:has(div.table)) > p,
+body > .container-fluid:not(:has(div.table)) > ul,
+body > .container-fluid:not(:has(div.table)) > ol,
+body > .container-fluid:not(:has(div.table)) > dl { max-width: 80ch; }
 
 /* The navbar carries its own .container-fluid. On index2.php that nav sits at
    the top level, so it needs the usual 15px gutter to line up with content.
@@ -747,16 +781,17 @@ div.table { overflow-x: auto; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Headers on one line too. Left to wrap, "Post processing / Comments" was
-   starved to a 100px column and broke over four lines, inflating the header
-   row to 92px and leaving a band of dead space above the data. One line
-   brings it to 36px; the extra table width scrolls in the wrapper.
-   `.table th` rather than bare `th`, so it beats the vertical-align:top set
-   on all cells further up. */
+/* Headers may wrap, but the last one must not be starved. Left entirely to
+   itself, "Post processing / Comments" was squeezed into a 100px column and
+   broke over four lines, inflating the header row to 92px. A minimum width
+   keeps it to two lines and, unlike forcing every header onto one line,
+   leaves the table narrow enough to fit a 1440 viewport: 1370px rather than
+   1464px. `.table th` rather than bare `th`, so it beats the
+   vertical-align:top set on all cells further up. */
 .table th {
-  white-space: nowrap;
   vertical-align: bottom;
 }
+.table th:last-child { min-width: 14ch; }
 
 /* Cells that hold prose or form controls are exempt: they legitimately want
    the full column. Listed after the cap so they win on source order. */
@@ -985,6 +1020,54 @@ div.pm_preview {
 .actionlist li { display: inline-block; margin: 0 .75rem .25rem 0; font-size: .875rem; }
 
 img.flag { border: 1px solid var(--c-hairline); vertical-align: baseline; }
+/* Forum status icons. show_image() in util.inc emits
+   <img class="icon" ...> for these, and forum_forum.php calls it without a
+   height, so they render at their intrinsic 13x15 — which is correct, and
+   nothing here changes their size.
+
+   The problem is colour. They are fixed-palette bitmaps from long before dark
+   mode, and several are near-black glyphs: measured against the dark surface,
+   sticky_locked_post 1.19:1, locked_post 1.34:1, sticky_post 1.45:1,
+   unread_sticky 1.64:1, emphasized_post 1.99:1, filtered_post 2.41:1. All
+   below the 3:1 that WCAG 1.4.11 asks of meaningful graphics, and in practice
+   invisible. Inverting each one clears 5:1 (sticky_post reaches 14.5:1).
+
+   Listed by filename rather than inverting every .icon, because the rest are
+   light glyphs that are already fine on dark and would break if inverted:
+   post.png 8.55:1, unread_post.png 6.17:1, hidden.png 5.87:1.
+
+   BOINC's own DARK_MODE has this same problem; it is not specific to this
+   theme. The real fix upstream is an SVG icon set, or a light variant of each
+   PNG. */
+img.icon[src$="sticky_post.png"],
+img.icon[src$="locked_post.png"],
+img.icon[src$="sticky_locked_post.png"],
+img.icon[src$="unread_sticky.png"],
+img.icon[src$="unread_sticky_locked.png"],
+img.icon[src$="emphasized_post.png"],
+img.icon[src$="filtered_post.png"],
+img.icon[src$="report_post.png"] { filter: none; }
+
+:root[data-theme="dark"] img.icon[src$="sticky_post.png"],
+:root[data-theme="dark"] img.icon[src$="locked_post.png"],
+:root[data-theme="dark"] img.icon[src$="sticky_locked_post.png"],
+:root[data-theme="dark"] img.icon[src$="unread_sticky.png"],
+:root[data-theme="dark"] img.icon[src$="unread_sticky_locked.png"],
+:root[data-theme="dark"] img.icon[src$="emphasized_post.png"],
+:root[data-theme="dark"] img.icon[src$="filtered_post.png"],
+:root[data-theme="dark"] img.icon[src$="report_post.png"] { filter: invert(1); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) img.icon[src$="sticky_post.png"],
+  :root:not([data-theme="light"]) img.icon[src$="locked_post.png"],
+  :root:not([data-theme="light"]) img.icon[src$="sticky_locked_post.png"],
+  :root:not([data-theme="light"]) img.icon[src$="unread_sticky.png"],
+  :root:not([data-theme="light"]) img.icon[src$="unread_sticky_locked.png"],
+  :root:not([data-theme="light"]) img.icon[src$="emphasized_post.png"],
+  :root:not([data-theme="light"]) img.icon[src$="filtered_post.png"],
+  :root:not([data-theme="light"]) img.icon[src$="report_post.png"] { filter: invert(1); }
+}
+
 img.userimg { border: 1px solid var(--c-rule); border-radius: var(--radius); }
 
 /* ---- name/value field tables (prefs, account, forms) ------------------ */

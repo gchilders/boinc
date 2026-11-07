@@ -31,20 +31,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CTermsOfUsePage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CTermsOfUsePage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CTermsOfUsePage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CTermsOfUsePage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CTermsOfUsePage::OnCancel)
-EVT_RADIOBUTTON(ID_TERMSOFUSEAGREECTRL, CTermsOfUsePage::OnTermsOfUseStatusChange)
-EVT_RADIOBUTTON(ID_TERMSOFUSEDISAGREECTRL, CTermsOfUsePage::OnTermsOfUseStatusChange)
-EVT_HTML_LINK_CLICKED(ID_TERMSOFUSECTRL, CTermsOfUsePage::OnLinkClicked)
-
-END_EVENT_TABLE()
-
-CTermsOfUsePage::CTermsOfUsePage() {
-}
-
 CTermsOfUsePage::CTermsOfUsePage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -64,6 +50,13 @@ bool CTermsOfUsePage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
+    Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent& event){ OnTermsOfUseStatusChange(event); }, ID_TERMSOFUSEAGREECTRL);
+    Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent& event){ OnTermsOfUseStatusChange(event); }, ID_TERMSOFUSEDISAGREECTRL);
+    Bind(wxEVT_HTML_LINK_CLICKED, [this](wxHtmlLinkEvent& event){ OnLinkClicked(event); }, ID_TERMSOFUSECTRL);
 
     return true;
 }

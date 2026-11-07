@@ -215,13 +215,13 @@
         <name>powerpc-apple-darwin[ALTIVEC]</name>
         <name>windows_intelx86</name>
         <name>windows_intelx86[FGRPSSE]</name>
-        <name>windows_x86_64</name>
         <name>windows_x86_64[BRP4X64]</name>
         <name>windows_x86_64[BRP7-cuda102]</name>
         <name>windows_x86_64[BRP7-cuda55]</name>
         <name>windows_x86_64[BRP7-opencl-ati]</name>
         <name>windows_x86_64[BRP7-opencl-intel_gpu]</name>
         <name>windows_x86_64[BRP7-opencl-nvidia]</name>
+        <name>windows_x86_64[GW-cuda-2G]</name>
         <name>windows_x86_64[GW-opencl-ati]</name>
         <name>windows_x86_64[GW-opencl-ati-2G]</name>
         <name>windows_x86_64[GW-opencl-intel_gpu]</name>
@@ -249,6 +249,7 @@
         <name>x86_64-pc-linux-gnu[GW-opencl-ati-2G]</name>
         <name>x86_64-pc-linux-gnu[GW-opencl-intel_gpu]</name>
         <name>x86_64-pc-linux-gnu[GW-opencl-nvidia]</name>
+        <name>x86_64-pc-linux-gnu[GW-opencl-nvidia-570-2G]</name>
         <name>x86_64-pc-linux-gnu[opencl-intel_gpu]</name>
     </platforms>
       <image>https://boinc.berkeley.edu/images/einstein.jpg</image>
@@ -305,33 +306,6 @@
         <keywords>15</keywords>
     </project>
     <project>
-        <name>Amicable Numbers</name>
-        <id>23</id>
-        <url>https://sech.me/boinc/Amicable/</url>
-        <web_url>https://sech.me/boinc/Amicable/</web_url>
-        <general_area>Mathematics, computing, and games</general_area>
-        <specific_area>Mathematics</specific_area>
-        <description><![CDATA['Amicable numbers' are pairs where the sum of the proper divisors of each is equal to the other number. The goal of this project is to collect all amicable numbers up to a very large limit.]]></description>
-        <home>Independent</home>
-    <platforms>
-        <name>aarch64-unknown-linux-gnu[mt]</name>
-        <name>windows_x86_64[mt]</name>
-        <name>windows_x86_64[opencl_amd]</name>
-        <name>windows_x86_64[opencl_intel_gpu]</name>
-        <name>windows_x86_64[opencl_nvidia]</name>
-        <name>x86_64-apple-darwin[mt]</name>
-        <name>x86_64-apple-darwin[opencl_amd]</name>
-        <name>x86_64-apple-darwin[opencl_intel_gpu]</name>
-        <name>x86_64-apple-darwin[opencl_nvidia]</name>
-        <name>x86_64-pc-linux-gnu[mt]</name>
-        <name>x86_64-pc-linux-gnu[opencl_amd]</name>
-        <name>x86_64-pc-linux-gnu[opencl_intel_gpu]</name>
-        <name>x86_64-pc-linux-gnu[opencl_nvidia]</name>
-    </platforms>
-      <summary>Do research in number theory</summary>
-        <keywords>15 32 20</keywords>
-    </project>
-    <project>
         <name>NumberFields@home</name>
         <id>24</id>
         <url>https://numberfields.asu.edu/NumberFields/</url>
@@ -341,6 +315,7 @@
         <description><![CDATA[NumberFields@home searches for fields with special properties. The primary application of this research is in the realm of algebraic number theory. Number theorists can mine the data for interesting patterns to help them formulate conjectures about number fields. Ultimately, this research will lead to a deeper understanding of the profound properties of numbers, the basic building blocks of all mathematics.]]></description>
         <home>Arizona State University, school of Mathematics</home>
     <platforms>
+        <name>aarch64-unknown-linux-gnu[default]</name>
         <name>i686-pc-linux-gnu[default]</name>
         <name>windows_intelx86[default]</name>
         <name>windows_x86_64[default]</name>
@@ -349,6 +324,7 @@
         <name>windows_x86_64[opencl_nvidia]</name>
         <name>x86_64-apple-darwin[default]</name>
         <name>x86_64-pc-linux-gnu[cuda30]</name>
+        <name>x86_64-pc-linux-gnu[cuda50]</name>
         <name>x86_64-pc-linux-gnu[default]</name>
         <name>x86_64-pc-linux-gnu[opencl_amd]</name>
         <name>x86_64-pc-linux-gnu[opencl_intel_gpu]</name>
@@ -456,12 +432,18 @@
         <name>windows_x86_64[docker]</name>
         <name>x86_64-pc-linux-gnu[docker]</name>
         <name>x86_64-apple-darwin[docker]</name>
-        <name>windows_x86_64[cuda_80]</name>
-        <name>x86_64-pc-linux-gnu[cuda_80]</name>
-        <name>windows_x86_64[cuda_8030]</name>
-        <name>x86_64-pc-linux-gnu[cuda_8030]</name>
-        <name>windows_x86_64[cuda_8031]</name>
-        <name>x86_64-pc-linux-gnu[cuda_8031]</name>
+        <name>windows_x86_64[amd_hip]</name>
+        <name>windows_x86_64[cuda_50]</name>
+        <name>x86_64-pc-linux-gnu[cuda_50]</name>
+        <name>arm64-apple-darwin[apple_gpu_metal3]</name>
+        <name>windows_x86_64[amd_hip30]</name>
+        <name>windows_x86_64[cuda_5030]</name>
+        <name>x86_64-pc-linux-gnu[cuda_5030]</name>
+        <name>arm64-apple-darwin[apple_gpu_metal330]</name>
+        <name>windows_x86_64[amd_hip31]</name>
+        <name>windows_x86_64[cuda_5031]</name>
+        <name>x86_64-pc-linux-gnu[cuda_5031]</name>
+        <name>arm64-apple-darwin[apple_gpu_metal331]</name>
     </platforms>
       <image>https://boinc.berkeley.edu/images/NFS_Logo.jpg</image>
       <summary>Study the factorization of large integers</summary>
@@ -756,6 +738,7 @@
         <name>windows_x86_64[opencl_ati_101]</name>
         <name>windows_x86_64[opencl_ati_200]</name>
         <name>windows_x86_64[opencl_intel_gpu_intelarc]</name>
+        <name>windows_x86_64[opencl_intel_gpu_intelarc_200]</name>
         <name>windows_x86_64[opencl_nvidia_200]</name>
         <name>x86_64-apple-darwin</name>
         <name>x86_64-pc-linux-gnu</name>
@@ -765,6 +748,7 @@
         <name>x86_64-pc-linux-gnu[opencl_ati_101]</name>
         <name>x86_64-pc-linux-gnu[opencl_ati_200]</name>
         <name>x86_64-pc-linux-gnu[opencl_intel_gpu_intelarc]</name>
+        <name>x86_64-pc-linux-gnu[opencl_intel_gpu_intelarc_200]</name>
         <name>x86_64-pc-linux-gnu[opencl_nvidia_200]</name>
     </platforms>
         <keywords>15 32</keywords>
@@ -950,13 +934,13 @@
         <name>windows_intelx86</name>
         <name>windows_x86_64</name>
         <name>windows_x86_64[docker]</name>
-        <name>x86-android-linux-gnu</name>
         <name>x86_64-android-linux-gnu</name>
         <name>x86_64-apple-darwin</name>
         <name>x86_64-apple-darwin[docker]</name>
         <name>x86_64-pc-linux-gnu</name>
         <name>x86_64-pc-linux-gnu[docker]</name>
         <name>x86_64-pc-linux-gnu[libc_228]</name>
+        <name>x86-android-linux-gnu</name>
     </platforms>
       <summary>Support scientists from multiple institutions</summary>
         <keywords>23 24 9</keywords>

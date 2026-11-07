@@ -19,7 +19,9 @@
 
 import os
 import pathlib
+import subprocess
 import sys
+import time
 import testset
 import testhelper
 
@@ -32,6 +34,7 @@ class IntegrationTests:
         self.result &= self.test_user()
         self.result &= self.test_selected_values_from_boinc_client_service_file()
         self.result &= self.test_files_permissions()
+        self.result &= self.test_service_running()
 
     def _resolve_path(self, path):
         path = os.path.abspath(path)
@@ -125,7 +128,7 @@ class IntegrationTests:
         ts.expect_equal("/usr/local/bin/boincmgr", self._get_test_executable_file_path("boincmgr"), "Test 'boincmgr' file location")
         ts.expect_true(os.path.exists("/usr/lib/systemd/system/boinc-client.service"), "Test 'boinc-client.service' file exists in '/usr/lib/systemd/system/'")
         ts.expect_true(os.path.exists("/etc/default/boinc-client"), "Test 'boinc-client' file exists in '/etc/default/'")
-        ts.expect_true(os.path.exists("/etc/init.d/boinc-client"), "Test 'boinc-client' file exists in '/etc/init.d/'")
+        ts.expect_false(os.path.exists("/etc/init.d/boinc-client"), "Test 'boinc-client' file does not exist in '/etc/init.d/'")
         ts.expect_true(os.path.exists("/etc/bash_completion.d/boinc.bash"), "Test 'boinc.bash' file exists in '/etc/bash_completion.d/'")
         ts.expect_true(os.path.exists("/etc/X11/Xsession.d/36x11-common_xhost-boinc"), "Test '36x11-common_xhost-boinc' file exists in '/etc/X11/Xsession.d/'")
         ts.expect_true(os.path.exists("/usr/local/share/applications/boinc.desktop"), "Test 'boinc.desktop' file exists in '/usr/local/share/applications/'")
@@ -221,12 +224,49 @@ class IntegrationTests:
         ts.expect_equal("root:root", self._get_file_owner("/usr/local/bin/boincmgr"), "Test '/usr/local/bin/boincmgr' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/usr/lib/systemd/system/boinc-client.service"), "Test '/usr/lib/systemd/system/boinc-client.service' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/etc/default/boinc-client"), "Test '/etc/default/boinc-client' file owner")
-        ts.expect_equal("root:root", self._get_file_owner("/etc/init.d/boinc-client"), "Test '/etc/init.d/boinc-client' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/etc/bash_completion.d/boinc.bash"), "Test '/etc/bash_completion.d/boinc.bash' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/etc/X11/Xsession.d/36x11-common_xhost-boinc"), "Test '/etc/X11/Xsession.d/36x11-common_xhost-boinc' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/usr/local/share/applications/boinc.desktop"), "Test '/usr/local/share/applications/boinc.desktop' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/usr/local/share/icons/boinc.png"), "Test '/usr/local/share/icons/boinc.png' file owner")
         ts.expect_equal("root:root", self._get_file_owner("/usr/local/share/icons/boinc.svg"), "Test '/usr/local/share/icons/boinc.svg' file owner")
+        return ts.result()
+
+    def _is_service_initialized_after_install(self):
+        boinc_path = self._get_test_executable_file_path("boinc")
+        if not boinc_path or not os.path.exists(boinc_path):
+            return False
+        install_time = int(os.path.getctime(boinc_path))
+        since_arg = "@{ts}".format(ts=install_time)
+        state_command = [
+            "systemctl", "show", "boinc-client.service",
+            "--property=ActiveState,MainPID,InvocationID",
+        ]
+        for _ in range(30):
+            try:
+                state = subprocess.run(state_command, check=True, capture_output=True, text=True, timeout=5).stdout
+                properties = dict(line.split("=", 1) for line in state.splitlines() if "=" in line)
+                invocation = properties.get("InvocationID", "")
+                if (properties.get("ActiveState") == "active"
+                        and int(properties.get("MainPID", "0")) > 0 and invocation):
+                    output = subprocess.run([
+                        "journalctl", "-u", "boinc-client.service", "-o", "cat",
+                        "--since", since_arg, "--no-pager",
+                        "_SYSTEMD_INVOCATION_ID=" + invocation,
+                    ], check=True, capture_output=True, text=True, timeout=5).stdout
+                    if "Initialization completed" in output:
+                        # A crash or restart while reading the journal must not pass.
+                        current_state = subprocess.run(state_command, check=True, capture_output=True, text=True, timeout=5).stdout
+                        if current_state == state:
+                            return True
+            except (OSError, subprocess.SubprocessError, ValueError) as error:
+                print("Unable to verify boinc-client.service: {error}".format(error=error))
+                return False
+            time.sleep(1)
+        return False
+
+    def test_service_running(self):
+        ts = testset.TestSet("Test 'boinc-client.service' started and initialized")
+        ts.expect_true(self._is_service_initialized_after_install(), "Test service is active and its current invocation initialized after package installation")
         return ts.result()
 
 if __name__ == "__main__":

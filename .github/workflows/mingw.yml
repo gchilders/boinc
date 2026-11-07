@@ -87,9 +87,8 @@ jobs:
       - name: Install Powershell for vcpkg
         if: success() && matrix.type == 'apps-mingw-vcpkg'
         run: |
-          sudo apt install -y wget apt-transport-https software-properties-common doxygen
-          wget -q https://packages.microsoft.com/config/ubuntu/$(lsb_release -r -s)/packages-microsoft-prod.deb
-          sudo DEBIAN_FRONTEND=noninteractive apt install -y ./packages-microsoft-prod.deb powershell
+          sudo apt install -y doxygen
+          sudo snap install powershell --classic
 
       - name: Automake vcpkg and cmake
         if: success() && (matrix.type == 'apps-mingw-vcpkg' || matrix.type == 'libs-mingw-cmake')
@@ -121,7 +120,7 @@ jobs:
 
       - name: Upload logs on failure
         if: ${{ failure() }}
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:
           name: mingw_logs_${{ matrix.type }}_${{ matrix.arch }}_${{ github.event.pull_request.head.sha }}
           path: deploy/logs.7z
@@ -131,7 +130,7 @@ jobs:
         run: python ./deploy/prepare_deployment.py win_${{ matrix.type }}
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: ${{! contains(matrix.type, 'libs')}}
         with:
           name: win_${{ matrix.type }}_${{ matrix.arch }}_${{ github.event.pull_request.head.sha }}

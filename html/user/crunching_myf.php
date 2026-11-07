@@ -60,7 +60,12 @@ function display_result($xml, $numbers, $type, $details=false) {
 		echo "<td align='center'>$number->project</td>";
 		echo "<td align='center'>$number->type($number->difficulty)</td>";
 		echo "<td align='center'>$number->primebits</td>";
-		if ($number->sievesize > 0) $q_per_wu = 100000; else $q_per_wu = 2000;
+		if ($number->sievesize > 0) {
+			if ($number->sievesizej == 0) $totalbits = 2*$number->sievesize - 1;
+			else $totalbits = $number->sievesize + $number->sievesizej;
+			if ($totalbits > 31) $q_per_wu = 100000 / 2**($totalbits - 31);
+			else $q_per_wu = 100000;
+		} else $q_per_wu = 2000;
 		if($details) {
 			if($number->q_end != 0 && $number->q_start != 0) {
 				$last = $number->q_last;
@@ -103,10 +108,10 @@ function display_result($xml, $numbers, $type, $details=false) {
                         $log_url = is_file(__DIR__ . "/pastebin/$pastebin")
                             ? "pastebin/$pastebin"
                             : "https://pastebin.com/$pastebin";
-                        echo "<td><a href=\"$log_url\">$number->postprocessor</a></td>";
+                        echo "<td><a href=\"$log_url\">" . str_replace('|', ', ', $number->postprocessor) . "</a></td>";
 			// echo "<td><a href=\"http://pastebin.com/$number->pastebin\">$number->postprocessor</a></td>";
 		} else {
-			echo "<td>$number->postprocessor</td>";
+			echo "<td>" . str_replace('|', ', ', $number->postprocessor) . "</td>";
 		}
 		echo "</tr>";
 	}    

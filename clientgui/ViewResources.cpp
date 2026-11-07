@@ -31,13 +31,8 @@ WX_DEFINE_OBJARRAY(wxArrayColour)
 
 IMPLEMENT_DYNAMIC_CLASS(CViewResources, CBOINCBaseView)
 
-BEGIN_EVENT_TABLE (CViewResources, CBOINCBaseView)
-END_EVENT_TABLE ()
-
-
 CViewResources::CViewResources()
-: m_BOINCwasEmpty(false)
-, m_isDarkTheme(wxGetApp().GetIsDarkMode())
+: m_isDarkTheme(wxGetApp().GetIsDarkMode())
 {}
 
 CViewResources::CViewResources(wxNotebook* pNotebook) :

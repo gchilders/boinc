@@ -47,23 +47,7 @@
 
 class CProjectInfo : public wxObject {
     DECLARE_DYNAMIC_CLASS( CProjectInfo )
-    CProjectInfo() {
-        m_bSupportedPlatformFound = false;
-        m_bProjectSupportsWindows = false;
-        m_bProjectSupportsMac = false;
-        m_bProjectSupportsLinux = false;
-        m_bProjectSupportsAndroid = false;
-        m_bProjectSupportsFreeBSD = false;
-        m_bProjectSupportsLinuxARM = false;
-        m_bProjectSupportsRaspberryPi = false;
-        m_bProjectSupportsDocker = false;
-        m_bProjectSupportsCUDA = false;
-        m_bProjectSupportsCAL = false;
-        m_bProjectSupportsIntelGPU  = false;
-        m_bProjectSupportsVirtualBox = false;
-        m_bProjectSupportsMetal = false;
-    }
-
+    CProjectInfo() = default;
 public:
     wxString m_strURL;
     wxString m_strWebURL;
@@ -72,39 +56,26 @@ public:
     wxString m_strGeneralArea;
     wxString m_strSpecificArea;
     wxString m_strOrganization;
-    bool m_bSupportedPlatformFound;
-    bool m_bProjectSupportsWindows;
-    bool m_bProjectSupportsMac;
-    bool m_bProjectSupportsLinux;
-    bool m_bProjectSupportsAndroid;
-    bool m_bProjectSupportsFreeBSD;
-    bool m_bProjectSupportsLinuxARM;
-    bool m_bProjectSupportsRaspberryPi;
-    bool m_bProjectSupportsDocker;
-    bool m_bProjectSupportsCUDA;
-    bool m_bProjectSupportsCAL;
-    bool m_bProjectSupportsIntelGPU;
-    bool m_bProjectSupportsVirtualBox;
-    bool m_bProjectSupportsMetal;
+    bool m_bSupportedPlatformFound = false;
+    bool m_bProjectSupportsWindows = false;
+    bool m_bProjectSupportsMac = false;
+    bool m_bProjectSupportsLinux = false;
+    bool m_bProjectSupportsAndroid = false;
+    bool m_bProjectSupportsFreeBSD = false;
+    bool m_bProjectSupportsLinuxARM = false;
+    bool m_bProjectSupportsRaspberryPi = false;
+    bool m_bProjectSupportsDocker = false;
+    bool m_bProjectSupportsCUDA = false;
+    bool m_bProjectSupportsCAL = false;
+    bool m_bProjectSupportsIntelGPU = false;
+    bool m_bProjectSupportsVirtualBox = false;
+    bool m_bProjectSupportsMetal = false;
 };
 
 IMPLEMENT_DYNAMIC_CLASS(CProjectInfo, wxObject)
 
 
 IMPLEMENT_DYNAMIC_CLASS(CProjectInfoPage, CBOINCWizardPage)
-
-BEGIN_EVENT_TABLE(CProjectInfoPage, CBOINCWizardPage)
-
-EVT_COMBOBOX(ID_CATEGORIES, CProjectInfoPage::OnProjectCategorySelected)
-EVT_LIST_ITEM_SELECTED(ID_PROJECTS, CProjectInfoPage::OnProjectSelected)
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CProjectInfoPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CProjectInfoPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CProjectInfoPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CProjectInfoPage::CProjectInfoPage() {
-}
 
 CProjectInfoPage::CProjectInfoPage(CWizardAttach* parent) {
     Create(parent);
@@ -165,6 +136,11 @@ bool CProjectInfoPage::Create(CWizardAttach* parent) {
     CreateControls();
 
     GetSizer()->Fit(this);
+    Bind(wxEVT_COMBOBOX, [this](wxCommandEvent& event){ OnProjectCategorySelected(event); }, ID_CATEGORIES);
+    Bind(wxEVT_LIST_ITEM_SELECTED, [this](wxListEvent& event){ OnProjectSelected(event); }, ID_PROJECTS);
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
     return true;
 }
 

@@ -45,22 +45,9 @@
 #include "res/wizprogress11.xpm"
 #include "res/wizprogress12.xpm"
 
-DEFINE_EVENT_TYPE(wxEVT_ACCOUNTMANAGERPROPERTIES_STATECHANGE)
+wxDEFINE_EVENT(wxEVT_ACCOUNTMANAGERPROPERTIES_STATECHANGE, CAccountManagerPropertiesPageEvent);
 
 IMPLEMENT_DYNAMIC_CLASS(CAccountManagerPropertiesPage, CBOINCWizardPage)
-
-BEGIN_EVENT_TABLE(CAccountManagerPropertiesPage, CBOINCWizardPage)
-
-EVT_ACCOUNTMANAGERPROPERTIES_STATECHANGE(CAccountManagerPropertiesPage::OnStateChange)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CAccountManagerPropertiesPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CAccountManagerPropertiesPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CAccountManagerPropertiesPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CAccountManagerPropertiesPage::CAccountManagerPropertiesPage() {
-}
 
 CAccountManagerPropertiesPage::CAccountManagerPropertiesPage(CWizardAttach* parent) {
     Create(parent);
@@ -89,6 +76,11 @@ bool CAccountManagerPropertiesPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_ACCOUNTMANAGERPROPERTIES_STATECHANGE, [this](CAccountManagerPropertiesPageEvent& event){ OnStateChange(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
     return true;
 }
 

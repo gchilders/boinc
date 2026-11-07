@@ -49,8 +49,6 @@ public:
 
     void     OnPaint(wxPaintEvent& event);
 
-    DECLARE_EVENT_TABLE()
-
 private:
     wxColour m_LineColor;
 };
@@ -86,14 +84,12 @@ public:
 
     virtual void OnEraseBackground(wxEraseEvent& /*event*/) {};
 
-    DECLARE_EVENT_TABLE()
 };
 
 
 class CTransparentButton : public wxButton
 {
     DECLARE_DYNAMIC_CLASS (CTransparentButton)
-    DECLARE_EVENT_TABLE()
 
 public:
     CTransparentButton();
@@ -131,7 +127,7 @@ class CTransparentHyperlinkCtrl : public wxHyperlinkCtrl
     DECLARE_DYNAMIC_CLASS (CTransparentHyperlinkCtrl)
 
 public:
-    CTransparentHyperlinkCtrl();
+    CTransparentHyperlinkCtrl() = default;
     CTransparentHyperlinkCtrl(wxWindow *parent,
                     wxWindowID id,
                     const wxString& label, const wxString& url,
@@ -154,13 +150,11 @@ public:
                 );
 
 private:
-    wxBitmap** m_pParentsBgBmp;
+    wxBitmap** m_pParentsBgBmp = nullptr;
 
 #ifndef __WXMAC__
     public:
     virtual void OnEraseBackground(wxEraseEvent& event);
-
-    DECLARE_EVENT_TABLE()
 #endif
 };
 
@@ -170,7 +164,7 @@ class CTransparentStaticTextAssociate : public wxPanel
     DECLARE_DYNAMIC_CLASS (CTransparentStaticTextAssociate)
 
 public:
-    CTransparentStaticTextAssociate();
+    CTransparentStaticTextAssociate() = default;
     CTransparentStaticTextAssociate(
         wxWindow* parent,
         wxWindowID id,
@@ -200,9 +194,8 @@ public:
     virtual void OnPaint(wxPaintEvent& event);
     virtual void OnMouse(wxMouseEvent& event);
 
-    DECLARE_EVENT_TABLE()
 private:
-    wxWindow*   m_pWnd;
+    wxWindow*   m_pWnd = nullptr;
 };
 
 
@@ -240,7 +233,6 @@ public:
     virtual void OnEraseBackground(wxEraseEvent& /*event*/) {};
     virtual void OnPaint(wxPaintEvent& event);
 
-    DECLARE_EVENT_TABLE()
 private:
     wxBitmap   m_bitMap;
 };
@@ -252,7 +244,7 @@ class CTransparentCheckBox : public wxCheckBox
     DECLARE_DYNAMIC_CLASS (CTransparentCheckBox)
 
 public:
-    CTransparentCheckBox();
+    CTransparentCheckBox() = default;
     CTransparentCheckBox(wxWindow *parent, wxWindowID id, const wxString& label,
             const wxPoint& pos = wxDefaultPosition,
             const wxSize& size = wxDefaultSize, long style = 0,
@@ -270,13 +262,11 @@ public:
             );
 
 private:
-    wxBitmap** m_pParentsBgBmp;
+    wxBitmap** m_pParentsBgBmp = nullptr;
 
 #ifndef __WXMAC__
 public:
     virtual void OnEraseBackground(wxEraseEvent& event);
-
-    DECLARE_EVENT_TABLE()
 #endif
 };
 
@@ -311,7 +301,6 @@ public:
 
     virtual void OnMouse(wxMouseEvent& event);
 
-    DECLARE_EVENT_TABLE()
 private:
     wxCursor m_HandCursor;
 };

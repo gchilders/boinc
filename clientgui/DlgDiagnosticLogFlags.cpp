@@ -33,15 +33,6 @@ const int dlgDiagnosticsMinHeight = 400;
 
 IMPLEMENT_DYNAMIC_CLASS(CDlgDiagnosticLogFlags, wxDialog)
 
-BEGIN_EVENT_TABLE(CDlgDiagnosticLogFlags, wxDialog)
-    EVT_SIZE(CDlgDiagnosticLogFlags::OnSize)
-    EVT_BUTTON(wxID_OK,CDlgDiagnosticLogFlags::OnOK)
-    EVT_BUTTON(ID_DEFAULTSBTN,CDlgDiagnosticLogFlags::OnSetDefaults)
-    EVT_BUTTON(wxID_APPLY,CDlgDiagnosticLogFlags::OnApply)
-    EVT_CHECKBOX(wxID_ANY,CDlgDiagnosticLogFlags::OnCheckBox)
-
-END_EVENT_TABLE()
-
 /* Constructor */
 CDlgDiagnosticLogFlags::CDlgDiagnosticLogFlags(wxWindow* parent) :
     wxDialog( parent, ID_ANYDIALOG, wxEmptyString, wxDefaultPosition,
@@ -143,6 +134,12 @@ CDlgDiagnosticLogFlags::CDlgDiagnosticLogFlags(wxWindow* parent) :
 #if defined(__WXMSW__) || defined(__WXGTK__)
     SetDoubleBuffered(true);
 #endif
+
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnSetDefaults(event); }, ID_DEFAULTSBTN);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnApply(event); }, wxID_APPLY);
+    Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event){ OnCheckBox(event); });
 }
 
 // destructor

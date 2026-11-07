@@ -27,16 +27,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CErrNotDetectedPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CErrNotDetectedPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CErrNotDetectedPage::OnPageChanged)
-EVT_WIZARD_CANCEL(wxID_ANY, CErrNotDetectedPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CErrNotDetectedPage::CErrNotDetectedPage() {
-}
-
 CErrNotDetectedPage::CErrNotDetectedPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -52,6 +42,8 @@ bool CErrNotDetectedPage::Create(CWizardAttach* parent) {
     CreateControls();
     GetSizer()->Fit(this);
 
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
     return true;
 }
 

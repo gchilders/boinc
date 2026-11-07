@@ -193,60 +193,22 @@ CLIENT_STATE::CLIENT_STATE()
     have_sporadic_app = false;
 }
 
-void CLIENT_STATE::show_host_info() {
-    char buf[256], buf2[256];
-
-    msg_printf(NULL, MSG_INFO,
-        "Computer name: %s",
-        host_info.domain_name
-    );
-    nbytes_to_string(host_info.m_cache, 0, buf, sizeof(buf));
-    msg_printf(NULL, MSG_INFO,
-        "Processor: %d %s %s",
-        host_info.p_ncpus, host_info.p_vendor, host_info.p_model
-    );
-    if (n_usable_cpus != host_info.p_ncpus) {
-        msg_printf(NULL, MSG_INFO, "Using %d CPUs", n_usable_cpus);
-    }
-    msg_printf(NULL, MSG_INFO,
-        "Processor features: %s", host_info.p_features
-    );
-#ifdef __APPLE__
-    buf[0] = '\0';
-    FILE *f = popen("sw_vers -productVersion", "r");
-    fgets(buf, sizeof(buf), f);
-    strip_whitespace(buf);
-    pclose(f);
-    msg_printf(NULL, MSG_INFO,
-        "OS: MacOS %s (%s %s)", buf,
-        host_info.os_name, host_info.os_version
-    );
-#else
-    msg_printf(NULL, MSG_INFO,
-        "OS: %s: %s", host_info.os_name, host_info.os_version
-    );
-#endif
-
-    nbytes_to_string(host_info.m_nbytes, 0, buf, sizeof(buf));
-    if (is_swap_defined()) {
-        nbytes_to_string(host_info.m_swap, 0, buf2, sizeof(buf2));
-        msg_printf(NULL, MSG_INFO, "Memory: %s RAM, %s swap space", buf, buf2);
-    } else {
-        msg_printf(NULL, MSG_INFO, "Memory: %s RAM", buf);
-    }
-
-    nbytes_to_string(host_info.d_total, 0, buf, sizeof(buf));
-    nbytes_to_string(host_info.d_free, 0, buf2, sizeof(buf2));
-    msg_printf(NULL, MSG_INFO, "Disk: %s total, %s free", buf, buf2);
-    int tz = host_info.timezone/3600;
-    msg_printf(0, MSG_INFO, "Local time is UTC %s%d hours",
-        tz<0?"":"+", tz
-    );
-
 #ifdef _WIN64
+// show WSL info.
+//
+static void show_wsl_info(HOST_INFO &host_info) {
+    char buf[256];
+    if (strlen(host_info.wsl_version)) {
+        msg_printf(NULL, MSG_INFO, "WSL version %s", host_info.wsl_version);
+    }
+    // with WSL 3 we don't use distros.
+    //
+    if (host_info.use_wslc) {
+        return;
+    }
     if (host_info.wsl_distros.distros.empty()) {
         // Don't print this message when running as a service (WSL detection is skipped)
-        if (!executing_as_daemon) {
+        if (!gstate.executing_as_daemon) {
             msg_printf(NULL, MSG_INFO, "WSL: no usable distros found");
         }
     } else {
@@ -302,12 +264,61 @@ void CLIENT_STATE::show_host_info() {
             }
         }
     }
+}
 #endif
 
-    // show Docker-related messages
-    //
-#ifndef ANDROID
-    show_docker_messages();
+void CLIENT_STATE::show_host_info() {
+    char buf[256], buf2[256];
+
+    msg_printf(NULL, MSG_INFO,
+        "Computer name: %s",
+        host_info.domain_name
+    );
+    nbytes_to_string(host_info.m_cache, 0, buf, sizeof(buf));
+    msg_printf(NULL, MSG_INFO,
+        "Processor: %d %s %s",
+        host_info.p_ncpus, host_info.p_vendor, host_info.p_model
+    );
+    if (n_usable_cpus != host_info.p_ncpus) {
+        msg_printf(NULL, MSG_INFO, "Using %d CPUs", n_usable_cpus);
+    }
+    msg_printf(NULL, MSG_INFO,
+        "Processor features: %s", host_info.p_features
+    );
+#ifdef __APPLE__
+    buf[0] = '\0';
+    FILE *f = popen("sw_vers -productVersion", "r");
+    fgets(buf, sizeof(buf), f);
+    strip_whitespace(buf);
+    pclose(f);
+    msg_printf(NULL, MSG_INFO,
+        "OS: MacOS %s (%s %s)", buf,
+        host_info.os_name, host_info.os_version
+    );
+#else
+    msg_printf(NULL, MSG_INFO,
+        "OS: %s: %s", host_info.os_name, host_info.os_version
+    );
+#endif
+
+    nbytes_to_string(host_info.m_nbytes, 0, buf, sizeof(buf));
+    if (is_swap_defined()) {
+        nbytes_to_string(host_info.m_swap, 0, buf2, sizeof(buf2));
+        msg_printf(NULL, MSG_INFO, "Memory: %s RAM, %s swap space", buf, buf2);
+    } else {
+        msg_printf(NULL, MSG_INFO, "Memory: %s RAM", buf);
+    }
+
+    nbytes_to_string(host_info.d_total, 0, buf, sizeof(buf));
+    nbytes_to_string(host_info.d_free, 0, buf2, sizeof(buf2));
+    msg_printf(NULL, MSG_INFO, "Disk: %s total, %s free", buf, buf2);
+    int tz = host_info.timezone/3600;
+    msg_printf(0, MSG_INFO, "Local time is UTC %s%d hours",
+        tz<0?"":"+", tz
+    );
+
+#ifdef _WIN64
+    show_wsl_info(host_info);
 #endif
 
     if (strlen(host_info.virtualbox_version)) {
@@ -338,6 +349,12 @@ void CLIENT_STATE::show_host_info() {
             host_info.docker_compose_version
         );
     }
+#endif
+
+    // show Docker-related messages
+    //
+#ifndef ANDROID
+    show_docker_messages();
 #endif
 }
 
@@ -695,6 +712,9 @@ int CLIENT_STATE::init() {
     host_info.p_vm_extensions_disabled = false;
 
     set_n_usable_cpus();
+
+    acct_mgr_info.init();
+        // must precede show_host_info() to know if have dynamic AM
     show_host_info();
 
     // this follows parse_state_file() because that's where we read project names
@@ -828,7 +848,7 @@ int CLIENT_STATE::init() {
     // check for initialization files
     //
     process_autologin(true);
-    acct_mgr_info.init();
+    acct_mgr_info.show();
     project_init.init();
 
     // if project_init.xml specifies an account, attach
@@ -2489,6 +2509,33 @@ void CLIENT_STATE::init_result_resource_usage(PROJECT *p) {
     }
 }
 
+// We potentially could use Docker if
+// - we're attached to a project that has a Docker app
+// - we're using Science United
+//
+static bool could_use_docker() {
+    if (gstate.acct_mgr_info.using_am() && gstate.acct_mgr_info.dynamic) {
+        return true;
+    }
+    ALL_PROJECTS_LIST apl;
+    int retval = apl.read_file(ALL_PROJECTS_LIST_FILENAME);
+    if (retval) {
+        return false;
+    }
+    for (PROJECT *p: gstate.projects) {
+        for (PROJECT_LIST_ENTRY *ple: apl.projects) {
+            if (!strcmp(p->master_url, ple->url.c_str())) {
+                for (string plat: ple->platforms) {
+                    if (strstr(plat.c_str(), "docker")) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    return false;
+}
+
 // shows messages (as notices) related to Docker and WSL:
 // Called on startup, and after doing a get-version RPC
 // to get boinc-buda-runner version
@@ -2502,6 +2549,11 @@ void show_docker_messages() {
     if (cc_config.dont_use_wsl) {
         return;
     }
+
+    if (gstate.host_info.use_wslc) {
+        return;
+    }
+
     // don't show message if OS is too old for WSL
     //
     if (gstate.host_info.major_version < 10
@@ -2516,63 +2568,30 @@ void show_docker_messages() {
 #else
     const char* url = "https://github.com/BOINC/boinc/wiki/Installing-Podman-on-Linux";
 #endif
-    if (!gstate.host_info.have_docker()) {
-        msg_printf_notice(0, true, url,
-            "Some projects require Podman; we recommend that you install it."
-        );
+    if (gstate.host_info.have_docker()) {
 #ifdef _WIN32
-    } else {
-        int bdv = gstate.host_info.wsl_distros.boinc_distro_version();
-        if (bdv) {
-            if (bdv < gstate.latest_boinc_buda_runner_version) {
-                msg_printf_notice(0, true,
-                    "https://github.com/BOINC/boinc/wiki/Updating-the-BOINC-WSL-distro",
-                    "A new version of the BOINC WSL distro is available; we recommend that you install it."
+        if (!gstate.host_info.use_wslc) {
+            int bdv = gstate.host_info.wsl_distros.boinc_distro_version();
+            if (bdv) {
+                if (bdv < gstate.latest_boinc_buda_runner_version) {
+                    msg_printf_notice(0, true,
+                        "https://github.com/BOINC/boinc/wiki/Updating-the-BOINC-WSL-distro",
+                        "A new version of the BOINC WSL distro is available; we recommend that you install it."
+                    );
+                }
+            } else {
+                msg_printf_notice(0, true, url,
+                    "Docker or Podman is present but not using the BOINC WSL distro.  Some project apps may not function properly. We recommend that you install the BOINC WSL distro."
                 );
             }
-        } else {
-            msg_printf_notice(0, true, url,
-                "Docker or Podman is present but not using the BOINC WSL distro.  Some project apps may not function properly. We recommend that you install the BOINC WSL distro."
-            );
         }
 #endif
         return;
     }
 
     // here Docker is not present.
-    // Tell the user to install it if either
-    // - we're using Science United, or
-    // - we're attached to a project that has a Docker app
     //
-    bool show = false;
-    if (gstate.acct_mgr_info.using_am() && gstate.acct_mgr_info.dynamic) {
-        show = true;
-    } else {
-        ALL_PROJECTS_LIST apl;
-        int retval = apl.read_file(ALL_PROJECTS_LIST_FILENAME);
-        if (retval) {
-            return;
-        }
-        for (PROJECT *p: gstate.projects) {
-            for (PROJECT_LIST_ENTRY *ple: apl.projects) {
-                if (!strcmp(p->master_url, ple->url.c_str())) {
-                    for (string plat: ple->platforms) {
-                        if (strstr(plat.c_str(), "docker")) {
-                            show = true;
-                            break;
-                        }
-                    }
-                }
-                if (show) {
-                    break;
-                }
-            }
-            if (show) {
-                break;
-            }
-        }
-    }
-    if (show) {
+    if (could_use_docker()) {
         msg_printf_notice(0, true, url,
             "Some projects require Podman; we recommend that you install it."
         );

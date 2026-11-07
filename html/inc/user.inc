@@ -277,7 +277,7 @@ function show_user_info_private($user) {
         row2(tra("Postal code"), $user->postal_code);
     }
     row2(tra("%1 member since", PROJECT), date_str($user->create_time));
-    $url_tokens = url_tokens($user->authenticator);
+    $url_tokens = url_tokens();
     if (LDAP_HOST && is_ldap_email($user->email_addr)) {
         // LDAP accounts can't change email or password
         //
@@ -303,7 +303,11 @@ function show_user_info_private($user) {
     if (!NO_COMPUTING) {
         row2(
             tra("Account keys"),
-            "<a href=\"weak_auth.php\">".tra("View")."</a>"
+            sprintf(
+                '<a href="weak_auth.php?%s">%s</a>',
+                url_tokens(),
+                tra("View")
+            )
         );
 
         require_once("../inc/account_ownership.inc");
@@ -355,7 +359,7 @@ function friend_links($user) {
         'vertical-align:top',
         $user->name
     );
-    if ($user->has_profile) {
+    if (!DISABLE_PROFILES && $user->has_profile) {
         $profile = BoincProfile::lookup_fields("has_picture", "userid=$user->id");
         if ($profile && $profile->has_picture) {
             $img_url = profile_thumb_url($user->id);
@@ -387,9 +391,8 @@ function user_links($user, $badge_height=0, $name_limit=0) {
         error_log("user_links(): null arg\n");
         return;
     }
-    BoincForumPrefs::lookup($user);
     $x = "";
-    if ($user->has_profile) {
+    if (!DISABLE_PROFILES && $user->has_profile) {
         $img_url = url_base()."img/head_20.png";
         $x .= sprintf(
             ' <a href="%s%s?userid=%d"><img title="View the profile of %s" src="%s" alt="Profile"></a>',

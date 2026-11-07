@@ -32,19 +32,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CAccountInfoPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CAccountInfoPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CAccountInfoPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CAccountInfoPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CAccountInfoPage::OnCancel)
-EVT_RADIOBUTTON(ID_ACCOUNTCREATECTRL, CAccountInfoPage::OnAccountCreateCtrlSelected)
-EVT_RADIOBUTTON(ID_ACCOUNTUSEEXISTINGCTRL, CAccountInfoPage::OnAccountUseExistingCtrlSelected)
-
-END_EVENT_TABLE()
-
-CAccountInfoPage::CAccountInfoPage() {
-}
-
 CAccountInfoPage::CAccountInfoPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -71,6 +58,12 @@ bool CAccountInfoPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
+    Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent& event){ OnAccountCreateCtrlSelected(event); }, ID_ACCOUNTCREATECTRL);
+    Bind(wxEVT_RADIOBUTTON, [this](wxCommandEvent& event){ OnAccountUseExistingCtrlSelected(event); }, ID_ACCOUNTUSEEXISTINGCTRL);
 
     return true;
 }

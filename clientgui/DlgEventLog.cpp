@@ -41,9 +41,6 @@
 ////@begin includes
 ////@end includes
 
-////@begin XPM images
-////@end XPM images
-
 const int dlgEventlogInitialWidth = 640;
 const int dlgEventLogInitialHeight = 480;
 const int dlgEventlogMinWidth = 600;
@@ -60,44 +57,13 @@ static bool s_bErrorIsFiltered = false;
 static bool s_bErrorFilteringChanged = false;
 static std::string s_strFilteredProjectName;
 
-/*!
- * CDlgEventLog type definition
- */
-
 IMPLEMENT_DYNAMIC_CLASS( CDlgEventLog, DlgEventLogBase )
-
-/*!
- * CDlgEventLog event table definition
- */
-
-BEGIN_EVENT_TABLE( CDlgEventLog, DlgEventLogBase )
-////@begin CDlgEventLog event table entries
-    EVT_ACTIVATE(CDlgEventLog::OnActivate)
-    EVT_HELP(wxID_ANY, CDlgEventLog::OnHelp)
-    EVT_BUTTON(wxID_OK, CDlgEventLog::OnOK)
-    EVT_BUTTON(ID_COPYAll, CDlgEventLog::OnMessagesCopyAll)
-    EVT_BUTTON(ID_COPYSELECTED, CDlgEventLog::OnMessagesCopySelected)
-    EVT_BUTTON(ID_TASK_MESSAGES_FILTERBYERROR, CDlgEventLog::OnErrorFilter)
-    EVT_BUTTON(ID_TASK_MESSAGES_FILTERBYPROJECT, CDlgEventLog::OnMessagesFilter)
-    EVT_BUTTON(ID_SIMPLE_HELP, CDlgEventLog::OnButtonHelp)
-	EVT_MENU(ID_SGDIAGNOSTICLOGFLAGS, CDlgEventLog::OnDiagnosticLogFlags)
-	EVT_SIZE(CDlgEventLog::OnSize)
-    EVT_MOVE(CDlgEventLog::OnMove)
-    EVT_CLOSE(CDlgEventLog::OnClose)
-    EVT_LIST_COL_END_DRAG(ID_SIMPLE_MESSAGESVIEW, CDlgEventLog::OnColResize)
-////@end CDlgEventLog event table entries
-END_EVENT_TABLE()
-
-/*!
- * CDlgEventLog constructors
- */
 
 CDlgEventLog::CDlgEventLog( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
     wxLogTrace(wxT("Function Start/End"), wxT("CDlgEventLog::CDlgEventLog - Constructor Function Begin"));
 
     Create(parent, id, caption, pos, size, style);
-
     wxLogTrace(wxT("Function Start/End"), wxT("CDlgEventLog::CDlgEventLog - Constructor Function End"));
 }
 
@@ -232,6 +198,20 @@ bool CDlgEventLog::Create( wxWindow* parent, wxWindowID id, const wxString& capt
     m_pAccelTable = new wxAcceleratorTable(1, m_Shortcuts);
 
     SetAcceleratorTable(*m_pAccelTable);
+
+    Bind(wxEVT_ACTIVATE, [this](wxActivateEvent& event){ OnActivate(event); });
+    Bind(wxEVT_HELP, [this](wxHelpEvent& event){ OnHelp(event); });
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnMessagesCopyAll(event); }, ID_COPYAll);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnMessagesCopySelected(event); }, ID_COPYSELECTED);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnErrorFilter(event); }, ID_TASK_MESSAGES_FILTERBYERROR);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnMessagesFilter(event); }, ID_TASK_MESSAGES_FILTERBYPROJECT);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnButtonHelp(event); }, ID_SIMPLE_HELP);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnDiagnosticLogFlags(event); }, ID_SGDIAGNOSTICLOGFLAGS);
+	Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event){ OnMove(event); });
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event){ OnClose(event); });
+    Bind(wxEVT_LIST_COL_END_DRAG, [this](wxListEvent& event){ OnColResize(event); }, ID_SIMPLE_MESSAGESVIEW);
 
     return true;
 }
@@ -632,7 +612,7 @@ void CDlgEventLog::OnRefresh() {
             if (m_isConnected) {
                 pDoc->GetConnectedComputerName(strNewMachineName);
                 if (strLastMachineName != strNewMachineName) {
-                    strLastMachineName = strNewMachineName;
+                    strLastMachineName = std::move(strNewMachineName);
                     m_bWasConnected = false;
                     ResetMessageFiltering();
                     m_iPreviousFirstMsgSeqNum = pDoc->GetFirstMsgSeqNum();
@@ -1067,7 +1047,7 @@ void CDlgEventLog::UpdateButtons() {
         if ((n == 1) && (! s_bIsFiltered)) {
             n = m_pList->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
             MESSAGE* message = wxGetApp().GetDocument()->message(GetFilteredMessageIndex(n));
-            if ((message->project).size() > 0) {
+            if (message && (message->project).size() > 0) {
                 enableFilterButton = true;
             }
         }

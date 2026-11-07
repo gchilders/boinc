@@ -82,7 +82,6 @@ class CDlgEventLogListCtrl;
 class CDlgEventLog : public DlgEventLogBase
 {
     DECLARE_DYNAMIC_CLASS( CDlgEventLog )
-    DECLARE_EVENT_TABLE()
 
 public:
     /// Constructors

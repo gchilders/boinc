@@ -19,25 +19,6 @@
 #ifndef BOINC_DLGGENERICMESSAGE_H
 #define BOINC_DLGGENERICMESSAGE_H
 
-/*!
- * Includes
- */
-
-////@begin includes
-////@end includes
-
-/*!
- * Forward declarations
- */
-
-////@begin forward declarations
-////@end forward declarations
-
-/*!
- * Control identifiers
- */
-
-////@begin control identifiers
 #define ID_DIALOG 10000
 #ifndef wxCLOSE_BOX
 #define wxCLOSE_BOX 0x1000
@@ -47,19 +28,13 @@
 #else
 #define SYMBOL_CDLGGENERICMESSAGE_STYLE wxCAPTION|wxRESIZE_BORDER|wxSYSTEM_MENU|wxCLOSE_BOX
 #endif
-////@end control identifiers
-
-/*!
- * CDlgGenericMessage class declaration
- */
 
 struct CDlgGenericMessageButton
 {
-    CDlgGenericMessageButton(bool _show = true, wxWindowID _id = wxID_OK, wxString _label = _T("&OK"))
-    {
-        this->show = _show;
-        this->id = _id;
-        this->label = _label;
+    CDlgGenericMessageButton(bool _show = true, wxWindowID _id = wxID_OK, wxString _label = _T("&OK")) {
+        show = _show;
+        id = _id;
+        label = std::move(_label);
     }
     bool show = true;
     wxWindowID id = wxID_OK;
@@ -82,11 +57,10 @@ struct CDlgGenericMessageParameters
 class CDlgGenericMessage: public wxDialog
 {
     DECLARE_DYNAMIC_CLASS( CDlgGenericMessage )
-    DECLARE_EVENT_TABLE()
 
 public:
     /// Constructors
-    CDlgGenericMessage( );
+    CDlgGenericMessage() = default;
     CDlgGenericMessage( wxWindow* parent, CDlgGenericMessageParameters* parameters = NULL );
 
 ////@begin CDlgGenericMessage event handler declarations
@@ -114,9 +88,9 @@ private:
     void CreateControls();
 
     ////@begin CDlgGenericMessage member variables
-    wxWindow* m_DialogParent;
+    wxWindow* m_DialogParent = nullptr;
     CDlgGenericMessageParameters m_DialogParameters;
-    wxCheckBox* m_DialogDisableMessage = NULL;
+    wxCheckBox* m_DialogDisableMessage = nullptr;
     ////@end CDlgGenericMessage member variables
 };
 

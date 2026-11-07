@@ -116,6 +116,7 @@ function display_result($result,$details) {
           <TH>Prime bits</TH>
           <TH>Post Processor</TH>
           <TH>Pastebin</TH>
+          <TH>Priority</TH>
           <TH>DELETE?<sup>*</sup></TH>
 	  <th>Update</th>
            </TR>\n";
@@ -140,6 +141,7 @@ echo "<form action='$self' method='POST'>\n";
             <TH>Prime bits</TH>
             <TH>Post Processor</TH>
             <TH>Pastebin</TH>
+            <TH>Priority</TH>
             <TH>DELETE?<sup>*</sup></TH>
             </TR>\n";
         }  //            <TH>Ranges</TH>
@@ -201,6 +203,12 @@ echo "<form action='$self' method='POST'>\n";
         $v=$item->pastebin;
         echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
         
+        $field="priority_".$id;
+        $v=$item->priority;
+        if (empty($v)) $v = $item->id;
+        if ($v == 0) $v = $item->id;
+        echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
+
         $field="delete_number_".$id; 
         echo "  <TD align='center'><input type='text' size='6' name='$field' value=''></TD>\n";
     
@@ -320,6 +328,7 @@ if( !empty($_POST) ) {
 		$commands .= 	update_if_changed("primebits",		$id, (int)$item->primebits	, "primebits"		);
 		$commands .= 	update_if_changed("postprocessor",	$id, $item->postprocessor	, "postprocessor"	);
 		$commands .= 	update_if_changed("pastebin",	$id, $item->pastebin	, "pastebin"	);
+		$commands .= 	update_if_changed("priority",	$id, (int)$item->priority	, "priority"	);
 		$commands .= 	update_if_changed("ranges",			$id, $item->ranges			, "ranges"		);
 		if($item->status==0) {
 			$commands .= update_if_changed("value",			$id, $item->value			, "value"		);
@@ -339,6 +348,9 @@ if( !empty($_POST) ) {
         $project=_mysql_escape_string($_POST['add_project']);
         if( empty($name) || empty($project) ) {
             $commands .= "<p><font color='red'>To add a new number please supply both a name and a project.</font></p>\n";
+        }
+        else if (!preg_match('/^[a-zA-Z0-9._-]+$/', $name) ) {
+            $commands .= "<p><font color='red'>The name can only contain alphanumeric characters, underscores, hyphens, and periods.</font></p>\n";
         }
         else {
             $now=time();

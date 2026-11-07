@@ -26,12 +26,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CDlgItemProperties, wxDialog)
 
-BEGIN_EVENT_TABLE(CDlgItemProperties, wxDialog)
-    EVT_BUTTON(ID_COPYSELECTED, CDlgItemProperties::OnCopySelected)
-    EVT_BUTTON(ID_COPYALL, CDlgItemProperties::OnCopyAll)
-
-END_EVENT_TABLE()
-
 typedef enum _ITEM_TYPE {
     ItemTypeSection,
     ItemTypeProperty
@@ -60,8 +54,8 @@ CDlgItemProperties::CDlgItemProperties(wxWindow* parent) :
 
     const long style = wxBORDER_NONE;
     m_txtInformation = new wxHtmlWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, style, wxEmptyString );
-    m_txtInformation->Bind(wxEVT_LEFT_DOWN, &CDlgItemProperties::OnMouseButtonEvent, this);
-    m_txtInformation->Bind(wxEVT_LEFT_UP, &CDlgItemProperties::OnMouseButtonEvent, this);
+    m_txtInformation->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event){ OnMouseButtonEvent(event); });
+    m_txtInformation->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent& event){ OnMouseButtonEvent(event); });
 
     m_bSizer1->Add( m_txtInformation, 1, wxEXPAND | wxALL, 5 );
 
@@ -94,6 +88,9 @@ CDlgItemProperties::CDlgItemProperties(wxWindow* parent) :
         m_strBaseConfigLocation = wxString(wxT("/DlgProperties/"));
         break;
     }
+
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnCopySelected(event); }, ID_COPYSELECTED);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnCopyAll(event); }, ID_COPYALL);
 
     RestoreState();
 }

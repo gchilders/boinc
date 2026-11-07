@@ -45,41 +45,11 @@
 #define MAX_NOTIFICATION_DURATION 5
 #endif
 
-DEFINE_EVENT_TYPE(wxEVT_TASKBAR_RELOADSKIN)
-DEFINE_EVENT_TYPE(wxEVT_TASKBAR_REFRESH)
+wxDEFINE_EVENT(wxEVT_TASKBAR_RELOADSKIN, CTaskbarEvent);
+wxDEFINE_EVENT(wxEVT_TASKBAR_REFRESH, CTaskbarEvent);
 #ifdef __WXMSW__
-DEFINE_EVENT_TYPE(wxEVT_TASKBAR_SHUTDOWN)
+wxDEFINE_EVENT(wxEVT_TASKBAR_SHUTDOWN, CTaskbarEvent);
 #endif // __WXMSW__
-
-BEGIN_EVENT_TABLE(CTaskBarIcon, wxTaskBarIcon)
-
-    EVT_IDLE(CTaskBarIcon::OnIdle)
-    EVT_CLOSE(CTaskBarIcon::OnClose)
-    EVT_TASKBAR_REFRESH(CTaskBarIcon::OnRefresh)
-    EVT_TASKBAR_RELOADSKIN(CTaskBarIcon::OnReloadSkin)
-    EVT_TASKBAR_LEFT_DCLICK(CTaskBarIcon::OnLButtonDClick)
-#ifdef __WXGTK__
-    EVT_TASKBAR_RIGHT_DOWN(CTaskBarIcon::OnRButtonDown)
-#endif
-#ifdef __WXMSW__
-    EVT_TASKBAR_RIGHT_UP(CTaskBarIcon::OnRButtonUp)
-#endif
-#ifndef __WXMAC__
-    EVT_TASKBAR_BALLOON_CLICK(CTaskBarIcon::OnNotificationClick)
-    EVT_TASKBAR_BALLOON_TIMEOUT(CTaskBarIcon::OnNotificationTimeout)
-#endif
-    EVT_MENU(ID_OPENBOINCMANAGER, CTaskBarIcon::OnOpen)
-    EVT_MENU(ID_OPENWEBSITE, CTaskBarIcon::OnOpenWebsite)
-    EVT_MENU(ID_TB_SUSPEND, CTaskBarIcon::OnSuspendResume)
-    EVT_MENU(ID_TB_SUSPEND_GPU, CTaskBarIcon::OnSuspendResumeGPU)
-    EVT_MENU(wxID_ABOUT, CTaskBarIcon::OnAbout)
-    EVT_MENU(wxID_EXIT, CTaskBarIcon::OnExit)
-
-#ifdef __WXMSW__
-    EVT_TASKBAR_SHUTDOWN(CTaskBarIcon::OnShutdown)
-#endif
-
-END_EVENT_TABLE()
 
 
 CTaskBarIcon::CTaskBarIcon(wxIconBundle* icon, wxIconBundle* iconDisconnected, wxIconBundle* iconSnooze
@@ -123,6 +93,31 @@ CTaskBarIcon::CTaskBarIcon(wxIconBundle* icon, wxIconBundle* iconDisconnected, w
 
     m_dtLastNotificationAlertExecuted = wxDateTime((time_t)0);
     m_iLastNotificationUnreadMessageCount = 0;
+
+    Bind(wxEVT_IDLE, [this](wxIdleEvent& event){ OnIdle(event); });
+    Bind(wxEVT_CLOSE_WINDOW, [this](wxCloseEvent& event){ OnClose(event); });
+    Bind(wxEVT_TASKBAR_REFRESH, [this](CTaskbarEvent& event){ OnRefresh(event); });
+    Bind(wxEVT_TASKBAR_RELOADSKIN, [this](CTaskbarEvent& event){ OnReloadSkin(event); });
+    Bind(wxEVT_TASKBAR_LEFT_DCLICK, [this](wxTaskBarIconEvent& event){ OnLButtonDClick(event); });
+#ifdef __WXGTK__
+    Bind(wxEVT_TASKBAR_RIGHT_DOWN, [this](wxTaskBarIconEvent& event){ OnRButtonDown(event); });
+#endif
+#ifdef __WXMSW__
+    Bind(wxEVT_TASKBAR_RIGHT_UP, [this](wxTaskBarIconEvent& event){ OnRButtonUp(event); });
+#endif
+#ifndef __WXMAC__
+    Bind(wxEVT_TASKBAR_BALLOON_CLICK, [this](wxTaskBarIconEvent& event){ OnNotificationClick(event); });
+    Bind(wxEVT_TASKBAR_BALLOON_TIMEOUT, [this](wxTaskBarIconEvent& event){ OnNotificationTimeout(event); });
+#endif
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnOpen(event); }, ID_OPENBOINCMANAGER);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnOpenWebsite(event); }, ID_OPENWEBSITE);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnSuspendResume(event); }, ID_TB_SUSPEND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnSuspendResumeGPU(event); }, ID_TB_SUSPEND_GPU);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnAbout(event); }, wxID_ABOUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnExit(event); }, wxID_EXIT);
+#ifdef __WXMSW__
+    Bind(wxEVT_TASKBAR_SHUTDOWN, [this](CTaskbarEvent& event){ OnShutdown(event); });
+#endif
 }
 
 
@@ -335,7 +330,7 @@ void CTaskBarIcon::OnRButtonUp(wxTaskBarIconEvent& WXUNUSED(event)) {
     DisplayContextMenu();
 }
 
-void CTaskBarIcon::OnShutdown(wxTaskBarIconEvent& event) {
+void CTaskBarIcon::OnShutdown(CTaskbarEvent& event) {
     wxLogTrace(wxT("Function Start/End"), wxT("CTaskBarIcon::OnShutdown - Function Begin"));
 
     wxCloseEvent eventClose;
@@ -768,7 +763,7 @@ bool CTaskBarIcon::QueueBalloon(const wxIcon&
 #else
                                 icon,
 #endif
-                                const wxString title, const wxString message, unsigned int type) {
+                                const wxString& title, const wxString& message, unsigned int type) {
 #ifdef __WXGTK__
     wxNotificationMessage notification = wxNotificationMessage(title, message, wxGetApp().GetFrame()->GetParent(), type);
     return notification.Show();

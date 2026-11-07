@@ -24,7 +24,6 @@
 
 class CDlgHiddenColumns : public wxDialog {
 	DECLARE_DYNAMIC_CLASS( CDlgHiddenColumns )
-    DECLARE_EVENT_TABLE()
 public:
 	CDlgHiddenColumns(wxWindow* parent=NULL);
 	virtual ~CDlgHiddenColumns();

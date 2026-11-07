@@ -70,16 +70,6 @@ enum STATUSBARFIELDS {
 
 IMPLEMENT_DYNAMIC_CLASS(CStatusBar, wxStatusBar)
 
-BEGIN_EVENT_TABLE(CStatusBar, wxStatusBar)
-    EVT_SIZE(CStatusBar::OnSize)
-END_EVENT_TABLE()
-
-
-CStatusBar::CStatusBar() {
-    wxLogTrace(wxT("Function Start/End"), wxT("CStatusBar::CStatusBar - Default Constructor Function Begin"));
-    wxLogTrace(wxT("Function Start/End"), wxT("CStatusBar::CStatusBar - Default Constructor Function End"));
-}
-
 
 CStatusBar::CStatusBar(wxWindow *parent) :
     wxStatusBar(parent, ID_STATUSBAR, wxST_SIZEGRIP, _T("statusBar"))
@@ -104,6 +94,8 @@ CStatusBar::CStatusBar(wxWindow *parent) :
     m_ptxtDisconnect = new wxStaticText(this, -1, _("Disconnected"), wxPoint(0, 0), wxDefaultSize, wxALIGN_LEFT);
     wxASSERT(m_ptxtDisconnect);
     m_ptxtDisconnect->Hide();
+
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });
 
     wxSizeEvent evt;
     AddPendingEvent(evt);
@@ -157,63 +149,6 @@ void CStatusBar::OnSize(wxSizeEvent& event) {
 
 IMPLEMENT_DYNAMIC_CLASS(CAdvancedFrame, CBOINCBaseFrame)
 
-BEGIN_EVENT_TABLE (CAdvancedFrame, CBOINCBaseFrame)
-    EVT_MENU_OPEN(CAdvancedFrame::OnMenuOpening)
-    // View
-    EVT_MENU_RANGE(ID_ADVNOTICESVIEW, ID_ADVRESOURCEUSAGEVIEW, CAdvancedFrame::OnChangeView)
-    EVT_MENU(ID_CHANGEGUI, CAdvancedFrame::OnChangeGUI)
-    // Tools
-    EVT_MENU(ID_WIZARDATTACHPROJECT, CBOINCBaseFrame::OnWizardAttachProject)
-    EVT_MENU(ID_WIZARDATTACHACCOUNTMANAGER, CBOINCBaseFrame::OnWizardUpdate)
-    EVT_MENU(ID_WIZARDUPDATE, CBOINCBaseFrame::OnWizardUpdate)
-    EVT_MENU(ID_WIZARDDETACH, CBOINCBaseFrame::OnWizardDetach)
-    // Activity
-    EVT_MENU_RANGE(ID_ADVACTIVITYRUNALWAYS, ID_ADVACTIVITYSUSPEND, CAdvancedFrame::OnActivitySelection)
-    EVT_MENU_RANGE(ID_ADVACTIVITYGPUALWAYS, ID_ADVACTIVITYGPUSUSPEND, CAdvancedFrame::OnGPUSelection)
-    EVT_MENU_RANGE(ID_ADVNETWORKRUNALWAYS, ID_ADVNETWORKSUSPEND, CAdvancedFrame::OnNetworkSelection)
-    // Advanced
-    EVT_MENU(ID_OPTIONS, CAdvancedFrame::OnOptions)
-	EVT_MENU(ID_PREFERENCES, CAdvancedFrame::OnPreferences)
-	EVT_MENU(ID_EXCLUSIVE_APPS, CAdvancedFrame::OnExclusiveApps)
-	EVT_MENU(ID_DIAGNOSTICLOGFLAGS, CAdvancedFrame::OnDiagnosticLogFlags)
-	EVT_MENU(ID_SELECTCOLUMNS, CAdvancedFrame::OnSelectColumns)
-    EVT_MENU(ID_SELECTCOMPUTER, CAdvancedFrame::OnSelectComputer)
-    EVT_MENU(ID_SHUTDOWNCORECLIENT, CAdvancedFrame::OnClientShutdown)
-    EVT_MENU(ID_RUNBENCHMARKS, CAdvancedFrame::OnRunBenchmarks)
-    EVT_MENU(ID_RETRYCOMMUNICATIONS, CAdvancedFrame::OnRetryCommunications)
-	EVT_MENU(ID_READPREFERENCES, CAdvancedFrame::OnReadPreferences)
-	EVT_MENU(ID_READCONFIG, CAdvancedFrame::OnReadConfig)
-	EVT_MENU(ID_EVENTLOG, CAdvancedFrame::OnEventLog)
-	EVT_MENU(ID_LAUNCHNEWINSTANCE, CAdvancedFrame::OnLaunchNewInstance)
-    // Help
-    EVT_MENU(ID_HELPBOINC, CAdvancedFrame::OnHelpBOINC)
-    EVT_MENU(ID_HELPBOINCMANAGER, CAdvancedFrame::OnHelpBOINC)
-    EVT_MENU(ID_HELPBOINCWEBSITE, CAdvancedFrame::OnHelpBOINC)
-    EVT_MENU(wxID_ABOUT, CAdvancedFrame::OnHelpAbout)
-    EVT_MENU(ID_CHECK_VERSION, CAdvancedFrame::OnCheckVersion)
-    EVT_MENU(ID_REPORT_BUG, CAdvancedFrame::OnReportBug)
-    EVT_HELP(wxID_ANY, CAdvancedFrame::OnHelp)
-    // Custom Events & Timers
-    EVT_FRAME_CONNECT(CAdvancedFrame::OnConnect)
-    EVT_FRAME_NOTIFICATION(CAdvancedFrame::OnNotification)
-    EVT_TIMER(ID_REFRESHSTATETIMER, CAdvancedFrame::OnRefreshState)
-    EVT_TIMER(ID_FRAMERENDERTIMER, CAdvancedFrame::OnFrameRender)
-    EVT_NOTEBOOK_PAGE_CHANGED(ID_FRAMENOTEBOOK, CAdvancedFrame::OnNotebookSelectionChanged)
-    EVT_MENU(ID_SELECTALL, CAdvancedFrame::OnSelectAll)
-    EVT_SIZE(CAdvancedFrame::OnSize)
-    EVT_MOVE(CAdvancedFrame::OnMove)
-#ifdef __WXMAC__
-	EVT_MENU(wxID_PREFERENCES, CAdvancedFrame::OnPreferences)
-    EVT_CHAR_HOOK(CAdvancedFrame::OnKeyPressed)
-#endif
-END_EVENT_TABLE ()
-
-
-CAdvancedFrame::CAdvancedFrame() {
-    wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::CAdvancedFrame - Default Constructor Function Begin"));
-    wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::CAdvancedFrame - Default Constructor Function End"));
-}
-
 
 CAdvancedFrame::CAdvancedFrame(wxString title, wxIconBundle* icons, wxPoint position, wxSize size) :
     CBOINCBaseFrame((wxFrame *)NULL, ID_ADVANCEDFRAME, title, position, size, wxDEFAULT_FRAME_STYLE)
@@ -225,7 +160,7 @@ CAdvancedFrame::CAdvancedFrame(wxString title, wxIconBundle* icons, wxPoint posi
     m_pStatusbar = NULL;
 
     // Working Variables
-    m_strBaseTitle = title;
+    m_strBaseTitle = std::move(title);
 
     // Initialize Application
     SetIcons(*icons);
@@ -248,6 +183,55 @@ CAdvancedFrame::CAdvancedFrame(wxString title, wxIconBundle* icons, wxPoint posi
     m_pFrameRenderTimer = new wxTimer(this, ID_FRAMERENDERTIMER);
     wxASSERT(m_pFrameRenderTimer);
     m_pFrameRenderTimer->Start(1000);               // Send event every 1 second
+
+    Bind(wxEVT_MENU_OPEN, [this](wxMenuEvent& event){ OnMenuOpening(event); });
+    // View
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnChangeView(event); }, ID_ADVNOTICESVIEW, ID_ADVRESOURCEUSAGEVIEW);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnChangeGUI(event); }, ID_CHANGEGUI);
+    // Tools
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnWizardAttachProject(event); }, ID_WIZARDATTACHPROJECT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnWizardUpdate(event); }, ID_WIZARDATTACHACCOUNTMANAGER);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnWizardUpdate(event); }, ID_WIZARDUPDATE);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnWizardDetach(event); }, ID_WIZARDDETACH);
+    // Activity
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnActivitySelection(event); }, ID_ADVACTIVITYRUNALWAYS, ID_ADVACTIVITYSUSPEND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnGPUSelection(event); }, ID_ADVACTIVITYGPUALWAYS, ID_ADVACTIVITYGPUSUSPEND);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnNetworkSelection(event); }, ID_ADVNETWORKRUNALWAYS, ID_ADVNETWORKSUSPEND);
+    // Advanced
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnOptions(event); }, ID_OPTIONS);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnPreferences(event); }, ID_PREFERENCES);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnExclusiveApps(event); }, ID_EXCLUSIVE_APPS);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnDiagnosticLogFlags(event); }, ID_DIAGNOSTICLOGFLAGS);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnSelectColumns(event); }, ID_SELECTCOLUMNS);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnSelectComputer(event); }, ID_SELECTCOMPUTER);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnClientShutdown(event); }, ID_SHUTDOWNCORECLIENT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnRunBenchmarks(event); }, ID_RUNBENCHMARKS);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnRetryCommunications(event); }, ID_RETRYCOMMUNICATIONS);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnReadPreferences(event); }, ID_READPREFERENCES);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnReadConfig(event); }, ID_READCONFIG);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnEventLog(event); }, ID_EVENTLOG);
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnLaunchNewInstance(event); }, ID_LAUNCHNEWINSTANCE);
+    // Help
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnHelpBOINC(event); }, ID_HELPBOINC);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnHelpBOINC(event); }, ID_HELPBOINCMANAGER);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnHelpBOINC(event); }, ID_HELPBOINCWEBSITE);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnHelpAbout(event); }, wxID_ABOUT);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnCheckVersion(event); }, ID_CHECK_VERSION);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnReportBug(event); }, ID_REPORT_BUG);
+    Bind(wxEVT_HELP, [this](wxHelpEvent& event){ OnHelp(event); });
+    // Custom Events & Timers
+    Bind(wxEVT_FRAME_CONNECT, [this](CFrameEvent& event){ OnConnect(event); });
+    Bind(wxEVT_FRAME_NOTIFICATION, [this](CFrameEvent& event){ OnNotification(event); });
+    Bind(wxEVT_TIMER, [this](wxTimerEvent& event){ OnRefreshState(event); }, ID_REFRESHSTATETIMER);
+    Bind(wxEVT_TIMER, [this](wxTimerEvent& event){ OnFrameRender(event); }, ID_FRAMERENDERTIMER);
+    Bind(wxEVT_NOTEBOOK_PAGE_CHANGED, [this](wxNotebookEvent& event){ OnNotebookSelectionChanged(event); }, ID_FRAMENOTEBOOK);
+    Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnSelectAll(event); }, ID_SELECTALL);
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event){ OnMove(event); });
+#ifdef __WXMAC__
+	Bind(wxEVT_MENU, [this](wxCommandEvent& event){ OnPreferences(event); }, wxID_PREFERENCES);
+    Bind(wxEVT_CHAR_HOOK, [this](wxKeyEvent& event){ OnKeyPressed(event); });
+#endif
 
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::CAdvancedFrame - Function End"));
 }
@@ -1362,8 +1346,8 @@ void CAdvancedFrame::OnClientShutdown(wxCommandEvent& WXUNUSED(event)) {
         );
 
         CDlgGenericMessageParameters dlgParams;
-        dlgParams.caption = strDialogTitle;
-        dlgParams.message = strDialogMessage;
+        dlgParams.caption = std::move(strDialogTitle);
+        dlgParams.message = std::move(strDialogMessage);
         CDlgGenericMessage dlg(this, &dlgParams);
 
         if (wxID_OK == dlg.ShowModal()) {
@@ -1574,6 +1558,9 @@ void CAdvancedFrame::OnRefreshView(CFrameEvent& WXUNUSED(event)) {
 
         // Force update the notice tab text
         pView = wxDynamicCast(m_pNotebook->GetPage(ID_ADVNOTICESVIEW - ID_ADVVIEWBASE), CBOINCBaseView);
+        if (!pView) {
+            return;
+        }
         iCount = pDoc->GetUnreadNoticeCount();
         if (iLastCount != iCount) {
             iLastCount = iCount;
@@ -1609,7 +1596,9 @@ void CAdvancedFrame::OnRefreshView(CFrameEvent& WXUNUSED(event)) {
 
         // Update current tab contents
         pView = wxDynamicCast(m_pNotebook->GetPage(m_pNotebook->GetSelection()), CBOINCBaseView);
-        pView->FireOnListRender();
+        if (pView) {
+            pView->FireOnListRender();
+        }
     }
 
     wxLogTrace(wxT("Function Start/End"), wxT("CAdvancedFrame::OnRefreshView - Function End"));
@@ -1762,8 +1751,8 @@ void CAdvancedFrame::OnConnect(CFrameEvent& WXUNUSED(event)) {
             );
 
             ShowAlert(
-                strDialogTitle,
-                strDialogDescription,
+                std::move(strDialogTitle),
+                std::move(strDialogDescription),
                 wxOK | wxICON_INFORMATION,
                 true
             );
@@ -1971,6 +1960,9 @@ void CAdvancedFrame::OnNotebookSelectionChanged(wxNotebookEvent& event) {
 
 void CAdvancedFrame::OnSelectAll(wxCommandEvent& WXUNUSED(event)) {
   CBOINCBaseView* pView = wxDynamicCast(m_pNotebook->GetPage(m_pNotebook->GetSelection()), CBOINCBaseView);
+  if (!pView) {
+      return;
+  }
   CBOINCListCtrl* lCtrl = pView->GetListCtrl();
 
   if (lCtrl == NULL) return;

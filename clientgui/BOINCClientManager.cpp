@@ -527,10 +527,6 @@ void CBOINCClientManager::ShutdownBOINCCore(bool ShuttingDownManager) {
 }
 
 
-BEGIN_EVENT_TABLE(ClientCrashDlg, wxDialog)
-    EVT_BUTTON(wxID_HELP, ClientCrashDlg::OnHelp)
-END_EVENT_TABLE()
-
 IMPLEMENT_CLASS(ClientCrashDlg, wxDialog)
 
 ClientCrashDlg::ClientCrashDlg(double timeDiff) : wxDialog( NULL, wxID_ANY, wxT(""), wxDefaultPosition ) {
@@ -583,6 +579,7 @@ ClientCrashDlg::ClientCrashDlg(double timeDiff) : wxDialog( NULL, wxID_ANY, wxT(
     }
 
     Centre( wxBOTH | wxCENTER_FRAME);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnHelp(event); }, wxID_HELP);
 }
 
 

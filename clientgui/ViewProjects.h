@@ -110,8 +110,6 @@ protected:
     wxInt32                 ConvertLinkToWebsiteIndex( const wxString& strLink, wxInt32& iProjectIndex, wxInt32& iWebsiteIndex );
 
     int                     GetProjectCacheAtIndex(CProject*& projectPtr, int index);
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif

@@ -20,10 +20,9 @@
 
 class CErrNotDetectedPage: public CBOINCWizardPage {
     DECLARE_DYNAMIC_CLASS(CErrNotDetectedPage)
-    DECLARE_EVENT_TABLE()
 
 public:
-    CErrNotDetectedPage();
+    CErrNotDetectedPage() = default;
     CErrNotDetectedPage(CWizardAttach* parent);
     bool Create(CWizardAttach* parent);
 
@@ -41,11 +40,11 @@ public:
     bool HasPrevPage() const;
 
 private:
-    wxStaticText* m_pTitleStaticCtrl;
-    wxStaticText* m_pDirectionsStaticCtrl;
+    wxStaticText* m_pTitleStaticCtrl = nullptr;
+    wxStaticText* m_pDirectionsStaticCtrl = nullptr;
 
-    CWizardAttach *m_pParent;
-    CBOINCWizardPage *m_pPrev;
+    CWizardAttach *m_pParent = nullptr;
+    CBOINCWizardPage *m_pPrev = nullptr;
 };
 
 #endif

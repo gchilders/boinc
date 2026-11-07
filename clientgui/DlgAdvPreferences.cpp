@@ -32,14 +32,6 @@ using std::string;
 
 IMPLEMENT_DYNAMIC_CLASS(CDlgAdvPreferences, wxDialog)
 
-BEGIN_EVENT_TABLE(CDlgAdvPreferences, wxDialog)
-    EVT_COMMAND_RANGE(ID_ADV_PREFS_START,ID_ADV_PREFS_LAST,wxEVT_COMMAND_CHECKBOX_CLICKED,CDlgAdvPreferences::OnHandleCommandEvent)
-    //buttons
-    EVT_BUTTON(wxID_OK,CDlgAdvPreferences::OnOK)
-    EVT_BUTTON(ID_HELPBOINC,CDlgAdvPreferences::OnHelp)
-    EVT_BUTTON(ID_BTN_CLEAR,CDlgAdvPreferences::OnClear)
-END_EVENT_TABLE()
-
 /* Constructor */
 CDlgAdvPreferences::CDlgAdvPreferences(wxWindow* parent) : CDlgAdvPreferencesBase(parent,ID_ANYDIALOG) {
     m_arrTabPageIds.Add(ID_TABPAGE_PROC);
@@ -108,6 +100,11 @@ CDlgAdvPreferences::CDlgAdvPreferences(wxWindow* parent) : CDlgAdvPreferencesBas
 #if defined(__WXMSW__) || defined(__WXGTK__)
     SetDoubleBuffered(true);
 #endif
+
+    Bind(wxEVT_COMMAND_CHECKBOX_CLICKED, [this](wxCommandEvent& event){ OnHandleCommandEvent(event); }, ID_ADV_PREFS_START, ID_ADV_PREFS_LAST);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnHelp(event); }, ID_HELPBOINC);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnClear(event); }, ID_BTN_CLEAR);
 }
 
 /* destructor */
@@ -672,8 +669,8 @@ bool CDlgAdvPreferences::SavePreferencesSettings() {
             wxString startStr = procDayStartTxts[i]->GetValue();
             wxString endStr = procDayStopTxts[i]->GetValue();
             prefs.cpu_times.week.set(i,
-                TimeStringToDouble(startStr),
-                TimeStringToDouble(endStr)
+                TimeStringToDouble(std::move(startStr)),
+                TimeStringToDouble(std::move(endStr))
                 );
         }
     }
@@ -689,13 +686,13 @@ bool CDlgAdvPreferences::SavePreferencesSettings() {
     // clear special net times settings
     //
     prefs.net_times.week.clear();
-    for(int i=0; i< 7;i++) {
+    for(int i = 0; i < 7; ++i) {
         if(netDayChks[i]->GetValue()) {
             wxString startStr = netDayStartTxts[i]->GetValue();
             wxString endStr = netDayStopTxts[i]->GetValue();
             prefs.net_times.week.set(i,
-                TimeStringToDouble(startStr),
-                TimeStringToDouble(endStr)
+                TimeStringToDouble(std::move(startStr)),
+                TimeStringToDouble(std::move(endStr))
                 );
         }
     }

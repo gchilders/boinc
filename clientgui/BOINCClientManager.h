@@ -50,7 +50,6 @@ protected:
 
 class ClientCrashDlg : public wxDialog {
     DECLARE_DYNAMIC_CLASS( ClientCrashDlg )
-    DECLARE_EVENT_TABLE()
 
 public:
     ClientCrashDlg(double timeDiff);

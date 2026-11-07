@@ -28,13 +28,7 @@ public:
     virtual wxEvent *Clone() const { return new CAccountManagerProcessingPageEvent(*this); }
 };
 
-
-BEGIN_DECLARE_EVENT_TYPES()
-DECLARE_EVENT_TYPE( wxEVT_ACCOUNTMANAGERPROCESSING_STATECHANGE, 11100 )
-END_DECLARE_EVENT_TYPES()
-
-#define EVT_ACCOUNTMANAGERPROCESSING_STATECHANGE(fn) \
-    DECLARE_EVENT_TABLE_ENTRY(wxEVT_ACCOUNTMANAGERPROCESSING_STATECHANGE, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
+wxDECLARE_EVENT(wxEVT_ACCOUNTMANAGERPROCESSING_STATECHANGE, CAccountManagerProcessingPageEvent);
 
 #define ATTACHACCTMGR_INIT                              0
 #define ATTACHACCTMGR_ATTACHACCTMGR_BEGIN               1
@@ -44,10 +38,9 @@ END_DECLARE_EVENT_TYPES()
 
 class CAccountManagerProcessingPage: public CBOINCWizardPage {
     DECLARE_DYNAMIC_CLASS( CAccountManagerProcessingPage )
-    DECLARE_EVENT_TABLE()
 
 public:
-    CAccountManagerProcessingPage();
+    CAccountManagerProcessingPage() = default;
     CAccountManagerProcessingPage(CWizardAttach* parent);
     bool Create(CWizardAttach* parent);
 
@@ -91,19 +84,19 @@ public:
     void FinishProgress(wxStaticBitmap* pBitmap);
 
 private:
-    wxStaticText* m_pTitleStaticCtrl;
-    wxStaticText* m_pPleaseWaitStaticCtrl;
-    wxStaticBitmap* m_pProgressIndicator;
-    bool m_bProjectCommunicationsSucceeded;
-    bool m_bProjectUnavailable;
-    bool m_bProjectAccountNotFound;
-    bool m_bProjectAccountAlreadyExists;
-    bool m_bProjectAttachSucceeded;
-    int m_iBitmapIndex;
-    int m_iCurrentState;
+    wxStaticText* m_pTitleStaticCtrl = nullptr;
+    wxStaticText* m_pPleaseWaitStaticCtrl = nullptr;
+    wxStaticBitmap* m_pProgressIndicator = nullptr;
+    bool m_bProjectCommunicationsSucceeded = false;
+    bool m_bProjectUnavailable = false;
+    bool m_bProjectAccountNotFound = false;
+    bool m_bProjectAccountAlreadyExists = false;
+    bool m_bProjectAttachSucceeded = false;
+    int m_iBitmapIndex = 0;
+    int m_iCurrentState = 0;
 
-    CWizardAttach *m_pParent;
-    CBOINCWizardPage *m_pPrev;
+    CWizardAttach *m_pParent = nullptr;
+    CBOINCWizardPage *m_pPrev = nullptr;
 };
 
 #endif

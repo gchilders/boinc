@@ -37,7 +37,6 @@
 
 #include "Events.h"
 #include "LogBOINC.h"
-#include "BOINCGUIApp.h"
 #include "SkinManager.h"
 #include "MainDocument.h"
 #include "BOINCClientManager.h"
@@ -49,23 +48,16 @@
 #include "procinfo.h"
 #include "sg_BoincSimpleFrame.h"
 #include "DlgGenericMessage.h"
-
+#include "AsyncRPC.h"
+#include "BOINCGUIApp.h"
 
 bool s_bSkipExitConfirmation = false;
 
 
-DEFINE_EVENT_TYPE(wxEVT_RPC_FINISHED)
+wxDEFINE_EVENT(wxEVT_RPC_FINISHED, CRPCFinishedEvent);
 
 IMPLEMENT_APP(CBOINCGUIApp)
 IMPLEMENT_DYNAMIC_CLASS(CBOINCGUIApp, wxApp)
-
-BEGIN_EVENT_TABLE (CBOINCGUIApp, wxApp)
-    EVT_ACTIVATE_APP(CBOINCGUIApp::OnActivateApp)
-    EVT_RPC_FINISHED(CBOINCGUIApp::OnRPCFinished)
-#ifndef __WXMAC__
-    EVT_END_SESSION(CBOINCGUIApp::OnEndSession)
-#endif
-END_EVENT_TABLE ()
 
 #if defined(__WXGTK__) && defined(BUILD_WITH_VCPKG)
 extern "C" {
@@ -94,6 +86,13 @@ bool CBOINCGUIApp::OnInit() {
         hp(NULL);
     } catch (...) {}
 #endif
+
+    Bind(wxEVT_ACTIVATE_APP, [this](wxActivateEvent& event){ OnActivateApp(event); });
+    Bind(wxEVT_RPC_FINISHED, [this](CRPCFinishedEvent& event){ OnRPCFinished(event); });
+#ifndef __WXMAC__
+    Bind(wxEVT_END_SESSION, [this](wxCloseEvent& event){ OnEndSession(event); });
+#endif
+
     // Initialize globals
 #ifdef SANDBOX
     g_use_sandbox = true;
@@ -302,7 +301,7 @@ bool CBOINCGUIApp::OnInit() {
     }
 
 #ifdef SANDBOX
-    if (!success) iErrorCode = -1016;
+    if (!success) iErrorCode = -1021;
 #endif
 
     // Initialize the BOINC Diagnostics Framework
@@ -385,7 +384,7 @@ bool CBOINCGUIApp::OnInit() {
 
     // Load desired manager skin
     m_pConfig->Read(wxT("Skin"), &strDesiredSkinName, m_pSkinManager->GetDefaultSkinName());
-    m_pSkinManager->ReloadSkin(strDesiredSkinName);
+    m_pSkinManager->ReloadSkin(std::move(strDesiredSkinName));
 
 #ifdef SANDBOX
     // Make sure owners, groups and permissions are correct for the current setting of g_use_sandbox
@@ -538,8 +537,8 @@ bool CBOINCGUIApp::OnInit() {
             wxString message;
             message.Printf(_("Another instance of %s is already running."), appName);
             CDlgGenericMessageParameters params;
-            params.caption = appName;
-            params.message = message;
+            params.caption = std::move(appName);
+            params.message = std::move(message);
             params.button2 = CDlgGenericMessageButton(false);
             CDlgGenericMessage dlg(NULL, &params);
             ShowApplication(true);
@@ -1085,7 +1084,7 @@ void CBOINCGUIApp::InitSupportedLanguages() {
         wxString lang_region = pLI->CanonicalName.BeforeFirst('@');
         wxString lang = lang_region.BeforeFirst('_');
         wxString script = pLI->CanonicalName.AfterFirst('@');
-        wxString lang_script = lang;
+        wxString lang_script = std::move(lang);
         if (!script.empty()) {
             lang_script += wxT("@") + script;
         }

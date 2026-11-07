@@ -34,48 +34,20 @@
 
 #define TEST_BACKGROUND_WITH_MAGENTA_FILL 0
 
-////@begin includes
-////@end includes
-
-////@begin XPM images
-////@end XPM images
-
-
 #define COLUMN_PROJECT              0
 #define COLUMN_TIME                 1
 #define COLUMN_MESSAGE              2
 
-/*!
- * CPanelMessages type definition
- */
-
 IMPLEMENT_DYNAMIC_CLASS( CPanelMessages, wxPanel )
-
-/*!
- * CPanelMessages event table definition
- */
-
-BEGIN_EVENT_TABLE( CPanelMessages, wxPanel )
-////@begin CPanelMessages event table entries
-    EVT_ERASE_BACKGROUND( CPanelMessages::OnEraseBackground )
-    EVT_BUTTON( wxID_OK, CPanelMessages::OnOK )
-    EVT_BUTTON(ID_SIMPLE_HELP, CPanelMessages::OnButtonHelp)
-////@end CPanelMessages event table entries
-END_EVENT_TABLE()
-
-/*!
- * CPanelMessages constructors
- */
-
-CPanelMessages::CPanelMessages( )
-{
-}
-
 
 CPanelMessages::CPanelMessages( wxWindow* parent ) :
     wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxNO_BORDER)
 {
     Create();
+
+    Bind(wxEVT_ERASE_BACKGROUND, [this](wxEraseEvent& event){ OnEraseBackground(event); });
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnButtonHelp(event); }, ID_SIMPLE_HELP);
 }
 
 
@@ -282,7 +254,7 @@ void CPanelMessages::OnRefresh() {
         if (pDoc->IsConnected()) {
             pDoc->GetConnectedComputerName(strNewMachineName);
             if (strLastMachineName != strNewMachineName) {
-                strLastMachineName = strNewMachineName;
+                strLastMachineName = std::move(strNewMachineName);
                 m_FetchingNoticesText->Show();
                 m_NoNoticesText->Hide();
                 m_pHtmlListPane->Clear();
@@ -394,38 +366,17 @@ void CPanelMessages::RedrawNoticesListCtrl() {
 }
 
 
-/*!
- * CDlgMessages type definition
- */
-
 IMPLEMENT_DYNAMIC_CLASS( CDlgMessages, wxDialog )
-
-/*!
- * CDlgMessages event table definition
- */
-
-BEGIN_EVENT_TABLE( CDlgMessages, wxDialog )
-////@begin CDlgMessages event table entries
-    EVT_HELP(wxID_ANY, CDlgMessages::OnHelp)
-    EVT_SHOW( CDlgMessages::OnShow )
-    EVT_BUTTON( wxID_OK, CDlgMessages::OnOK )
-	EVT_SIZE(CDlgMessages::OnSize)
-    EVT_MOVE(CDlgMessages::OnMove)
-////@end CDlgMessages event table entries
-END_EVENT_TABLE()
-
-/*!
- * CDlgMessages constructors
- */
-
-CDlgMessages::CDlgMessages( )
-{
-}
-
 
 CDlgMessages::CDlgMessages( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {
     Create(parent, id, caption, pos, size, style);
+
+    Bind(wxEVT_HELP, [this](wxHelpEvent& event){ OnHelp(event); });
+    Bind(wxEVT_SHOW, [this](wxShowEvent& event){ OnShow(event); });
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
+	Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });
+    Bind(wxEVT_MOVE, [this](wxMoveEvent& event){ OnMove(event); });
 }
 
 

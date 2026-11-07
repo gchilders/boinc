@@ -28,13 +28,7 @@ public:
     virtual wxEvent *Clone() const { return new CProjectPropertiesPageEvent(*this); }
 };
 
-
-BEGIN_DECLARE_EVENT_TYPES()
-DECLARE_EVENT_TYPE(wxEVT_PROJECTPROPERTIES_STATECHANGE, 11000)
-END_DECLARE_EVENT_TYPES()
-
-#define EVT_PROJECTPROPERTIES_STATECHANGE(fn) \
-    DECLARE_EVENT_TABLE_ENTRY(wxEVT_PROJECTPROPERTIES_STATECHANGE, -1, -1, (wxObjectEventFunction) (wxEventFunction) &fn, NULL),
+wxDECLARE_EVENT(wxEVT_PROJECTPROPERTIES_STATECHANGE, CProjectPropertiesPageEvent);
 
 #define PROJPROP_INIT                                   0
 #define PROJPROP_RETRPROJECTPROPERTIES_BEGIN            1
@@ -48,10 +42,9 @@ END_DECLARE_EVENT_TYPES()
 
 class CProjectPropertiesPage: public CBOINCWizardPage {
     DECLARE_DYNAMIC_CLASS(CProjectPropertiesPage)
-    DECLARE_EVENT_TABLE()
 
 public:
-    CProjectPropertiesPage();
+    CProjectPropertiesPage() = default;
     CProjectPropertiesPage(CWizardAttach* parent);
     bool Create(CWizardAttach* parent);
 
@@ -107,22 +100,22 @@ public:
     void FinishProgress(wxStaticBitmap* pBitmap);
 
 private:
-    wxStaticText* m_pTitleStaticCtrl;
-    wxStaticBitmap* m_pProgressIndicator;
-    bool m_bProjectPropertiesSucceeded;
-    bool m_bProjectPropertiesURLFailure;
-    bool m_bProjectPropertiesCommunicationFailure;
-    bool m_bProjectAccountCreationDisabled;
-    bool m_bProjectClientAccountCreationDisabled;
-    bool m_bNetworkConnectionNotDetected;
-    bool m_bServerReportedError;
-    bool m_bTermsOfUseRequired;
-    bool m_bCredentialsAlreadyAvailable;
-    int m_iBitmapIndex;
-    int m_iCurrentState;
+    wxStaticText* m_pTitleStaticCtrl = nullptr;
+    wxStaticBitmap* m_pProgressIndicator = nullptr;
+    bool m_bProjectPropertiesSucceeded = false;
+    bool m_bProjectPropertiesURLFailure = false;
+    bool m_bProjectPropertiesCommunicationFailure = false;
+    bool m_bProjectAccountCreationDisabled = false;
+    bool m_bProjectClientAccountCreationDisabled = false;
+    bool m_bNetworkConnectionNotDetected = false;
+    bool m_bServerReportedError = false;
+    bool m_bTermsOfUseRequired = false;
+    bool m_bCredentialsAlreadyAvailable = false;
+    int m_iBitmapIndex = 0;
+    int m_iCurrentState = 0;
 
-    CWizardAttach *m_pParent;
-    CBOINCWizardPage *m_pPrev;
+    CWizardAttach *m_pParent = nullptr;
+    CBOINCWizardPage *m_pPrev = nullptr;
 };
 
 #endif

@@ -22,7 +22,8 @@ $numbers = array_merge(
     BoincNumber_es::enum("pastebin IS NOT NULL"),
     BoincNumber_e::enum("pastebin IS NOT NULL"),
     BoincNumber_fs::enum("pastebin IS NOT NULL"),
-    BoincNumber_f::enum("pastebin IS NOT NULL")
+    BoincNumber_f::enum("pastebin IS NOT NULL"),
+    BoincNumber_cs::enum("pastebin IS NOT NULL")
 );
 
 // Use associative array to deduplicate by pastebin ID

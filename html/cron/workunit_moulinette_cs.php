@@ -41,7 +41,6 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 
 	$numname=$number->name;
         $polyname = sprintf("%s.poly",$number->name);
-//        $rootsname = sprintf("%s.roots1",$number->name);
 	$results=Array();
 
 	exec("cd $boinc && $boinc/bin/dir_hier_path $polyname", $results, $retcode);
@@ -60,32 +59,7 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 		echo "generating: $destination\n";
 		rename($polyname, $destination);
 	}
-/*
-	$results = Array();
-	$retcode = 0;
 
-	exec("cd $boinc && $boinc/bin/dir_hier_path $rootsname", $results, $retcode);
-	if($retcode!=0) {
-		echo "ret code from dir_hier_path: $retcode\n";
-		print_r($results);
-		return $results[0];
-	}
-        $rootsdestination=$results[0];
-        if (file_exists($rootsdestination)) {
-                echo "$rootsname already exists\n";
-	} else {
-		$results = Array();
-		$retcode = 0;
-		exec("/home/boincadm/projects/nfs/html/cron/fbgen --poly $destination --maxbits $number->sievesize --threads 6 --out $rootsname", $results, $retcode);
-		if($retcode!=0) {
-                	echo "ret code from fbgen: $retcode\n";
-                	print_r($results);
-                	return $results[0];
-        	}
-		echo "generating: $rootsdestination\n";
-		rename($rootsname, $rootsdestination);
-	}
-*/
 	$folder = "$boinc/sample_results/managed/$numname";
 	if(!file_exists($folder)) {
                 echo "created folder for $numname\n";
@@ -118,15 +92,17 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
                 $wupriority = $number->priority + 100;
                 if ($wupriority == 100) $wupriority = $wuid;
                 $wuname = sprintf("%s_%d",$number->name,$q_first/1000);
-		$q_last = $q_first + Q_PER_WU;
 
 		if ($number->sievesizej == 0) $sievesizej = $number->sievesize - 1;
 		else $sievesizej = $number->sievesizej;
 		$totalbits = $number->sievesize + $sievesizej;
-		$creditvalue=700 * 2**($totalbits - 27);
-		if ($totalbits == 31) $app = "cudasieve";
-		elseif ($totalbits == 30) $app = "cudasieve";
-		else $app = "cudasieve";
+		if ($totalbits > 30) {
+			$creditvalue=5600;
+		} else {
+			$creditvalue=700 * 2**($totalbits - 27);
+		}
+		$q_last = $q_first + $q_interval;
+		$app = "cudasieve";
 		$sieveparameters = "--logI $number->sievesize";
 		if ($number->sievesizej != 0) $sieveparameters .= " --J " . (2**$number->sievesizej);
 
@@ -137,11 +113,9 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 		$command.="--wu_name $wuname ";
 		$command.="--wu_template templates/la_wucs2 ";
 		$command.="--result_template templates/la_resultcs ";
-//		$command.="--command_line \"--pipeline --cofactor --poly input.poly $sieveparameters --fb1 input.roots1 --relations output.dat $sieveside --qrange $q_first:$q_last\" ";
 		$command.="--command_line \"--pipeline --cofactor --poly input.poly $sieveparameters --relations output.dat $sieveside --qrange $q_first:$q_last\" ";
 		$command.="--rsc_memory_bound 800000000 ";
 		$command.="--credit $creditvalue ";
-//		$command.="$polyname $rootsname";
 		$command.="$polyname";
 		$results=Array();
 		exec($command,$results,$retcode);
@@ -150,7 +124,7 @@ function generate_work($number, $q_first, $q_interval, $num_wus) {
 			print_r($results);
 			return $results[0];
 		}
-		$q_first += Q_PER_WU; //remember this one has been done
+		$q_first += $q_interval; //remember this one has been done
 		$number->q_last = $q_first;
 		$number->update("q_last=$number->q_last");
 	}
@@ -170,10 +144,15 @@ function manage_creation($number,$rerate) {
 	$name = $number->name;
 	if ($number->sievesizej == 0) $totalbits = 2*$number->sievesize - 1;
 	else $totalbits = $number->sievesize + $number->sievesizej;
-	if ($totalbits < 27 || $totalbits > 32) {
+	if ($totalbits < 27 || $totalbits > 36) {
     		return "Invalid sieve size in $number->name\n";
 	}
-	
+	if ($totalbits > 30) {
+		$q_interval = Q_PER_WU / 2**($totalbits - 30);
+	} else {
+		$q_interval = Q_PER_WU;
+	}
+
 	//--------------------
 	// count workunits in the UNSENT(2) state
 	// TODO: use batch ID.
@@ -203,9 +182,8 @@ function manage_creation($number,$rerate) {
 		echo "wtf? negative count!\n";
 		$q_count=0;
 	}
-	$q_interval = Q_PER_WU;
 	$required = $q_count / $q_interval;
-	echo "remaining WU creations in q range [$q_last..$q_end] (length $q_count): $required.\n";
+	echo "remaining WU creations in q range [$q_last..$q_end] (length $q_count, interval $q_interval): $required.\n";
 
 	//--------------------
 	// Compute how much WUs should be generated according to the last run time

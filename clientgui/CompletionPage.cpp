@@ -28,17 +28,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CCompletionPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CCompletionPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CCompletionPage::OnPageChanged)
-EVT_WIZARD_CANCEL(wxID_ANY, CCompletionPage::OnCancel)
-EVT_WIZARD_FINISHED(wxID_ANY, CCompletionPage::OnFinished)
-
-END_EVENT_TABLE()
-
-CCompletionPage::CCompletionPage() {
-}
-
 CCompletionPage::CCompletionPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -53,6 +42,10 @@ bool CCompletionPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
+    Bind(wxEVT_WIZARD_FINISHED, [this](wxWizardEvent& event) { OnFinished(event); });
 
     return true;
 }

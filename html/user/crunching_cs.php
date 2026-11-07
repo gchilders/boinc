@@ -22,9 +22,9 @@ changelog
 	squalyl  2010 apr 26 	- display details for numbers queued for post processing
 				- removed XML bits
 	squalyl  2010 apr 27	- added the "estimated pending relations" column
-	debrouxl 2010 apr 27	- changed the "Now crunching" comment and the "~ Pending Rels" title 
+	debrouxl 2010 apr 27	- changed the "Now crunching" comment and the "~ Pending Rels" title
 	squalyl	 2010 apr 30	- avoided div/0 when received_relations was zero and computing pending relations
-	debrouxl 2010 may 08	- slightly reduced the indication on the minimum numbers of relations 
+	debrouxl 2010 may 08	- slightly reduced the indication on the minimum numbers of relations
 				  (223251500 relations on 10003_250 showed significant oversieving)
 	squalyl  2011 aug 26    - add indication of order, to allow counting number per category
 */
@@ -61,7 +61,13 @@ function display_result($xml, $numbers, $type, $details=false) {
 		echo "<td align='center'>$number->type($number->difficulty)</td>";
 		echo "<td align='center'>$number->primebits</td>";
 		if($details) {
-			if ($number->id < 20) $q_per_wu=100000; else $q_per_wu=250000;
+			if ($number->id < 39) $q_per_wu=250000;
+			else {
+				if ($number->sievesizej == 0) $totalbits = 2*$number->sievesize - 1;
+				else $totalbits = $number->sievesize + $number->sievesizej;
+				if ($totalbits > 30) $q_per_wu = 250000 / 2**($totalbits - 30);
+				else $q_per_wu = 250000;
+			}
 			if($number->q_end != 0 && $number->q_start != 0) {
 				$last = $number->q_last;
                                 if ($last == 0) $last = $number->q_start;
@@ -109,7 +115,7 @@ function display_result($xml, $numbers, $type, $details=false) {
 			echo "<td>$number->postprocessor</td>";
 		}
 		echo "</tr>";
-	}    
+	}
 	end_table();
 }
 
@@ -171,7 +177,7 @@ echo "<h2>Completed</h2>";
 echo "<p>These numbers have been successfully factored</p>";
 $numbers = BoincNumber_cs::enum("status=4");
 display_result($xml,$numbers,"done");
-	
+
 echo "<h2>Explanations</h2>";
 echo "<p><strong>Name: </strong>The name identifying the number (Cnnn=composite, etc, project dependent) - probably the workunits name prefix</p>";
 echo "<p><strong>Project: </strong>The factoring project for which this number is sieved</p>";

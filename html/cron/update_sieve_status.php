@@ -139,14 +139,37 @@ function sieve_collect($apps) {
                 // the front page, but it is real data and costs nothing to
                 // publish in the JSON.
                 'bits'       => isset($n->primebits) ? (int)$n->primebits : 0,
+                // Priority rank. Lower means more important. 0 means unset:
+                // workunit_moulinette*.php substitutes the number's own id in
+                // that case.
+                'priority'   => isset($n->priority) ? (int)$n->priority : 0,
                 'percent'    => sieve_percent($n),
             );
         }
+        // Order within an app:
+        //   1. sieving progress, furthest along first. A manual range has no
+        //      percentage to compare, so it sorts to the bottom.
+        //   2. priority, lowest value first: in these tables a lower number
+        //      means more important. 0 is treated as unset rather than as the
+        //      highest priority of all, because workunit_moulinette*.php does
+        //      `if ($wupriority == 0) $wupriority = $wuid;` — so a 0 there
+        //      means "nobody set one". Unset sorts last.
+        //   3. display name, purely so the order cannot shuffle between cron
+        //      runs when two numbers are genuinely equal on both counts.
         usort($list, function ($x, $y) {
             $a = $x['percent'] === null ? -1 : $x['percent'];
             $b = $y['percent'] === null ? -1 : $y['percent'];
-            if ($a == $b) return strcmp($x['name'], $y['name']);
-            return ($b < $a) ? -1 : 1;
+            if ($a != $b) {
+                return ($b < $a) ? -1 : 1;
+            }
+
+            $pa = $x['priority'] > 0 ? $x['priority'] : PHP_INT_MAX;
+            $pb = $y['priority'] > 0 ? $y['priority'] : PHP_INT_MAX;
+            if ($pa != $pb) {
+                return ($pa < $pb) ? -1 : 1;
+            }
+
+            return strcmp($x['name'], $y['name']);
         });
 
         $entry['total']   = count($list);

@@ -282,6 +282,7 @@ void SCHEDULER_REQUEST::clear() {
     user_id = 0;
 }
 
+// parse a scheduler request.
 // return an error message or NULL
 //
 const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
@@ -329,7 +330,9 @@ const char* SCHEDULER_REQUEST::parse(XML_PARSER& xp) {
             return "xp.get_tag() failed";
         }
     }
-    if (!xp.match_tag("scheduler_request")) return "no start tag";
+    if (!xp.match_tag("scheduler_request")) {
+        return "no start tag";
+    }
     while (!xp.get_tag()) {
         if (xp.match_tag("/scheduler_request")) {
             core_client_version = 10000*core_client_major_version + 100*core_client_minor_version + core_client_release;
@@ -1367,6 +1370,8 @@ int SCHED_DB_RESULT::parse_from_client(XML_PARSER& xp) {
     return ERR_XML_PARSE;
 }
 
+// parse the <host_info> part of a scheduler request
+//
 int HOST::parse(XML_PARSER& xp) {
     p_ncpus = 1;
     double dtemp;
@@ -1402,10 +1407,18 @@ int HOST::parse(XML_PARSER& xp) {
         if (xp.parse_str("virtualbox_version", virtualbox_version, sizeof(virtualbox_version))) continue;
         if (xp.parse_bool("p_vm_extensions_disabled", p_vm_extensions_disabled)) continue;
         if (xp.match_tag("opencl_cpu_prop")) {
-            int retval = opencl_cpu_prop[num_opencl_cpu_platforms].parse(xp);
-            if (!retval) num_opencl_cpu_platforms++;
+            OPENCL_CPU_PROP ocp;
+            int retval = ocp.parse(xp);
+            if (retval == 0
+                && num_opencl_cpu_platforms<MAX_OPENCL_CPU_PLATFORMS
+            ) {
+                opencl_cpu_prop[num_opencl_cpu_platforms++] = ocp;
+            }
             continue;
         }
+
+        if (xp.parse_str("wsl_version", wsl_version, sizeof(wsl_version))) continue;
+        if (xp.parse_bool("use_wslc", use_wslc)) continue;
         if (xp.match_tag("wsl")) {
             wsl_distros.parse(xp);
             continue;

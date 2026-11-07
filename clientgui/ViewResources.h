@@ -20,14 +20,12 @@
 
 #include "BOINCBaseView.h"
 #include "common/wxPieCtrl.h"
-#include <wx/dynarray.h>
 
 WX_DECLARE_OBJARRAY(wxColour, wxArrayColour);
 
 class CViewResources : public CBOINCBaseView
 {
     DECLARE_DYNAMIC_CLASS( CViewResources )
-	DECLARE_EVENT_TABLE()
 
 public:
     CViewResources();
@@ -43,11 +41,11 @@ public:
 
 protected:
 
-	wxPieCtrl*				m_pieCtrlBOINC;
-	wxPieCtrl*				m_pieCtrlTotal;
+	wxPieCtrl*				m_pieCtrlBOINC = nullptr;
+	wxPieCtrl*				m_pieCtrlTotal = nullptr;
 
-	bool					m_BOINCwasEmpty;
-    bool                    m_isDarkTheme;
+	bool					m_BOINCwasEmpty = false;
+    bool                    m_isDarkTheme = false;
 
     virtual void            UpdateSelection();
 

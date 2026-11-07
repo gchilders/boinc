@@ -85,7 +85,7 @@ dnl Verify C++11 support
 AC_MSG_CHECKING([whether $CXX supports C++11])
 AC_LANG_PUSH([C++])
 save_CXXFLAGS="$CXXFLAGS"
-for flag in "-std=gnu++1z" "-std=c++11" "-std=c++0x"; do
+for flag in "-std=gnu++11" "-std=gnu++0x" "-std=c++11" "-std=c++0x"; do
   CXXFLAGS="$save_CXXFLAGS $flag"
   AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
     #include <memory>
@@ -102,7 +102,8 @@ for flag in "-std=gnu++1z" "-std=c++11" "-std=c++0x"; do
     [have_cxx11=no])
   if test "x$have_cxx11" = "xyes"; then
     AC_MSG_RESULT([yes, with $flag])
-    CXXFLAGS="$save_CXXFLAGS $flag"
+    CXXFLAGS="$save_CXXFLAGS"
+    cxx11_flag="$flag"
     break
   fi
 done
@@ -117,6 +118,84 @@ Please use a newer compiler version (e.g., GCC 4.8+, Clang 3.3+).
   ])
 fi
 AC_LANG_POP([C++])
+
+dnl Verify C++14 support
+AC_MSG_CHECKING([whether $CXX supports C++14])
+AC_LANG_PUSH([C++])
+save_CXXFLAGS="$CXXFLAGS"
+for flag in "-std=gnu++14" "-std=gnu++1y" "-std=c++14" "-std=c++1y"; do
+  CXXFLAGS="$save_CXXFLAGS $flag"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    #include <memory>
+    #include <array>
+    #include <functional>
+    ]],
+    [[
+    auto ptr = std::make_shared<int>(42);
+    std::array<int, 5> arr = {{1, 2, 3, 4, 5}};
+    auto lambda = [](auto x) { return x * 2; };
+    return lambda(*ptr) + arr[0];
+    ]])],
+    [have_cxx14=yes],
+    [have_cxx14=no])
+  if test "x$have_cxx14" = "xyes"; then
+    AC_MSG_RESULT([yes, with $flag])
+    CXXFLAGS="$save_CXXFLAGS"
+    cxx14_flag="$flag"
+    break
+  fi
+done
+if test "x$have_cxx14" != "xyes"; then
+  CXXFLAGS="$save_CXXFLAGS"
+  AC_MSG_RESULT([no])
+fi
+AC_LANG_POP([C++])
+
+dnl Verify C++17 support
+AC_MSG_CHECKING([whether $CXX supports C++17])
+AC_LANG_PUSH([C++])
+save_CXXFLAGS="$CXXFLAGS"
+for flag in "-std=gnu++17" "-std=gnu++1z" "-std=c++17" "-std=c++1z"; do
+  CXXFLAGS="$save_CXXFLAGS $flag"
+  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[
+    #include <memory>
+    #include <array>
+    #include <functional>
+    ]],
+    [[
+    if constexpr (true) {
+    auto ptr = std::make_shared<int>(42);
+    std::array<int, 5> arr = {{1, 2, 3, 4, 5}};
+    auto lambda = [](auto x) { return x * 2; };
+    return lambda(*ptr) + arr[0];
+    }
+    ]])],
+    [have_cxx17=yes],
+    [have_cxx17=no])
+  if test "x$have_cxx17" = "xyes"; then
+    AC_MSG_RESULT([yes, with $flag])
+    CXXFLAGS="$save_CXXFLAGS"
+    cxx17_flag="$flag"
+    break
+  fi
+done
+if test "x$have_cxx17" != "xyes"; then
+  CXXFLAGS="$save_CXXFLAGS"
+  AC_MSG_RESULT([no])
+fi
+AC_LANG_POP([C++])
+
+if test "x$have_cxx17" = "xyes"; then
+  CXXFLAGS="$save_CXXFLAGS $cxx17_flag"
+else
+    if test "x$have_cxx14" = "xyes"; then
+      CXXFLAGS="$save_CXXFLAGS $cxx14_flag"
+    else
+        if test "x$have_cxx11" = "xyes"; then
+          CXXFLAGS="$save_CXXFLAGS $cxx11_flag"
+        fi
+    fi
+fi
 
 dnl ------
 dnl Workaround for autoconf >= 2.65 backwards incompatibility
@@ -509,33 +588,37 @@ If you do not want to build the server you should use --disable-server.
 ================================================================================
     ])
   fi
+fi
 
-   dnl Check for nlohmann::json (header-only library)
-   AC_ARG_WITH([nlohmann_json],
-     [AS_HELP_STRING([--with-nlohmann_json=DIR], [Specify prefix for nlohmann::json (header-only) library])],
-     [nlohmann_json_dir="$withval"],
-     [nlohmann_json_dir=""])
+if test "${enable_server}" = yes -o "${enable_apps}" = yes -o "${enable_apps_vcpkg}" = yes; then
+    dnl skip for Android builds
+    if test "${ANDROID}" != yes; then
+        dnl Check for nlohmann::json (header-only library)
+        AC_ARG_WITH([nlohmann_json],
+          [AS_HELP_STRING([--with-nlohmann_json=DIR], [Specify prefix for nlohmann::json (header-only) library])],
+          [nlohmann_json_dir="$withval"],
+          [nlohmann_json_dir=""])
 
-   if test "x$nlohmann_json_dir" != "x"; then
-     CPPFLAGS="$CPPFLAGS -I$nlohmann_json_dir/include"
-   fi
+        if test "x$nlohmann_json_dir" != "x"; then
+            CPPFLAGS="$CPPFLAGS -I$nlohmann_json_dir/include"
+        fi
 
-   dnl Ensure we use C++ and require C++11 for the header check
-   AC_LANG_PUSH([C++])
-   m4_ifdef([AX_CXX_COMPILE_STDCXX], [AX_CXX_COMPILE_STDCXX(11)])
-   AC_CHECK_HEADER([nlohmann/json.hpp],
-     [AC_MSG_RESULT([Found nlohmann::json])],
-     [AC_MSG_ERROR([
+        dnl Ensure we use C++ and require C++11 for the header check
+        AC_LANG_PUSH([C++])
+        m4_ifdef([AX_CXX_COMPILE_STDCXX], [AX_CXX_COMPILE_STDCXX(11)])
+        AC_CHECK_HEADER([nlohmann/json.hpp],
+          [AC_MSG_RESULT([Found nlohmann::json])],
+          [AC_MSG_ERROR([
 ================================================================================
 ERROR: nlohmann::json (nlohmann/json.hpp) is required to build the server but was not found.
 
 Please install it (e.g., via your package manager or from https://github.com/nlohmann/json),
 or specify its location with --with-nlohmann_json=DIR.
 ================================================================================
-     ])])
-   AC_LANG_POP([C++])
+          ])])
+        AC_LANG_POP([C++])
+    fi
 fi
-
 
 
 dnl Checks for libraries.
@@ -740,7 +823,7 @@ else
    echo "DEBUG: GLUT_CFLAGS = $GLUT_CFLAGS" >&5
    echo "DEBUG: GLUT_LIBS = $GLUT_LIBS" >&5
 
-   AC_CHECK_HEADERS([gl.h glu.h glut.h glaux.h GL/gl.h GL/glu.h GL/glut.h GL/glaux.h OpenGL/gl.h OpenGL/glu.h OpenGL/glut.h OpenGL/glaux.h GLUT/glut.h MesaGL/gl.h MesaGL/glu.h MesaGL/glut.h MesaGL/glaux.h libnotify/notify.h gtk/gtk.h])
+   AC_CHECK_HEADERS([gl.h glu.h glut.h glaux.h GL/gl.h GL/glu.h GL/glut.h GL/glaux.h OpenGL/gl.h OpenGL/glu.h OpenGL/glut.h OpenGL/glaux.h GLUT/glut.h MesaGL/gl.h MesaGL/glu.h MesaGL/glut.h MesaGL/glaux.h])
 
    AC_CHECK_LIB([jpeg], [jpeg_start_compress],[have_jpeg=1],[have_jpeg=0])
    AC_CHECK_HEADER([jpeglib.h],[have_jpeg=1],[have_jpeg=0])

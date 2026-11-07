@@ -18,12 +18,6 @@
 
 #include "stdwx.h"
 #include "diagnostics.h"
-#include "util.h"
-#include "mfile.h"
-#include "miofile.h"
-#include "parse.h"
-#include "error_numbers.h"
-#include "error_numbers.h"
 #include "BOINCGUIApp.h"
 #include "SkinManager.h"
 #include "MainDocument.h"
@@ -49,15 +43,6 @@
 #include "ProxyPage.h"
 
 IMPLEMENT_DYNAMIC_CLASS(CWizardAttach, CBOINCBaseWizard)
-
-BEGIN_EVENT_TABLE(CWizardAttach, CBOINCBaseWizard)
-EVT_WIZARD_FINISHED(ID_ATTACHWIZARD, CWizardAttach::OnFinished)
-EVT_BUTTON(wxID_BACKWARD, CWizardAttach::OnWizardBack)
-EVT_BUTTON(wxID_FORWARD, CWizardAttach::OnWizardNext)
-END_EVENT_TABLE()
-
-CWizardAttach::CWizardAttach() {
-}
 
 CWizardAttach::CWizardAttach(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, long style) {
     Create(parent, id, title, pos, style);
@@ -123,6 +108,10 @@ bool CWizardAttach::Create(wxWindow* parent, wxWindowID id, const wxString&, con
     CBOINCBaseWizard::Create( parent, id, strTitle, wxBitmapBundle(), pos, style );
 
     CreateControls();
+
+    Bind(wxEVT_WIZARD_FINISHED, [this](wxWizardEvent& event) { OnFinished(event); }, ID_ATTACHWIZARD);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { OnWizardBack(event); }, wxID_BACKWARD);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event) { OnWizardNext(event); }, wxID_FORWARD);
 
     return true;
 }
@@ -218,8 +207,8 @@ bool CWizardAttach::Run(
         SetProjectURL(strProjectURL);
         SetCredentialsCached(bAccountKeyDetected);
     }
-    SetProjectInstitution(strProjectInstitution);
-    SetProjectDescription(strProjectDescription);
+    SetProjectInstitution(std::move(strProjectInstitution));
+    SetProjectDescription(std::move(strProjectDescription));
     if (strProjectAuthenticator.size()) {
         SetProjectAuthenticator(strProjectAuthenticator);
     }
@@ -311,14 +300,22 @@ bool CWizardAttach::HasNextPage(wxWizardPage* page) {
     if (!page) {
         return false;
     }
-    return dynamic_cast<CBOINCWizardPage*>(page)->HasNextPage();
+    CBOINCWizardPage* pPage = dynamic_cast<CBOINCWizardPage*>(page);
+    if (!pPage) {
+        return false;
+    }
+    return pPage->HasNextPage();
 }
 
 bool CWizardAttach::HasPrevPage(wxWizardPage* page) {
     if (!page) {
         return false;
     }
-    return dynamic_cast<CBOINCWizardPage*>(page)->HasPrevPage();
+    CBOINCWizardPage* pPage = dynamic_cast<CBOINCWizardPage*>(page);
+    if (!pPage) {
+        return false;
+    }
+    return pPage->HasPrevPage();
 }
 
 void CWizardAttach::_ProcessCancelEvent(wxWizardEvent& event) {

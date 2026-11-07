@@ -28,19 +28,7 @@
 #include "AccountManagerPropertiesPage.h"
 #include "ProxyPage.h"
 
-
 IMPLEMENT_DYNAMIC_CLASS(CErrProxyPage, CBOINCWizardPage)
-
-BEGIN_EVENT_TABLE(CErrProxyPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CErrProxyPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CErrProxyPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CErrProxyPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CErrProxyPage::CErrProxyPage() {
-}
 
 CErrProxyPage::CErrProxyPage(CWizardAttach* parent) {
     Create(parent);
@@ -73,6 +61,10 @@ bool CErrProxyPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
 
     return true;
 }

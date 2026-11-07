@@ -1,4 +1,40 @@
-/*   General   */
+/*
+DEPRECATED - USE BOOTSTRAP
+
+main.css - general stylesheet for BOINC web pages
+
+No colors are defined here.
+Put colors in a separate stylesheet (e.g., white.css, style2.css)
+
+Use classes, not IDs.
+
+We use the following classes:
+
+.table-bordered
+    a table with a border around it
+td.bordered
+    bordered table cell (admin pages only)
+td.fieldname
+td.fieldvalue
+    table cells with name/value pairs
+td.fieldname_error
+td.fieldvalue_error
+    same, but colored to show error
+td.row0, row1
+    rows with alternating colors
+td.highlighted_row0, highlighted_row1
+    same, but highlighted
+
+... a bunch for message boards; see below
+
+In the home page:
+
+td.news
+td.uotd
+h2.headline
+div.mainnav
+
+*/
 
 a, a:link, a:visited, a:active {
 	text-decoration: none;
@@ -423,5 +459,10 @@ span.inboxunread {
 /*   IE hack   */
 
 * html body .code {
-	white-space: normal;
+    white-space: normal;
+}
+
+/* this ignores additional bootstrap classes */
+div.input-group, div.btn-group, ul.pager, div.pagination {
+    display: inline;
 }

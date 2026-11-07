@@ -39,7 +39,7 @@ function calc_table($id,$item) {
      $field="value_".$id;
      $v=$item->value;
      if (FALSE) {  // if($editable) {
-    	echo "<tr><td>Value</td><TD align='left'>";
+	echo "<tr><td>Value</td><TD align='left'>";
         echo "<input type='text' size='100' name='$field' value='$v'></TD>";
 	echo "</tr>\n";
     }
@@ -55,7 +55,7 @@ function calc_table($id,$item) {
     }
 
     if($editable) {
-    	$field="q_start_".$id;
+	$field="q_start_".$id;
 	$v=$item->q_start;
 	if (empty($v)) $v = 20000000;
 	echo "<tr><td>Starting Q</td><TD align='left'>";
@@ -78,8 +78,13 @@ function calc_table($id,$item) {
 	}
 	echo "<tr><td>Generated Q range</td><TD align='left'>$range $percent</td></tr>";
         if ($item->results_received > 9) {
-                $needed_rels = 27500000 * pow(2,$item->primebits - 28);
-                $rec_last = $needed_rels / $item->globresult_relations * $item->results_received * 16000 + $item->q_start; 
+                preg_match('/lpbr:\s*(\d+)/', $item->polyfile, $m);
+                $pbr = (int)$m[1];
+                preg_match('/lpba:\s*(\d+)/', $item->polyfile, $m);
+                $pba = (int)$m[1];
+                //$needed_rels = 27500000 * pow(2,$item->primebits - 28);
+                $needed_rels = round(57500000/2*((2**($pba-29) * 29/$pba)**0.981 + (2**($pbr-29)*29/$pbr)**0.981));
+                $rec_last = $needed_rels / $item->globresult_relations * $item->results_received * 16000 + $item->q_start;
                 $rec_last = round($rec_last/1000000);
                 if ($rec_last % 2) $rec_last += 1;
                 echo "<tr><td>Recommended ending Q&nbsp;&nbsp;</td><TD align='left'>$rec_last M</td></tr>";
@@ -116,6 +121,7 @@ function display_result($result,$details,$comp = false) {
           <TH>Prime bits</TH>
           <TH>Post Processor</TH>
           <TH>Pastebin</TH>
+          <TH>Priority</TH>
           <TH>DELETE?<sup>*</sup></TH>
 	  <th>Update</th>
            </TR>\n";
@@ -140,6 +146,7 @@ echo "<form action='$self' method='POST'>\n";
             <TH>Prime bits</TH>
             <TH>Post Processor</TH>
             <TH>Pastebin</TH>
+            <TH>Priority</TH>
             <TH>DELETE?<sup>*</sup></TH>
             </TR>\n";
         }  //            <TH>Ranges</TH>
@@ -147,13 +154,13 @@ echo "<form action='$self' method='POST'>\n";
         $item=_mysql_fetch_object($result);
         $id=$item->id;
 
-    
+
         echo "<tr> ";
         echo "  <TD align='center'>$f1 #$id $f2</TD>\n";
-    
+
         $time=$item->create_time;
         echo "  <TD align='center'>$f1 " .time_str($time)." $f2</TD>\n";
-    
+
         $filedel = "/home/boincadm/projects/nfs/sample_results/managed/".$item->name;
         if ($comp and file_exists($filedel)) {
             echo "  <TD align='center'> <b>$f1 " .$item->name." $f2</b></TD>\n";
@@ -166,7 +173,7 @@ echo "<form action='$self' method='POST'>\n";
 	if (empty($v)) $v = $item->name;
         echo "  <TD align='center'>
         <input type='text' size='40' name='$field' value='$v'></TD>\n";
-        
+
 		$field="status_$id";
         echo "  <TD align='center'><select name='$field'>";
 		global $states;
@@ -179,36 +186,42 @@ echo "<form action='$self' method='POST'>\n";
 			echo "<option value='$i'$sel>".$states[$i]."</option>";
 		}
 		echo "</select></TD>\n";
-    
+
         $field="project_".$id;
         $v=$item->project;
         echo "  <TD align='center'><input type='text' size='20' name='$field' value='$v'></TD>\n";
-    
+
         $field="type_".$id;
         $v=$item->type;
 	if (empty($v)) $v = "SNFS";
         echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
-    
+
         $field="difficulty_".$id;
         $v=$item->difficulty;
         echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
-    
+
         $field="primebits_".$id;
         $v=$item->primebits;
 	if (empty($v)) $v = 30;
         echo "  <TD align='center'><input type='text' size='8' name='$field' value='$v'></TD>\n";
-    
+
         $field="postprocessor_".$id;
         $v=$item->postprocessor;
         echo "  <TD align='center'><input type='text' size='60' name='$field' value='$v'></TD>\n";
-        
+
         $field="pastebin_".$id;
         $v=$item->pastebin;
         echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
-        
-        $field="delete_number_".$id; 
+
+        $field="priority_".$id;
+        $v=$item->priority;
+	if (empty($v)) $v = $item->id;
+	if ($v == 0) $v = $item->id;
+        echo "  <TD align='center'><input type='text' size='10' name='$field' value='$v'></TD>\n";
+
+        $field="delete_number_".$id;
         echo "  <TD align='center'><input type='text' size='6' name='$field' value=''></TD>\n";
-    
+
         $field="ranges_".$id;
         $v=$item->ranges;
         // echo "  <TD align='center'><input type='text' size='30' name='$field' value='$v'></td>\n";
@@ -216,17 +229,17 @@ echo "<form action='$self' method='POST'>\n";
 			//add submit button for each number
 			echo "<td><input type='submit' value='Update' /></td>\n";
 		}
-    
+
         echo "</tr> ";
 
 //table pour les parametres de calcul
 		if($details) {
 			echo "<tr><td colspan='11'>";
-        	calc_table($id,$item);
+	calc_table($id,$item);
 	        echo "</td></tr>";
 		}
-    	if($details) {
-        	end_table();
+	if($details) {
+	end_table();
         }
 
 echo "</form>\n";
@@ -235,11 +248,11 @@ echo "</form>\n";
     if(!$details) {
         end_table();
     }
-} 
+}
 
 /***********************************************************************\
  *  Display and Manage BOINC managed numbers
- * 
+ *
  * This page lists the numbers currently sieved by the project and
  * displays status for each of them.
  *
@@ -307,7 +320,7 @@ if( !empty($_POST) ) {
 		$id=$item->id;
 
         /* Delete this entry? */
-        $field="delete_number_".$id; 
+        $field="delete_number_".$id;
         if( isset($_POST[$field]) && $_POST[$field]=='DELETE' ) {
             $cmd =  "DELETE FROM number WHERE id=$id";
             $commands .= "<P><pre>$cmd</pre>\n";
@@ -325,6 +338,7 @@ if( !empty($_POST) ) {
 		$commands .= 	update_if_changed("primebits",		$id, (int)$item->primebits	, "primebits"		);
 		$commands .= 	update_if_changed("postprocessor",	$id, $item->postprocessor	, "postprocessor"	);
 		$commands .= 	update_if_changed("pastebin",	$id, $item->pastebin	, "pastebin"	);
+		$commands .= 	update_if_changed("priority",	$id, (int)$item->priority	, "priority"	);
 		$commands .= 	update_if_changed("ranges",			$id, $item->ranges			, "ranges"		);
 		if($item->status==0) {
 			$commands .= update_if_changed("value",			$id, $item->value			, "value"		);
@@ -344,6 +358,9 @@ if( !empty($_POST) ) {
         $project=_mysql_escape_string($_POST['add_project']);
         if( empty($name) || empty($project) ) {
             $commands .= "<p><font color='red'>To add a new number please supply both a name and a project.</font></p>\n";
+        }
+        else if (!preg_match('/^[a-zA-Z0-9._-]+$/', $name) ) {
+            $commands .= "<p><font color='red'>The name can only contain alphanumeric characters, underscores, hyphens, and periods.</font></p>\n";
         }
         else {
             $now=time();
@@ -439,7 +456,7 @@ echo "<br><sup>*</sup>To delete an entry you must enter the word 'DELETE' in thi
 
 
 /**
- * Entry form to create a new number 
+ * Entry form to create a new number
  */
 
 echo"<P><hr><hr>

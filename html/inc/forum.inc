@@ -39,6 +39,7 @@ define('REPLIES_MOST', 4);
 define('CREATE_TIME_NEW', 5);
 define('CREATE_TIME_OLD', 6);
 define('POST_SCORE', 7);
+define('NSORT_STYLES', 8);
 
 // names for the above
 //
@@ -153,11 +154,9 @@ function show_forum_header($user) {
         <input type="hidden" name="search_sort" value="'.CREATE_TIME_NEW.'">
         <input type="text" class="" name="search_keywords">
     ';
-    echo sprintf(
-        '<input class="btn" %s title="%s" type="submit" value="%s"><br>',
-        button_style(),
-        tra("Search for words in forum messages"),
-        tra("Search forums")
+    show_submit_button(
+        tra("Search forums"),
+        tra("Search for words in forum messages")
     );
     echo '
         <small><a href="forum_search.php">'.tra("Advanced search").'</a></small>
@@ -560,7 +559,7 @@ function show_post(
     //
     $ignore_poster = false;
     if ($logged_in_user){
-        $tokens = url_tokens($logged_in_user->authenticator);
+        $tokens = url_tokens();
         if (is_ignoring($logged_in_user, $user)){
             $ignore_poster = true;
         }
@@ -591,7 +590,7 @@ function show_post(
     $is_posted_by_special = false;
     for ($i=0; $i<sizeof($special_user_bitfield);$i++) {
         if ($user->prefs && $user->prefs->privilege($keys[$i])) {
-            $fstatus .= "<nobr>".$special_user_bitfield[$keys[$i]]."<nobr><br>";
+            $fstatus .= "<nobr>".$special_user_bitfield[$keys[$i]]."</nobr><br>";
             $is_posted_by_special = true;
         }
     }
@@ -826,7 +825,7 @@ function is_banished($user) {
 function check_banished($user) {
     if (is_banished($user)) {
         error_page(
-            tra("You may not post or rate messages until %1", gmdate('M j, Y', $user->prefs->banished_until))
+            tra("You may not post or rate messages until %1", time_str($user->prefs->banished_until))
         );
     }
 }
@@ -1116,7 +1115,7 @@ function unhide_thread($thread, $forum) {
 
 function move_thread($thread, $old_forum, $new_forum) {
     $now = time();
-    $old_forum->update("threads=if(threads>0, threads-1, 0), posts=posts-$thread->replies-1");
+    $old_forum->update("threads=if(threads>0, threads-1, 0), posts=if(posts>=$thread->replies+1, posts-$thread->replies-1, 0)");
     $new_forum->update("threads=threads+1, posts=posts+$thread->replies+1, timestamp=$now");
     return $thread->update("forum=$new_forum->id");
 }
@@ -1503,7 +1502,7 @@ function subscribed_forum_rss($notify) {
 function show_mark_as_read_button($user) {
     if ($user) {
         $return = urlencode(current_url());
-        $tokens = url_tokens($user->authenticator);
+        $tokens = url_tokens();
         $url = "forum_index.php?read=1$tokens&amp;return=$return";
         show_button($url,
             tra("Mark all threads as read"),

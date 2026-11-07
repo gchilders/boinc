@@ -64,6 +64,7 @@ require_once("../inc/submit_db.inc");
 require_once("../inc/util.inc");
 require_once("../inc/result.inc");
 require_once("../inc/submit_util.inc");
+require_once("../inc/buda.inc");
 require_once("../project/project.inc");
 require_once('../project/remote_apps.inc');
 
@@ -211,7 +212,11 @@ function show_in_progress($all_batches, $order, $limit, $user, $app) {
             ];
             row_heading_array($x);
         }
-        $pct_done = (int)($batch->fraction_done*100);
+        $frac_done = $batch->njobs
+            ? ($batch->nerror_jobs + $batch->n_success)/$batch->njobs
+            : 0
+        ;
+        $pct_done = (int)($frac_done*100);
         $x = [
             "<a href=submit.php?action=query_batch&batch_id=$batch->id>$batch->name</a>",
             "<a href=submit.php?action=query_batch&batch_id=$batch->id>$batch->id</a>",
@@ -243,10 +248,13 @@ function show_complete($all_batches, $order, $limit, $user, $app) {
         if ($first) {
             $first = false;
             if ($limit) {
-                show_all_batches_link($batches, BATCH_STATE_COMPLETE, $limit, $user, $app);
+                show_all_batches_link(
+                    $batches, BATCH_STATE_COMPLETE, $limit, $user, $app
+                );
             }
             form_start('submit.php', 'get');
             form_input_hidden('action', 'retire_multi');
+            echo form_tokens();
             start_table('table-striped');
             table_header(
                 "Name", "ID", "User", "App", "# Jobs", "Submitted", "Completed", "Select"
@@ -289,6 +297,7 @@ function show_aborted($all_batches, $order, $limit, $user, $app) {
             }
             form_start('submit.php', 'get');
             form_input_hidden('action', 'retire_multi');
+            echo form_tokens();
             start_table();
             table_header("Name", "ID", "User", "App", "# Jobs", "Submitted", "Aborted", 'Select');
         }
@@ -349,7 +358,6 @@ function fill_in_app_and_user_names(&$batches) {
 //
 function show_batches($batches, $order, $limit, $user, $app) {
     fill_in_app_and_user_names($batches);
-    $batches = get_batches_params($batches);
     show_in_progress($batches, $order, $limit, $user, $app);
     show_complete($batches, $order, $limit, $user, $app);
     show_aborted($batches, $order, $limit, $user, $app);
@@ -391,6 +399,7 @@ function show_submit_links($user) {
     }
 
     form_start('submit.php');
+    echo form_tokens();
     form_input_hidden('action', 'update_only_own');
     form_radio_buttons(
         'Jobs you submit can run', 'only_own',
@@ -602,9 +611,9 @@ define('COLOR_UNSENT', 'gray');
 // return HTML for a color-coded batch progress bar
 //
 function progress_bar($batch, $wus, $width) {
-    $nsuccess = $batch->njobs_success;
+    $nsuccess = $batch->n_success;
     $nerror = $batch->nerror_jobs;
-    $nin_prog = $batch->njobs_in_prog;
+    $nin_prog = $batch->n_in_progress;
     $nunsent = $batch->njobs - $nsuccess - $nerror - $nin_prog;
     $w_success = $width*$nsuccess/$batch->njobs;
     $w_fail = $width*$nerror/$batch->njobs;
@@ -654,7 +663,7 @@ function is_batch_gzipped($wus) {
     return false;
 }
 
-// show the details of an existing batch.
+// show the details of an existing batch, include a list of its jobs
 // $user has access to abort/retire the batch
 // and to get its output files
 //
@@ -667,7 +676,7 @@ function handle_query_batch($user) {
     }
     $app = BoincApp::lookup_id($batch->app_id);
     $wus = BoincWorkunit::enum_fields(
-        'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask, priority',
+        'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask, priority, n_sent',
         "batch = $batch->id"
     );
     $batch = get_batch_params($batch, $wus);
@@ -683,16 +692,24 @@ function handle_query_batch($user) {
     text_start(800);
     start_table();
     row2("Batch name", $batch->name);
-    if ($batch->description) {
-        row2('Description', $batch->description);
-    }
+
     if ($owner) {
         row2('Submitter',
             "<a href=show_user.php?userid=$owner->id>$owner->name</a>"
         );
     }
+
+    // If app is BUDA, show the science app name
+    //
+    if ($app && $app->name == 'buda') {
+        row2('Application', get_buda_app_name($batch->description).' (BUDA)');
+    } else {
+        if ($batch->description) {
+            row2('Description', $batch->description);
+        }
+        row2("Application", $app?$app->name:'---');
+    }
     row2("Submitted", time_str($batch->create_time));
-    row2("Application", $app?$app->name:'---');
     row2("State", batch_state_string($batch->state));
     //row2("# jobs", $batch->njobs);
     //row2("# error jobs", $batch->nerror_jobs);
@@ -734,14 +751,20 @@ function handle_query_batch($user) {
     case BATCH_STATE_IN_PROGRESS:
     case BATCH_STATE_INIT:
         show_button(
-            "submit.php?action=abort_batch&batch_id=$batch_id",
+            sprintf(
+                'submit.php?action=abort_batch&batch_id=%d%s',
+                $batch_id, url_tokens()
+            ),
             "Abort batch"
         );
         break;
     case BATCH_STATE_COMPLETE:
     case BATCH_STATE_ABORTED:
         show_button(
-            "submit.php?action=retire_batch&batch_id=$batch_id",
+            sprintf(
+                'submit.php?action=retire_batch&batch_id=%d%s',
+                $batch_id, url_tokens()
+            ),
             "Retire batch"
         );
         break;
@@ -1016,7 +1039,10 @@ function handle_abort_batch($user) {
             <p>
         ";
         show_button(
-            "submit.php?action=abort_batch&batch_id=$batch_id&confirmed=1",
+            sprintf(
+                'submit.php?action=abort_batch&batch_id=%d&confirmed=1%s',
+                $batch_id, url_tokens()
+            ),
             "Yes - abort batch"
         );
         return_link();
@@ -1046,7 +1072,10 @@ function handle_retire_batch($user) {
             <p>
         ";
         show_button(
-            "submit.php?action=retire_batch&batch_id=$batch_id&confirmed=1",
+            sprintf(
+                'submit.php?action=retire_batch&batch_id=%d&confirmed=1%s',
+                $batch_id, url_tokens()
+            ),
             "Yes - retire batch"
         );
         return_link();
@@ -1111,7 +1140,6 @@ function handle_show_all_batches($user) {
         if ($userid != $user->id) error_page("wrong user");
         $batches = BoincBatch::enum("user_id=$user->id and state=$state");
         fill_in_app_and_user_names($batches);
-        $batches = get_batches_params($batches);
         show_batches_in_state($batches, $state, $url_args, $order);
     } else {
         // admin looking at batches
@@ -1127,7 +1155,6 @@ function handle_show_all_batches($user) {
             $batches = BoincBatch::enum("state=$state");
         }
         fill_in_app_and_user_names($batches);
-        $batches = get_batches_params($batches);
         show_batches_in_state($batches, $state, $url_args, $order);
     }
 }
@@ -1153,15 +1180,27 @@ case 'query_batch': handle_query_batch($user); break;
 case 'query_job': handle_query_job($user); break;
 
 // operations on batches
-case 'retire_batch': handle_retire_batch($user); break;
-case 'retire_multi': handle_retire_multi($user); break;
-case 'abort_batch': handle_abort_batch($user); break;
+case 'retire_batch':
+    check_tokens();
+    handle_retire_batch($user);
+    break;
+case 'retire_multi':
+    check_tokens();
+    handle_retire_multi($user);
+    break;
+case 'abort_batch':
+    check_tokens();
+    handle_abort_batch($user);
+    break;
 
 // access control
 case 'admin': handle_admin($user); break;
 
 // 'run jobs only on my computers' flag (stored in user.seti_id)
-case 'update_only_own': handle_update_only_own($user); break;
+case 'update_only_own':
+    check_tokens();
+    handle_update_only_own($user);
+    break;
 
 default:
     error_page("no such action $action");

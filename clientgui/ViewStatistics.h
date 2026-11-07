@@ -197,18 +197,14 @@ protected:
 
     void*                   m_fauxStatisticsView;
 #endif
-
-
-	DECLARE_EVENT_TABLE()
 };
 
 class CViewStatistics : public CBOINCBaseView
 {
     DECLARE_DYNAMIC_CLASS( CViewStatistics )
-	DECLARE_EVENT_TABLE()
 
 public:
-    CViewStatistics();
+    CViewStatistics() = default;
     CViewStatistics(wxNotebook* pNotebook);
 
     ~CViewStatistics();
@@ -233,7 +229,7 @@ public:
 
 protected:
 
-    CPaintStatistics*       m_PaintStatistics;
+    CPaintStatistics*       m_PaintStatistics = nullptr;
 
     virtual bool            OnSaveState( wxConfigBase* pConfig );
     virtual bool            OnRestoreState( wxConfigBase* pConfig );

@@ -30,44 +30,7 @@
 #include "BOINCBaseFrame.h"
 #include "BOINCDialupManager.h"
 
-////@begin includes
-////@end includes
-
-////@begin XPM images
-////@end XPM images
-
-/*!
- * CDlgOptions type definition
- */
-
 IMPLEMENT_DYNAMIC_CLASS(CDlgOptions, wxDialog)
-
-/*!
- * CDlgOptions event table definition
- */
-
-BEGIN_EVENT_TABLE(CDlgOptions, wxDialog)
-
-////@begin CDlgOptions event table entries
-#if defined(__WXMSW__)
-    EVT_BUTTON( ID_DIALUPSETDEFAULT, CDlgOptions::OnDialupSetDefaultClick )
-    EVT_BUTTON( ID_DIALUPCLEARDEFAULT, CDlgOptions::OnDialupClearDefaultClick )
-#endif      // __WXMSW__
-    EVT_CHECKBOX( ID_ENABLEHTTPPROXYCTRL, CDlgOptions::OnEnableHTTPProxyCtrlClick )
-    EVT_UPDATE_UI( ID_ENABLEHTTPPROXYCTRL, CDlgOptions::OnEnableHTTPProxyCtrlUpdate )
-    EVT_CHECKBOX( ID_ENABLESOCKSPROXYCTRL, CDlgOptions::OnEnableSOCKSProxyCtrlClick )
-    EVT_UPDATE_UI( ID_ENABLESOCKSPROXYCTRL, CDlgOptions::OnEnableSOCKSProxyCtrlUpdate )
-    EVT_BUTTON( wxID_OK, CDlgOptions::OnOK )
-////@end CDlgOptions event table entries
-
-END_EVENT_TABLE()
-
-/*!
- * CDlgOptions constructors
- */
-
-CDlgOptions::CDlgOptions() {
-}
 
 CDlgOptions::CDlgOptions(wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style) {
     Create(parent, id, caption, pos, size, style);
@@ -148,6 +111,16 @@ bool CDlgOptions::Create(wxWindow* parent, wxWindowID id, const wxString& captio
     GetSizer()->Fit(this);
     GetSizer()->SetSizeHints(this);
     Centre();
+
+#if defined(__WXMSW__)
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnDialupSetDefaultClick(event); }, ID_DIALUPSETDEFAULT);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnDialupClearDefaultClick(event); }, ID_DIALUPCLEARDEFAULT);
+#endif      // __WXMSW__
+    Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event){ OnEnableHTTPProxyCtrlClick(event); }, ID_ENABLEHTTPPROXYCTRL);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event){ OnEnableHTTPProxyCtrlUpdate(event); }, ID_ENABLEHTTPPROXYCTRL);
+    Bind(wxEVT_CHECKBOX, [this](wxCommandEvent& event){ OnEnableSOCKSProxyCtrlClick(event); }, ID_ENABLESOCKSPROXYCTRL);
+    Bind(wxEVT_UPDATE_UI, [this](wxUpdateUIEvent& event){ OnEnableSOCKSProxyCtrlUpdate(event); }, ID_ENABLESOCKSPROXYCTRL);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnOK(event); }, wxID_OK);
 
     return TRUE;
 }
@@ -752,7 +725,7 @@ bool CDlgOptions::SaveSettings() {
         newLangCode = wxEmptyString;
     } else if (selLangIdx > 0) {
         const std::vector<GUI_SUPPORTED_LANG>& langs = wxGetApp().GetSupportedLanguages();
-        if (selLangIdx < langs.size()) {
+        if (selLangIdx < static_cast<int>(langs.size())) {
             const GUI_SUPPORTED_LANG& selLang = langs[selLangIdx];
             newLanguageInfo = wxLocale::GetLanguageInfo(selLang.Language);
         }
@@ -780,13 +753,13 @@ bool CDlgOptions::SaveSettings() {
         );
 
         pFrame->ShowAlert(
-            strDialogTitle,
-            strDialogMessage,
+            std::move(strDialogTitle),
+            std::move(strDialogMessage),
             wxOK | wxICON_INFORMATION
         );
     }
 
-    wxGetApp().SetISOLanguageCode(newLangCode);
+    wxGetApp().SetISOLanguageCode(std::move(newLangCode));
     wxGetApp().SetUseDefaultLocale(selLangIdx == 0);
 
     switch(m_ReminderFrequencyCtrl->GetSelection()) {

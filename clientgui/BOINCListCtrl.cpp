@@ -16,8 +16,6 @@
 // along with BOINC.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "stdwx.h"
-#include "BOINCGUIApp.h"
-#include "BOINCBaseView.h"
 #include "BOINCListCtrl.h"
 #include "Events.h"
 
@@ -27,50 +25,21 @@
 #define GetColumnIndexFromOrder(x) x
 #endif
 
-BEGIN_EVENT_TABLE(MyEvtHandler, wxEvtHandler)
-    EVT_PAINT(MyEvtHandler::OnPaint)
-END_EVENT_TABLE()
-
-
 IMPLEMENT_DYNAMIC_CLASS(MyEvtHandler, wxEvtHandler)
-
-MyEvtHandler::MyEvtHandler() {}
 
 MyEvtHandler::MyEvtHandler(CBOINCListCtrl *theListControl) {
     m_listCtrl = theListControl;
 #ifdef __WXGTK__
     m_view_startX = 0;
 #endif
+    Bind(wxEVT_PAINT, [this](wxPaintEvent& event){ OnPaint(event); });
 }
 
-
-DEFINE_EVENT_TYPE(wxEVT_CHECK_SELECTION_CHANGED)
-
-#if USE_NATIVE_LISTCONTROL
-DEFINE_EVENT_TYPE(wxEVT_DRAW_PROGRESSBAR)
-#endif
-
-BEGIN_EVENT_TABLE(CBOINCListCtrl, LISTCTRL_BASE)
-
-#if USE_NATIVE_LISTCONTROL
-    EVT_DRAW_PROGRESSBAR(CBOINCListCtrl::OnDrawProgressBar)
-#else
-#ifdef __WXMAC__
-    EVT_SIZE(CBOINCListCtrl::OnSize)    // In MacAccessibility.mm
-#endif
-#endif
-
-#if ! USE_LIST_CACHE_HINT
-    EVT_LEFT_DOWN(CBOINCListCtrl::OnMouseDown)
-#endif
-END_EVENT_TABLE()
+wxDEFINE_EVENT(wxEVT_DRAW_PROGRESSBAR, CDrawProgressBarEvent);
+wxDEFINE_EVENT(wxEVT_CHECK_SELECTION_CHANGED, CCheckSelectionChangedEvent);
 
 
 IMPLEMENT_DYNAMIC_CLASS(CBOINCListCtrl, LISTCTRL_BASE)
-
-
-CBOINCListCtrl::CBOINCListCtrl() {}
-
 
 CBOINCListCtrl::CBOINCListCtrl(
     CBOINCBaseView* pView, wxWindowID iListWindowID, wxInt32 iListWindowFlags
@@ -92,6 +61,19 @@ CBOINCListCtrl::CBOINCListCtrl(
     SetupMacAccessibilitySupport();
 #endif
 #endif
+
+#if USE_NATIVE_LISTCONTROL
+    Bind(wxEVT_DRAW_PROGRESSBAR, [this](CDrawProgressBarEvent& event){ OnDrawProgressBar(event); });
+#else
+#ifdef __WXMAC__
+    Bind(wxEVT_SIZE, [this](wxSizeEvent& event){ OnSize(event); });    // In MacAccessibility.mm
+#endif
+#endif
+
+#if ! USE_LIST_CACHE_HINT
+    Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent& event){ OnMouseDown(event); });
+#endif
+
 }
 
 
@@ -228,7 +210,7 @@ bool CBOINCListCtrl::OnRestoreState(wxConfigBase* pConfig) {
 
     if (pConfig->Read(wxT("ColumnOrder"), &strColumnOrder)) {
         wxArrayString orderArray;
-        TokenizedStringToArray(strColumnOrder, ";", &orderArray);
+        TokenizedStringToArray(std::move(strColumnOrder), ";", &orderArray);
         SetListColumnOrder(orderArray);
 
         // If the user installed a new version of BOINC, new columns may have
@@ -244,7 +226,7 @@ bool CBOINCListCtrl::OnRestoreState(wxConfigBase* pConfig) {
         if (pConfig->Read(wxT("HiddenColumns"), &strHiddenColumns)) {
             wxArrayString hiddenArray;
             wxArrayString defaultArray;
-            TokenizedStringToArray(strHiddenColumns, ";", &hiddenArray);
+            TokenizedStringToArray(std::move(strHiddenColumns), ";", &hiddenArray);
             int shownCount = orderArray.size();
             int hiddenCount = hiddenArray.size();
             int totalCount = pView->m_aStdColNameOrder->size();

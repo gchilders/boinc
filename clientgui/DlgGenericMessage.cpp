@@ -19,40 +19,10 @@
 #include "stdwx.h"
 #include "BOINCGUIApp.h"
 
-////@begin includes
-////@end includes
-
 #include "DlgGenericMessage.h"
-
-////@begin XPM images
-////@end XPM images
-
 #define ID_DISABLEDIALOG 10017
 
-/*!
- * CDlgGenericMessage type definition
- */
-
 IMPLEMENT_DYNAMIC_CLASS( CDlgGenericMessage, wxDialog )
-
-/*!
- * CDlgGenericMessage event table definition
- */
-
-BEGIN_EVENT_TABLE( CDlgGenericMessage, wxDialog )
-
-////@begin CDlgGenericMessage event table entries
-////@end CDlgGenericMessage event table entries
-
-END_EVENT_TABLE()
-
-/*!
- * CDlgGenericMessage constructors
- */
-
-CDlgGenericMessage::CDlgGenericMessage( )
-{
-}
 
 CDlgGenericMessage::CDlgGenericMessage( wxWindow* parent, CDlgGenericMessageParameters* parameters )
 {

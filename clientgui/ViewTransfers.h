@@ -102,8 +102,6 @@ protected:
     virtual wxString        GetProgressText( long item);
 
     int                     GetTransferCacheAtIndex(CTransfer*& transferPtr, int index);
-
-    DECLARE_EVENT_TABLE()
 };
 
 #endif

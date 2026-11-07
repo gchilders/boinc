@@ -105,7 +105,7 @@ static bool find_host_by_other(DB_USER& user, HOST req_host, DB_HOST& host) {
         safe_strcpy(pm, req_host.p_model);
         escape_string(pm, sizeof(pm));
 
-        sprintf(buf,
+        snprintf(buf, sizeof(buf),
             "where userid=%lu and id>%lu and domain_name='%s' and last_ip_addr = '%s' and os_name = '%s' and p_model = '%s'"
                " and m_nbytes = %lf order by id desc", user.id, req_host.id, dn, ip, os, pm, req_host.m_nbytes
         );
@@ -295,11 +295,15 @@ int authenticate_user() {
     DB_TEAM team;
 
     if (g_request->hostid) {
+        int n = 0;
         retval = host.lookup_id(g_request->hostid);
         while (!retval && host.userid==0) {
             // if host record is zombie, follow link to new host
-            // TODO: check for infinite loop
             //
+            if (++n > 10) {
+                retval = ERR_DB_NOT_FOUND;
+                break;
+            }
             retval = host.lookup_id(host.rpc_seqno);
             if (!retval) {
                 g_reply->hostid = host.id;
@@ -319,6 +323,7 @@ int authenticate_user() {
                 g_request->hostid
             );
             g_request->hostid = 0;
+            g_reply->hostid = 0;
             goto lookup_user_and_make_new_host;
         }
 
@@ -394,7 +399,7 @@ int authenticate_user() {
         // the user must have copied the state file to a different host.
         // Make a new host record.
         //
-        if (!batch && g_request->rpc_seqno < g_reply->host.rpc_seqno) {
+        if (!stdin_reqs && g_request->rpc_seqno < g_reply->host.rpc_seqno) {
             g_request->hostid = 0;
             log_messages.printf(MSG_NORMAL,
                 "[HOST#%lu] [USER#%lu] RPC seqno %d less than expected %d; creating new host\n",
@@ -1388,7 +1393,8 @@ void process_request(char* code_sign_key) {
         }
     }
     if (g_request->platforms.list.empty()) {
-        sprintf(buf, "%s %s",
+        snprintf(buf, sizeof(buf),
+            "%s %s",
             _("This project doesn't support computers of type"),
             g_request->platform.name
         );
@@ -1563,7 +1569,7 @@ void handle_request(FILE* fin, FILE* fout, char* code_sign_key) {
             send_file_deletes();
         }
     } else {
-        sprintf(buf, "Error in request message: %s", p);
+        snprintf(buf, sizeof(buf), "Error in request message: %s", p);
         log_incomplete_request();
         sreply.insert_message(buf, "low");
     }

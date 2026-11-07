@@ -29,7 +29,6 @@
 
 class CDlgExclusiveApps : public wxDialog  {
 	DECLARE_DYNAMIC_CLASS( CDlgExclusiveApps )
-    DECLARE_EVENT_TABLE()
 	void ReadPreferenceSettings();
 	bool SavePreferencesSettings();
 public:

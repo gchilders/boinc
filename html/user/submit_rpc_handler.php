@@ -501,6 +501,22 @@ function submit_batch($r) {
         }
     }
 
+    // do these checks before creating batch
+    //
+    $input_template_filename = (string) $r->batch->input_template_filename;
+    if ($input_template_filename
+        && !is_valid_filename($input_template_filename, false)
+    ) {
+        xml_error(-1, 'invalid input template filename');
+    }
+    $output_template_filename = (string) $r->batch->output_template_filename;
+        // possibly empty
+    if ($output_template_filename
+        && !is_valid_filename($output_template_filename, false)
+    ) {
+        xml_error(-1, 'invalid output template filename');
+    }
+
     // compute a priority for the jobs
     //
     $priority = null;
@@ -544,10 +560,6 @@ function submit_batch($r) {
     $job_params->rsc_memory_bound = (double) $r->batch->job_params->rsc_memory_bound;
     $job_params->delay_bound = (double) $r->batch->job_params->delay_bound;
         // could add quorum-related stuff
-
-    $input_template_filename = (string) $r->batch->input_template_filename;
-    $output_template_filename = (string) $r->batch->output_template_filename;
-        // possibly empty
 
     submit_jobs(
         $jobs, $job_params, $app, $batch_id, $priority, $app_version_num,
@@ -600,13 +612,17 @@ function create_batch($r) {
 function print_batch_params($batch, $get_cpu_time) {
     $app = BoincApp::lookup_id($batch->app_id);
     if (!$app) $app->name = "none";
+    $fraction_done = $batch->njobs
+        ? ($batch->nerror_jobs+$batch->n_success)/$batch->njobs
+        : 0
+    ;
     echo "
         <id>$batch->id</id>
         <create_time>$batch->create_time</create_time>
         <expire_time>$batch->expire_time</expire_time>
         <est_completion_time>$batch->est_completion_time</est_completion_time>
         <njobs>$batch->njobs</njobs>
-        <fraction_done>$batch->fraction_done</fraction_done>
+        <fraction_done>$fraction_done</fraction_done>
         <nerror_jobs>$batch->nerror_jobs</nerror_jobs>
         <state>$batch->state</state>
         <completion_time>$batch->completion_time</completion_time>
@@ -627,13 +643,6 @@ function query_batches($r) {
     $get_cpu_time = (int)($r->get_cpu_time);
     foreach ($batches as $batch) {
         if ($batch->state == BATCH_STATE_RETIRED) continue;
-        if ($batch->state < BATCH_STATE_COMPLETE) {
-            $wus = BoincWorkunit::enum_fields(
-                'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask',
-                "batch = $batch->id"
-            );
-            $batch = get_batch_params($batch, $wus);
-        }
         echo "    <batch>\n";
         print_batch_params($batch, $get_cpu_time);
         echo "   </batch>\n";
@@ -685,6 +694,9 @@ function show_job_details($wu) {
         }
         if ($r->id == $wu->canonical_resultid) {
             echo "            <cpu_time>$r->cpu_time</cpu_time>\n";
+            echo "            <elapsed_time>$r->elapsed_time</elapsed_time>\n";
+            echo "            <sent_time>$r->sent_time</sent_time>\n";
+            echo "            <received_time>$r->received_time</received_time>\n";
         }
     }
     if ($wu->error_mask) {
@@ -738,7 +750,6 @@ function query_batch($r) {
         'id, name, rsc_fpops_est, canonical_credit, canonical_resultid, error_mask',
         "batch = $batch->id", 'order by id'
     );
-    $batch = get_batch_params($batch, $wus);
     $get_cpu_time = (int)($r->get_cpu_time);
     $get_job_details = (int)($r->get_job_details);
     print_batch_params($batch, $get_cpu_time);
@@ -887,7 +898,8 @@ function query_completed_job($r) {
         $result = BoincResult::lookup_id($wu->canonical_resultid);
         echo "   <canonical_resultid>$wu->canonical_resultid</canonical_resultid>\n";
     } else {
-        $results = BoincResult::enum("workunitid=$job_id");
+        $result = null;
+        $results = BoincResult::enum("workunitid=$wu->id");
         foreach ($results as $r) {
             switch($r->outcome) {
             case 1:

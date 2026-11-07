@@ -32,20 +32,6 @@ IMPLEMENT_DYNAMIC_CLASS(CAcctMgrListItem, wxObject)
 
 IMPLEMENT_DYNAMIC_CLASS(CAccountManagerInfoPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CAccountManagerInfoPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CAccountManagerInfoPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CAccountManagerInfoPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CAccountManagerInfoPage::OnCancel)
-EVT_LISTBOX(ID_PROJECTS, CAccountManagerInfoPage::OnProjectSelected)
-EVT_BUTTON(ID_PROJECTWEBPAGECTRL, CAccountManagerInfoPage::OnProjectItemDisplay)
-EVT_TEXT(ID_PROJECTURLCTRL, CAccountManagerInfoPage::OnURLChanged)
-
-END_EVENT_TABLE()
-
-CAccountManagerInfoPage::CAccountManagerInfoPage() {
-}
-
 CAccountManagerInfoPage::CAccountManagerInfoPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -64,6 +50,14 @@ bool CAccountManagerInfoPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
+    Bind(wxEVT_LISTBOX, [this](wxCommandEvent& event){ OnProjectSelected(event); }, ID_PROJECTS);
+    Bind(wxEVT_BUTTON, [this](wxCommandEvent& event){ OnProjectItemDisplay(event); }, ID_PROJECTWEBPAGECTRL);
+    Bind(wxEVT_TEXT, [this](wxCommandEvent& event){ OnURLChanged(event); }, ID_PROJECTURLCTRL);
+
     return true;
 }
 
@@ -262,8 +256,8 @@ void CAccountManagerInfoPage::OnPageChanging(wxWizardEvent& event) {
             name = pItem->GetName();
         }
     }
-    m_pParent->SetProjectURL(url);
-    m_pParent->SetProjectName(name);
+    m_pParent->SetProjectURL(std::move(url));
+    m_pParent->SetProjectName(std::move(name));
 }
 
 void CAccountManagerInfoPage::OnProjectSelected(wxCommandEvent&) {

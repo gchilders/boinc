@@ -40,6 +40,7 @@ $badge_images_15e = array("bronze_15e.png", "silver_15e.png", "gold_15e.png", "a
 $badge_images_15es = array("bronze_15es.png", "silver_15es.png", "gold_15es.png", "amethyst_15es.png", "turquoise_15es.png", "sapphire_15es.png", "ruby_15es.png", "emerald_15es.png", "diamond_15es.png");
 $badge_images_16es = array("bronze_16es.png", "silver_16es.png", "gold_16es.png", "amethyst_16es.png", "turquoise_16es.png", "sapphire_16es.png", "ruby_16es.png", "emerald_16es.png", "diamond_16es.png");
 $badge_images_16e = array("bronze_16e.png", "silver_16e.png", "gold_16e.png", "amethyst_16e.png", "turquoise_16e.png", "sapphire_16e.png", "ruby_16e.png", "emerald_16e.png", "diamond_16e.png");
+$badge_images_cs = array("bronze_cs.png", "silver_cs.png", "gold_cs.png", "amethyst_cs.png", "turquoise_cs.png", "sapphire_cs.png", "ruby_cs.png", "emerald_cs.png", "diamond_cs.png");
 $badge_images_nfs = array("bronze_nfs.png", "silver_nfs.png", "gold_nfs.png", "amethyst_nfs.png", "turquoise_nfs.png", "sapphire_nfs.png", "ruby_nfs.png", "emerald_nfs.png", "diamond_nfs.png");
 
 // get the records for percentile badges; create them if needed
@@ -53,7 +54,7 @@ function get_pct_badges($badge_name_prefix, $badge_pctiles, $badge_images) {
 }
 
 // badge_name_prefix should be user
-// app_name should be 14e, 15e, 16e, 15es, 16es, or nfs
+// app_name should be 14e, 15e, 16e, 15es, 16es, cs, or nfs
 
 function get_nfs_badges($badge_name_prefix, $badge_level_names, $badge_images, $app_name) {
     $badges = array();
@@ -205,11 +206,13 @@ assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_15e
 assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_15es, "15es", "appid=10");
 assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_16es, "16es", "appid=11");
 assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_16e, "16e", "appid=8 or appid=9");
+assign_nfs_app_badges(true, $badge_levels, $badge_level_names, $badge_images_cs, "cudasieve", "appid=13 or appid=14 or appid=15");
 assign_nfs_badges(false, $badge_levels, $badge_level_names, $badge_images_nfs);
 assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_14e, "14e", "appid=6");
 assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_15e, "15e", "appid=7");
-assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_15e, "15es", "appid=10");
-assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_15e, "16es", "appid=11");
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_15es, "15es", "appid=10");
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_16es, "16es", "appid=11");
 assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_16e, "16e", "appid=8 or appid=9");
+assign_nfs_app_badges(false, $badge_levels, $badge_level_names, $badge_images_cs, "cudasieve", "appid=13 or appid=14 or appid=15");
 
 ?>

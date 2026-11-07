@@ -28,17 +28,6 @@
 
 IMPLEMENT_DYNAMIC_CLASS(CErrNotFoundPage, CBOINCWizardPage)
 
-BEGIN_EVENT_TABLE(CErrNotFoundPage, CBOINCWizardPage)
-
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CErrNotFoundPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CErrNotFoundPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CErrNotFoundPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CErrNotFoundPage::CErrNotFoundPage() {
-}
-
 CErrNotFoundPage::CErrNotFoundPage(CWizardAttach* parent) {
     Create(parent);
 }
@@ -54,6 +43,9 @@ bool CErrNotFoundPage::Create(CWizardAttach* parent) {
     CreateControls();
     GetSizer()->Fit(this);
 
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
     return true;
 }
 

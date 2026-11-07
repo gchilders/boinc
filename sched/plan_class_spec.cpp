@@ -295,7 +295,7 @@ bool PLAN_CLASS_SPEC::check(
     //
     if (!cpu_features.empty()) {
         char buf[P_FEATURES_SIZE], buf2[512];
-        sprintf(buf, " %s ", sreq.host.p_features);
+        snprintf(buf, sizeof(buf), " %s ", sreq.host.p_features);
         char* p = strrchr(sreq.host.p_model, '[');
         if (p) {
             sprintf(buf2, " %s", p+1);
@@ -303,8 +303,8 @@ bool PLAN_CLASS_SPEC::check(
             if (p) {
                 *p = 0;
             }
-            strcat(buf2, " ");
-            strcat(buf, buf2);
+            safe_strcat(buf2, " ");
+            safe_strcat(buf, buf2);
         }
         downcase_string(buf);
 
@@ -598,23 +598,25 @@ bool PLAN_CLASS_SPEC::check(
                 add_no_work_message("Client config does not allow using WSL");
                 return false;
             }
-            if (min_boinc_wsl_distro_version) {
-                int v = sreq.host.wsl_distros.boinc_distro_version();
-                if (v < min_boinc_wsl_distro_version) {
-                    add_no_work_message("Current BOINC WSL distro needed");
-                    return false;
-                }
-            } else {
-                bool found = false;
-                for (WSL_DISTRO &wd: sreq.host.wsl_distros.distros) {
-                    if (wd.disallowed) continue;
-                    if (wd.docker_version.empty()) continue;
-                    found = true;
-                    break;
-                }
-                if (!found) {
-                    add_no_work_message("No usable WSL distros found");
-                    return false;
+            if (!sreq.host.use_wslc) {
+                if (min_boinc_wsl_distro_version) {
+                    int v = sreq.host.wsl_distros.boinc_distro_version();
+                    if (v < min_boinc_wsl_distro_version) {
+                        add_no_work_message("Current BOINC WSL distro needed");
+                        return false;
+                    }
+                } else {
+                    bool found = false;
+                    for (WSL_DISTRO &wd: sreq.host.wsl_distros.distros) {
+                        if (wd.disallowed) continue;
+                        if (wd.docker_version.empty()) continue;
+                        found = true;
+                        break;
+                    }
+                    if (!found) {
+                        add_no_work_message("No usable WSL distros found");
+                        return false;
+                    }
                 }
             }
         } else {
@@ -638,8 +640,10 @@ bool PLAN_CLASS_SPEC::check(
     if (have_project_prefs_regex && strlen(project_prefs_tag)) {
         char tag[256], value[256];
         char buf[65536];
-        extract_venue(g_reply->user.project_prefs, g_reply->host.venue, buf, sizeof(buf));
-        sprintf(tag,"<%s>",project_prefs_tag);
+        extract_venue(
+            g_reply->user.project_prefs, g_reply->host.venue, buf, sizeof(buf)
+        );
+        snprintf(tag, sizeof(tag), "<%s>", project_prefs_tag);
         bool p = parse_str(buf, tag, value, sizeof(value));
         if (config.debug_version_select) {
             log_messages.printf(MSG_NORMAL,
@@ -663,13 +667,16 @@ bool PLAN_CLASS_SPEC::check(
     double gpu_utilization = 1.0;
 
     // user defined gpu_utilization
+    // Kludge - should do in a more straightforward way
     //
     if (strlen(gpu_utilization_tag)) {
         char tag[256];
         char buf[65536];
         double v = 0;
-        extract_venue(g_reply->user.project_prefs, g_reply->host.venue, buf, sizeof(buf));
-        sprintf(tag,"<%s>",gpu_utilization_tag);
+        extract_venue(
+            g_reply->user.project_prefs, g_reply->host.venue, buf, sizeof(buf)
+        );
+        snprintf(tag, sizeof(tag), "<%s>", gpu_utilization_tag);
         bool p = parse_double(buf, tag, v);
         if (config.debug_version_select) {
             log_messages.printf(MSG_NORMAL,
@@ -912,9 +919,11 @@ bool PLAN_CLASS_SPEC::check(
 
     // Apple GPU
 
-    } else if (!strcmp(gpu_type, "apple")) {
+    } else if (!strcmp(gpu_type, "apple_gpu")) {
         COPROC& cp = sreq.coprocs.apple_gpu;
         cpp = &cp;
+
+        gpu_ram = cp.available_ram;
 
         if (!cp.count) {
             if (config.debug_version_select) {
@@ -1332,8 +1341,8 @@ int PLAN_CLASS_SPEC::parse(XML_PARSER& xp) {
 
         if (xp.parse_bool("need_ati_libs", need_ati_libs)) continue;
         if (xp.parse_bool("need_amd_libs", need_amd_libs)) continue;
-        if (xp.parse_bool("without_opencl", without_opencl)) continue;
         if (xp.parse_int("min_amd_simd_width", min_amd_simd_width)) continue;
+        if (xp.parse_bool("without_opencl", without_opencl)) continue;
         if (xp.parse_int("min_cal_target", min_cal_target)) continue;
         if (xp.parse_int("max_cal_target", max_cal_target)) continue;
 

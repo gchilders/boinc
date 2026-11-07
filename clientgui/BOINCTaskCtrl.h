@@ -26,7 +26,7 @@ class CBOINCTaskCtrl : public wxScrolledWindow {
     DECLARE_DYNAMIC_CLASS( CBOINCTaskCtrl )
 
 public:
-    CBOINCTaskCtrl();
+    CBOINCTaskCtrl() = default;
     CBOINCTaskCtrl( CBOINCBaseView* pView, wxWindowID iTaskWindowID, int iTaskWindowFlags );
 
     ~CBOINCTaskCtrl();
@@ -53,15 +53,9 @@ public:
 
 private:
 
-    CBOINCBaseView*  m_pParent;
+    CBOINCBaseView*  m_pParent = nullptr;
 
-    wxBoxSizer*      m_pSizer;
-
-#ifdef __WXMSW__
-    DECLARE_EVENT_TABLE()
-#endif
+    wxBoxSizer*      m_pSizer = nullptr;
 };
 
-
 #endif
-

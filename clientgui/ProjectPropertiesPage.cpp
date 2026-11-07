@@ -46,21 +46,9 @@
 #include "res/wizprogress11.xpm"
 #include "res/wizprogress12.xpm"
 
-DEFINE_EVENT_TYPE(wxEVT_PROJECTPROPERTIES_STATECHANGE)
+wxDEFINE_EVENT(wxEVT_PROJECTPROPERTIES_STATECHANGE, CProjectPropertiesPageEvent);
 
 IMPLEMENT_DYNAMIC_CLASS(CProjectPropertiesPage, CBOINCWizardPage)
-
-BEGIN_EVENT_TABLE(CProjectPropertiesPage, CBOINCWizardPage)
-
-EVT_PROJECTPROPERTIES_STATECHANGE(CProjectPropertiesPage::OnStateChange)
-EVT_WIZARD_PAGE_CHANGED(wxID_ANY, CProjectPropertiesPage::OnPageChanged)
-EVT_WIZARD_PAGE_CHANGING(wxID_ANY, CProjectPropertiesPage::OnPageChanging)
-EVT_WIZARD_CANCEL(wxID_ANY, CProjectPropertiesPage::OnCancel)
-
-END_EVENT_TABLE()
-
-CProjectPropertiesPage::CProjectPropertiesPage() {
-}
 
 CProjectPropertiesPage::CProjectPropertiesPage(CWizardAttach* parent) {
     Create(parent);
@@ -87,6 +75,11 @@ bool CProjectPropertiesPage::Create(CWizardAttach* parent) {
 
     CreateControls();
     GetSizer()->Fit(this);
+
+    Bind(wxEVT_PROJECTPROPERTIES_STATECHANGE, [this](CProjectPropertiesPageEvent& event){ OnStateChange(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGED, [this](wxWizardEvent& event){ OnPageChanged(event); });
+    Bind(wxEVT_WIZARD_PAGE_CHANGING, [this](wxWizardEvent& event){ OnPageChanging(event); });
+    Bind(wxEVT_WIZARD_CANCEL, [this](wxWizardEvent& event){ OnCancel(event); });
 
     return true;
 }

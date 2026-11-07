@@ -76,6 +76,8 @@ void HOST_INFO::clear_host_info() {
 
 #ifdef _WIN32
     wsl_distros.clear();
+    use_wslc = false;
+    wsl_version[0] = 0;
 #else
     safe_strcpy(docker_version, "");
     docker_type = NONE;
@@ -148,6 +150,8 @@ int HOST_INFO::parse(XML_PARSER& xp, bool static_items_only) {
             this->wsl_distros.parse(xp);
             continue;
         }
+        if (xp.parse_str("wsl_version", wsl_version, sizeof(wsl_version))) continue;
+        if (xp.parse_bool("use_wslc", use_wslc)) continue;
 #else
         int i;
         if (xp.parse_str("docker_version", docker_version, sizeof(docker_version))) continue;
@@ -171,8 +175,14 @@ int HOST_INFO::parse(XML_PARSER& xp, bool static_items_only) {
         // for each of multiple OpenCL platforms
         //
         if (xp.match_tag("opencl_cpu_prop")) {
-            int retval = opencl_cpu_prop[num_opencl_cpu_platforms].parse(xp);
-            if (!retval) num_opencl_cpu_platforms++;
+            OPENCL_CPU_PROP ocp;
+            int retval = ocp.parse(xp);
+            if (retval == 0
+                && num_opencl_cpu_platforms<MAX_OPENCL_CPU_PLATFORMS
+            ) {
+                opencl_cpu_prop[num_opencl_cpu_platforms++] = ocp;
+            }
+            continue;
         }
     }
     return ERR_XML_PARSE;
@@ -249,7 +259,20 @@ int HOST_INFO::write(
         coprocs.ndevs()
     );
 #ifdef _WIN32
-    wsl_distros.write_xml(out);
+    if (strlen(wsl_version)) {
+        out.printf(
+            "    <wsl_version>%s</wsl_version>\n",
+            wsl_version
+        );
+        if (use_wslc) {
+            out.printf(
+                "    <use_wslc/>\n"
+            );
+        }
+    }
+    if (!use_wslc) {
+        wsl_distros.write_xml(out);
+    }
 #else
     if (strlen(docker_version)) {
         out.printf(
@@ -412,6 +435,9 @@ const char* docker_cli_prog(DOCKER_TYPE type) {
 #else
     case PODMAN: return "podman";
 #endif
+#ifdef _WIN64
+    case WSLC: return "wslc.exe";
+#endif
     default: break;
     }
     return "unknown";
@@ -470,6 +496,7 @@ bool HOST_INFO::get_docker_compose_version_string(
 
 bool HOST_INFO::have_docker() {
 #ifdef _WIN32
+    if (use_wslc) return true;
     for (WSL_DISTRO &wd: wsl_distros.distros) {
         if (!wd.docker_version.empty()) return true;
     }

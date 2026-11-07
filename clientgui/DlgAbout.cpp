@@ -26,9 +26,6 @@
 #include "BOINCGUIApp.h"
 #include "SkinManager.h"
 
-////@begin includes
-////@end includes
-
 #include "DlgAbout.h"
 
 #ifdef __WXMSW__
@@ -37,33 +34,9 @@
 #include "config.h"
 #endif
 
-////@begin XPM images
 #include "res/boinc_logo.xpm"
-////@end XPM images
-
-
-/*!
- * CDlgAbout type definition
- */
 
 IMPLEMENT_DYNAMIC_CLASS(CDlgAbout, wxDialog)
-
-/*!
- * CDlgAbout event table definition
- */
-
-BEGIN_EVENT_TABLE(CDlgAbout, wxDialog)
-
-////@begin CDlgAbout event table entries
-////@end CDlgAbout event table entries
-
-END_EVENT_TABLE()
-
-/*!
- * CDlgAbout constructors
- */
-
-CDlgAbout::CDlgAbout() {}
 
 CDlgAbout::CDlgAbout(wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style) {
     Create(parent, id, caption, pos, size, style);

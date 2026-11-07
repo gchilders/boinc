@@ -30,37 +30,7 @@
 #include "MainDocument.h"
 #include "NoticeListCtrl.h"
 
-////@begin XPM images
-////@end XPM images
-
- /* CNoticeListCtrl type definition
- */
 IMPLEMENT_DYNAMIC_CLASS( CNoticeListCtrl, wxWindow )
-
-
-/*!
- * CNoticeListCtrl event table definition
- */
-
-BEGIN_EVENT_TABLE( CNoticeListCtrl, wxWindow )
-
-////@begin CNoticeListCtrl event table entries
-#if wxUSE_WEBVIEW
-    EVT_WEBVIEW_NAVIGATING(ID_LIST_NOTIFICATIONSVIEW, CNoticeListCtrl::OnLinkClicked)
-    EVT_WEBVIEW_ERROR(ID_LIST_NOTIFICATIONSVIEW, CNoticeListCtrl::OnWebViewError)
-#else
-    EVT_HTML_LINK_CLICKED(ID_LIST_NOTIFICATIONSVIEW, CNoticeListCtrl::OnLinkClicked)
-#endif
-////@end CNoticeListCtrl event table entries
-
-END_EVENT_TABLE()
-
-/*!
- * CNoticeListCtrl constructors
- */
-
-CNoticeListCtrl::CNoticeListCtrl( ) {
-}
 
 CNoticeListCtrl::CNoticeListCtrl( wxWindow* parent ) {
     Create( parent );
@@ -120,6 +90,12 @@ bool CNoticeListCtrl::Create( wxWindow* parent ) {
     m_bDisplayFetchingNotices = false;
     m_bDisplayEmptyNotice = true;
     m_bNeedsReloading = false;
+#if wxUSE_WEBVIEW
+    Bind(wxEVT_WEBVIEW_NAVIGATING, [this](wxWebViewEvent& event){ OnLinkClicked(event); }, ID_LIST_NOTIFICATIONSVIEW);
+    Bind(wxEVT_WEBVIEW_ERROR, [this](wxWebViewEvent& event){ OnWebViewError(event); }, ID_LIST_NOTIFICATIONSVIEW);
+#else
+    Bind(wxEVT_HTML_LINK_CLICKED, [this](wxHtmlLinkEvent& event){ OnLinkClicked(event); }, ID_LIST_NOTIFICATIONSVIEW);
+#endif
 
     return TRUE;
 }

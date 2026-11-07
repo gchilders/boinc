@@ -97,7 +97,7 @@ function show_app($app_dir) {
         return;
     }
     echo '<hr>';
-    echo sprintf('<h3>%s</h3><p>', $desc->long_name);
+    echo sprintf('<h3>%s</h3><p>', htmlspecialchars($desc->long_name));
     show_button_small(
         sprintf('buda.php?action=app_details&name=%s', $desc->name),
         'App details'
@@ -202,12 +202,13 @@ function variant_form($user) {
         page_head_select2("Create a variant of BUDA app $app");
     }
     echo "
-        Details are <a href=https://github.com/BOINC/boinc/wiki/BUDA-job-submission#adding-a-variant>here</a>.
+        Details are <a href=https://github.com/BOINC/boinc/wiki/BUDA-apps>here</a>.
     ";
     $sb = '<br><small>From your <a href=sandbox.php>file sandbox</a></small>';
     $pc = '<br><small>Specify
     <a href=https://github.com/BOINC/boinc/wiki/Plan-classes>GPU and other host requirements</a>.<br>Leave blank if none.</small>';
     form_start('buda.php');
+    echo form_tokens();
     form_input_hidden('app', $app);
     form_input_hidden('action', 'variant_action');
     if ($variant) {
@@ -442,14 +443,21 @@ function variant_action($user) {
     app_list("Variant $variant added for app $app.");
 }
 
-function variant_delete() {
+function variant_delete($user) {
     global $buda_root;
     $app = get_str('app');
     if (!is_valid_filename($app)) die('bad arg');
+
+    $app_desc = get_buda_app_desc($app);
+    if (!user_can_manage($user, $app_desc)) {
+        error_page('no access');
+    }
+
     $variant = get_str('variant');
     if (!is_valid_filename($variant)) die('bad arg');
     $confirmed = get_str('confirmed', true);
     if ($confirmed) {
+        check_tokens();
         $dir = "$buda_root/$app/$variant";
         if (!file_exists($dir)) error_page('no such variant');
         // delete staged files
@@ -478,25 +486,35 @@ function variant_delete() {
         page_head("Confirm");
         echo "<p>Are you sure you want to delete variant $variant of BUDA app $app?  <p>";
         show_button(
-            "buda.php?action=variant_delete&app=$app&variant=$variant&confirmed=yes",
+            sprintf(
+                'buda.php?action=variant_delete&app=%s&variant=%s&confirmed=yes%s',
+                $app, $variant, url_tokens()
+            ),
             "Yes"
         );
         page_tail();
     }
 }
 
-function app_delete() {
+function app_delete($user) {
     global $buda_root;
     $app = get_str('app');
     if (!is_valid_filename($app)) die('bad arg');
+
+    $app_desc = get_buda_app_desc($app);
+    if (!user_can_manage($user, $app_desc)) {
+        error_page('no access');
+    }
+
     $confirmed = get_str('confirmed', true);
+    $vars = get_buda_variants($app);
+    if ($vars) {
+        error_page("To delete a BUDA app, you must first delete all its variants.");
+    }
     if ($confirmed) {
+        check_tokens();
         $dir = "$buda_root/$app";
         if (!file_exists($dir)) error_page('no such app');
-        $vars = get_buda_variants($app);
-        if ($vars) {
-            error_page("You must delete all variants first.");
-        }
         system(
             sprintf(
                 'rm -r %s',
@@ -513,7 +531,10 @@ function app_delete() {
         page_head('Confirm');
         echo "<p>Are you sure you want to delete BUDA science app $app?  <p>";
         show_button(
-            "buda.php?action=app_delete&app=$app&confirmed=yes",
+            sprintf(
+                'buda.php?action=app_delete&app=%s&confirmed=yes%s',
+                $app, url_tokens()
+            ),
             "Yes"
         );
         page_tail();
@@ -523,11 +544,15 @@ function app_delete() {
 function app_form($desc=null) {
     page_head_select2($desc?"Edit BUDA app $desc->name":'Create BUDA app');
     form_start('buda.php');
+    echo form_tokens();
     form_input_hidden('action', 'app_action');
     if ($desc) {
         form_input_hidden('edit_name', $desc->name);
         form_input_hidden('user_id', $desc->user_id);
         form_input_hidden('create_time', $desc->create_time);
+        if (empty($desc->submitters)) {
+            $desc->submitters = [];
+        }
     } else {
         $desc = new StdClass;
         $desc->long_name = null;
@@ -692,7 +717,7 @@ function app_action($user) {
     header("Location: buda.php");
 }
 
-function view_file() {
+function view_buda_file() {
     global $buda_root;
     $app = get_str('app');
     if (!is_valid_filename($app)) die('bad arg');
@@ -715,18 +740,44 @@ function handle_app_edit() {
 function app_details($user) {
     global $buda_root;
     $name = get_str('name');
+    if (!is_valid_filename($name)) {
+        error_page("bad app name ".htmlspecialchars($name));
+    }
     $desc = get_buda_app_desc($name);
-    if (!$desc) error_page("no desc file $path");
-    page_head("BUDA app: $desc->long_name");
+    if (!$desc) {
+        error_page("no desc file for ".htmlspecialchars($name));
+    }
+    page_head(
+        sprintf('BUDA app: %s',
+            htmlspecialchars($desc->long_name)
+        )
+    );
     start_table('table-striped');
-    row2('Internal name', $desc->name);
+    row2('Internal name', htmlspecialchars($desc->name));
     $user2 = BoincUser::lookup_id($desc->user_id);
     row2('Creator',
         sprintf('<a href=show_user.php?userid=%d>%s</a>',
             $user2->id,
-            $user2->name
+            htmlspecialchars($user2->name)
         )
     );
+    if (!empty($desc->submitters)) {
+        $y = [];
+        foreach ($desc->submitters as $id) {
+            $u = BoincUser::lookup_id($id);
+            if ($u) {
+                $y[] = sprintf('<a href=show_user.php?userid=%d>%s</a>',
+                    $u->id, htmlspecialchars($u->name)
+                );
+            } else {
+                $y[] = sprintf('unknown: %d', $id);
+            }
+        }
+        $x = implode('<br>', $y);
+    } else {
+        $x = '&mdash;';
+    }
+    row2('Additional submitters', $x);
     row2('Created', date_str($desc->create_time));
     row2('Description', $desc->description);
     row2('Science keywords', kw_array_to_str($desc->sci_kw));
@@ -785,6 +836,8 @@ function app_details($user) {
                 'Add variant'
             )
         );
+    }
+    if (user_can_manage($user, $desc)) {
         row2('',
             button_text(
                 "buda.php?action=app_delete&app=$name",
@@ -818,23 +871,25 @@ case 'app_edit':
 case 'app_form':
     app_form(); break;
 case 'app_action':
+    check_tokens();
     app_action($user); break;
 case 'app_details':
     app_details($user); break;
 case 'app_delete':
-    app_delete(); break;
+    app_delete($user); break;
 case 'variant_view':
     variant_view($user); break;
 case 'variant_form':
     variant_form($user); break;
 case 'variant_action':
+    check_tokens();
     variant_action($user);
     break;
 case 'variant_delete':
-    variant_delete();
+    variant_delete($user);
     break;
 case 'view_file':
-    view_file(); break;
+    view_buda_file(); break;
 case null:
     app_list(); break;
 default:

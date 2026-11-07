@@ -32,35 +32,8 @@
 #ifdef __WXMAC__
 #include "mac_util.h"
 #endif
-////@end includes
-
-////@begin XPM images
-////@end XPM images
-
-/*!
- * CDlgExitMessage type definition
- */
 
 IMPLEMENT_DYNAMIC_CLASS( CDlgExitMessage, wxDialog )
-
-/*!
- * CDlgExitMessage event table definition
- */
-
-BEGIN_EVENT_TABLE( CDlgExitMessage, wxDialog )
-
-////@begin CDlgExitMessage event table entries
-////@end CDlgExitMessage event table entries
-
-END_EVENT_TABLE()
-
-/*!
- * CDlgExitMessage constructors
- */
-
-CDlgExitMessage::CDlgExitMessage( )
-{
-}
 
 CDlgExitMessage::CDlgExitMessage( wxWindow* parent, wxWindowID id, const wxString& caption, const wxPoint& pos, const wxSize& size, long style )
 {

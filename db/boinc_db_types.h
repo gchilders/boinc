@@ -376,7 +376,7 @@ struct HOST {
 
     // the following items are passed in scheduler requests,
     // and used in the scheduler,
-    // but not stored in the DB
+    // but are NOT stored in the DB
     // TODO: move this stuff to a derived class HOST_SCHED
     //
     char p_features[P_FEATURES_SIZE];
@@ -384,6 +384,8 @@ struct HOST {
     bool p_vm_extensions_disabled;
     int num_opencl_cpu_platforms;
     OPENCL_CPU_PROP opencl_cpu_prop[MAX_OPENCL_CPU_PLATFORMS];
+    char wsl_version[256];
+    bool use_wslc;
     WSL_DISTROS wsl_distros;
 
     // Docker info (non-Win only)
@@ -396,7 +398,6 @@ struct HOST {
     double cpu_and_network_available_frac;
     double client_start_time;
     double previous_uptime;
-
 
     int parse(XML_PARSER&);
     int parse_time_stats(XML_PARSER&);
@@ -522,7 +523,8 @@ struct WORKUNIT {
         // validator: if #success results exceeds this without consensus
         // (i.e. WU seems nondeterministic)
         // mark WU as WU_ERROR_TOO_MANY_SUCCESS_RESULTS
-    char result_template_file[64];
+    char result_template_file[255];
+        // path, relative to the project dir, of the job's output template
     int priority;
     char mod_time[20];
     double rsc_bandwidth_bound;
@@ -540,6 +542,8 @@ struct WORKUNIT {
         // keywords, as space-separated integers
     int app_version_num;
         // if nonzero, use only this version num
+    int n_sent;
+        // number of results for this WU that have been sent to a client
 
     void clear();
     WORKUNIT(){clear();}
@@ -691,7 +695,7 @@ struct BATCH {
     int njobs;
         // # of workunits
     double fraction_done;
-        // based on workunits completed
+        // deprecated
     int nerror_jobs;
         // # of workunits with error
     int state;
@@ -714,6 +718,12 @@ struct BATCH {
     double expire_time;
         // if nonzero, retire the batch after this time
         // Condor calls this the batch's "lease".
+    int n_success;
+        // number of WUs with a canonical result
+    int n_in_progress;
+        // number of WUs not completed (success or error)
+        // and with at least one result sent.
+        // This is not exactly 'in progress' but close enough
 };
 
 // info for users who can submit jobs
