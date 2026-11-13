@@ -18,7 +18,7 @@ $bbcode_html = '
     <input type="button" class="btn btn-default btn-sm" accesskey="w" name="addbbcode16" value="URL" style="text-decoration: underline; " onClick="bbstyle(16)" title="'.tra("Insert URL: [url]http://url[/url] or [url=http://url]URL text[/url]  (alt+w)").'" />
     <p>
     &nbsp;'.tra("Font color").':
-    <select style="color:#000;" name="addbbcode22" onChange="bbfontstyle(\'[color=\' + this.form.addbbcode22.options[this.form.addbbcode22.selectedIndex].value + \']\', \'[/color]\');this.selectedIndex=0;" title="'.tra("Font color: [color=red]text[/color]  Tip: you can also use color=#FF0000").'" >
+    <select name="addbbcode22" onChange="bbfontstyle(\'[color=\' + this.form.addbbcode22.options[this.form.addbbcode22.selectedIndex].value + \']\', \'[/color]\');this.selectedIndex=0;" title="'.tra("Font color: [color=red]text[/color]  Tip: you can also use color=#FF0000").'" >
     <option style="color:black" value="#000000" class="genmed">'.tra("Default").'</option>
     <option style="color:darkred" value="darkred" class="genmed">'.tra("Dark Red").'</option>
     <option style="color:red" value="red" class="genmed">'.tra("Red").'</option>
@@ -34,7 +34,7 @@ $bbcode_html = '
     <option style="color:violet" value="violet" class="genmed">'.tra("Violet").'</option>
     </select>
     &nbsp;'.tra("Font size").':
-    <select style="color:#000;" name="addbbcode24" onChange="bbfontstyle(\'[size=\' + this.form.addbbcode24.options[this.form.addbbcode24.selectedIndex].value + \']\', \'[/size]\');this.selectedIndex=0;" title="'.tra("Font size: [size=x-small]small text[/size]").'" >
+    <select name="addbbcode24" onChange="bbfontstyle(\'[size=\' + this.form.addbbcode24.options[this.form.addbbcode24.selectedIndex].value + \']\', \'[/size]\');this.selectedIndex=0;" title="'.tra("Font size: [size=x-small]small text[/size]").'" >
     <option value="12" selected class="genmed">'.tra("Default").'</option>
     <option value="9" class="genmed">'.tra("Small").'</option>
     <option value="12" class="genmed">'.tra("Normal").'</option>

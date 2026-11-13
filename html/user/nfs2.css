@@ -91,6 +91,8 @@
 
   --radius: 4px;
   --measure: 68ch;
+
+  color-scheme: light;
 }
 
 /* Dark tokens, declared twice on purpose: once for "follow the OS", which must
@@ -117,6 +119,7 @@
     --c-focus:       var(--c-orange);
     --c-bar-track:   #3C4148;
     --c-bar-fill:    #8ACCE4;
+    color-scheme: dark;
     --c-code-bg:     #1E242B;
     --c-mark:        #4A431F;
     --c-btn-fill:        #1F5FBF;
@@ -151,6 +154,7 @@
   --c-focus:       var(--c-orange);
   --c-bar-track:   #3C4148;
   --c-bar-fill:    #8ACCE4;
+  color-scheme: dark;
   --c-code-bg:     #1E242B;
   --c-mark:        #4A431F;
   --c-btn-fill:        #1F5FBF;

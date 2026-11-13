@@ -909,7 +909,7 @@ function verify_numeric(&$value, $low, $high = false) {
 // Generate a "select" element from an array of values
 //
 function select_from_array($name, $array, $selection=null, $width=240) {
-    $out = '<select style="color:#000;"class="form-control input-sm" style="width:'.$width.'px" name="'.$name.'">"';
+    $out = '<select class="form-control input-sm" name="'.$name.'">';
 
     foreach ($array as $key => $value) {
         if ($value) {
