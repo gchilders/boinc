@@ -142,7 +142,7 @@ function get_logged_in_user_ops() {
     return $g_logged_in_user;
 }
 
-if (php_sapi_name() !== 'cli' && PHP_SAPI !== 'cli') {
+if (!isset($skip_auth_ops) && php_sapi_name() !== 'cli' && PHP_SAPI !== 'cli') {
     get_logged_in_user_ops();
 }
 
