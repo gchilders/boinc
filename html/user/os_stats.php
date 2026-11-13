@@ -18,11 +18,14 @@
 
 // show a breakdown of hosts by CPU type and OS
 //
-// This queries all hosts w/ recent credit.
-// Might be slow for projects w/ huge number of these
+// This counts hosts w/ recent credit, grouped in SQL by CPU vendor
+// and OS fields, so memory use depends on the number of distinct
+// combinations rather than the number of hosts.
+// The result is cached for a day.
 
 require_once('../inc/boinc_db.inc');
 require_once('../inc/util.inc');
+require_once('../inc/cache.inc');
 
 //  proc_type
 //      os_name
@@ -51,9 +54,11 @@ function make_entry() {
     return $x;
 }
 
+// $host represents a group of hosts with the same fields
+//
 function inc_entry($host, $entry) {
-    $entry->count += 1;
-    $entry->credit += $host->expavg_credit;
+    $entry->count += $host->count;
+    $entry->credit += $host->credit;
 }
 
 function add_host(&$hosts, $host) {
@@ -110,20 +115,26 @@ function show($hosts) {
     table_header('CPU type', 'OS', 'OS version', 'OS release', 'Count', 'Recent credit');
     echo "</thead><tbody>";
     table_row('Total', '', '', '', $hosts->count, $hosts->credit);
+    // names come from client-reported host info; escape them
+    //
     foreach ($hosts->children as $proc_type=>$entry) {
+        $proc_type = htmlspecialchars($proc_type);
         table_row($proc_type, 'all', '', '', $entry->count, $entry->credit);
         foreach ($entry->children as $os_name=>$entry2) {
+            $os_name = htmlspecialchars($os_name);
             table_row(
                 $proc_type, "$os_name", 'all', '',
                 $entry2->count, $entry2->credit
             );
-            foreach ($entry->children as $os_version=>$entry3) {
+            foreach ($entry2->children as $os_version=>$entry3) {
+                $os_version = htmlspecialchars($os_version);
                 table_row(
                     $proc_type, $os_name, "$os_version", 'all',
                     $entry3->count, $entry3->credit
                 );
-                foreach ($entry->children as $os_detail=>$entry4) {
+                foreach ($entry3->children as $os_detail=>$entry4) {
                     if (!$os_detail) continue;
+                    $os_detail = htmlspecialchars($os_detail);
                     table_row(
                         $proc_type, $os_name, $os_version, $os_detail,
                         $entry4->count, $entry4->credit
@@ -216,17 +227,32 @@ function parse_host($p_vendor, $os_name, $os_version) {
     return $x;
 }
 
-function main() {
-    $hosts = BoincHost::enum_fields('p_vendor, os_name, os_version, expavg_credit',
-        'expavg_credit > 0'
-    );
+function get_host_entries() {
     $host_entries = make_entry();
-    foreach ($hosts as $h) {
+    $db = BoincDb::get();
+    $result = $db->do_query(
+        "select p_vendor, os_name, os_version, count(*) as nhosts, sum(expavg_credit) as credit from DBNAME.host where expavg_credit > 0 group by p_vendor, os_name, os_version"
+    );
+    if (!$result) return $host_entries;
+    while ($h = $result->fetch_object()) {
         $x = parse_host($h->p_vendor, $h->os_name, $h->os_version);
-        $x->expavg_credit = $h->expavg_credit;
+        $x->count = (int)$h->nhosts;
+        $x->credit = (double)$h->credit;
         add_host($host_entries, $x);
     }
+    $result->free();
     sort_all($host_entries);
+    return $host_entries;
+}
+
+function main() {
+    $d = get_cached_data(86400);
+    if ($d) {
+        $host_entries = unserialize($d);
+    } else {
+        $host_entries = get_host_entries();
+        set_cached_data(86400, serialize($host_entries));
+    }
     show($host_entries);
 }
 

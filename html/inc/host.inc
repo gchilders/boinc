@@ -85,16 +85,16 @@ function show_host($host, $user, $ipprivate) {
     $anonymous = false;
     if ($user) {
         if ($ipprivate) {
-            row2(tra("IP address"), "$host->last_ip_addr<br>".tra("(same the last %1 times)", $host->nsame_ip_addr));
+            row2(tra("IP address"), htmlspecialchars($host->last_ip_addr)."<br>".tra("(same the last %1 times)", $host->nsame_ip_addr));
             if ($host->last_ip_addr != $host->external_ip_addr) {
-                row2(tra("External IP address"), $host->external_ip_addr);
+                row2(tra("External IP address"), htmlspecialchars($host->external_ip_addr));
             }
         } else {
             row2(tra("IP address"), "<a href=show_host_detail.php?hostid=$host->id&ipprivate=1>".tra("Show IP address")."</a>");
         }
-        row2(tra("Domain name"), $host->domain_name);
+        row2(tra("Domain name"), htmlspecialchars($host->domain_name));
         if ($host->product_name) {
-            row2(tra("Product name"), $host->product_name);
+            row2(tra("Product name"), htmlspecialchars($host->product_name));
         }
         $x = $host->timezone/3600;
         if ($x >= 0) $x="+$x";
@@ -406,11 +406,11 @@ function show_host_row($host, $i, $private, $show_owner, $any_product_name) {
         </td>
     ";
     if ($private) {
-        echo "<td>$host->domain_name</td>\n";
+        echo "<td>".htmlspecialchars($host->domain_name)."</td>\n";
         if ($any_product_name) {
-            echo "<td>$host->product_name</td>\n";
+            echo "<td>".htmlspecialchars($host->product_name)."</td>\n";
         }
-        echo "<td>$host->venue</td>\n";
+        echo "<td>".htmlspecialchars($host->venue)."</td>\n";
     } else {
         echo "<td>$i</td>\n";
         if ($show_owner) {
@@ -441,7 +441,8 @@ function show_host_row($host, $i, $private, $show_owner, $any_product_name) {
             boinc_version($misc),
             cpu_desc($host),
             gpu_desc($misc),
-            $host->os_name, $host->os_version
+            htmlspecialchars($host->os_name),
+            htmlspecialchars($host->os_version)
         );
     } else {
         // This is used to show the computers of a given user
@@ -464,7 +465,8 @@ function show_host_row($host, $i, $private, $show_owner, $any_product_name) {
             boinc_version($misc),
             cpu_desc($host),
             gpu_desc($misc),
-            $host->os_name, $host->os_version,
+            htmlspecialchars($host->os_name),
+            htmlspecialchars($host->os_version),
             sched_log_link($host->rpc_time)
         );
     }
